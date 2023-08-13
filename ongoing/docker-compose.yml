@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: loghoi-frontend
+    ports:
+      - 7777:7777
+    volumes:
+      - ./frontend/next-app:/usr/src/next-app:z
+    working_dir: /usr/src/next-app/loghoi
+    networks:
+      - local
+
+networks:
+  local:
+    driver: bridge
