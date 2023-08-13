@@ -2,12 +2,11 @@ FROM node:20-slim
 
 RUN apt-get update -y
 RUN apt-get install -y curl
-#RUN npm install -g npm@9.6.4
 
 WORKDIR /usr/src/
 #COPY ./next-app .a
 #RUN yarn
 #RUN npm build
-#CMD ["npm", "start"]
 
-CMD ["tail", "-f", "/dev/null"]
+#CMD ["npm", "start"]
+#CMD ["tail", "-f", "/dev/null"]
