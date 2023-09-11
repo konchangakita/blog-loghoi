@@ -1,4 +1,4 @@
-"use client"
+'use client'
 // React Hook Form
 import { SubmitHandler, useForm } from 'react-hook-form'
 
@@ -46,7 +46,7 @@ const Index = () => {
     }
   }
 
-  return(
+  return (
     <>
       <main data-theme='white' className='flex text-center items-center h-screen'>
         <div className='w-1/2'>
