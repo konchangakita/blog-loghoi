@@ -1,4 +1,11 @@
 'use client'
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+
+//components
+import Laoding from '@/components/loading'
+
 // React Hook Form
 import { SubmitHandler, useForm } from 'react-hook-form'
 
@@ -13,7 +20,103 @@ type FormValues = {
   prism_pass: string
 }
 
+interface dict {
+  [key: string]: any
+}
+
+type ResValues = {
+  pc_list: dict
+  cluster_list: dict
+}
+
+const DisplayCluster = ({ clusterList }: any) => {
+  const clusters = clusterList.length ? (
+    clusterList.map((val: dict, idx: number) => {
+      const iconList: dict = { AHV: '/ahv_ico.png', VMWARE: '/vmware_ico.png' }
+      const icon = iconList[val.hypervisor]
+      return (
+        <tr className='' key={idx + 1}>
+          <td className='whitespace-normal'>
+            <div className='ml-8'>
+              <Image src={icon} width={30} height={30} alt={''} className='inline' />
+              <div className='inline px-2'>
+                {val.name} {val.prism_ip}
+              </div>
+            </div>
+          </td>
+        </tr>
+      )
+    })
+  ) : (
+    <>empty</>
+  )
+
+  return <>{clusters}</>
+}
+
+const PcList = ({dataPc}: any) => {
+  console.log('dataPc', dataPc)
+
+  const pcList = dataPc.pc_list
+  const clusterList = dataPc.cluster_list
+
+  const displayPc = pcList.length ? (
+    pcList.map((val: dict, idx: number) => {
+      const clusterListSub = clusterList[val.prism_ip]
+      return (
+        <div className='table table-compact p-4' key={idx + 1}>
+          <table className='table '>
+            <thead className='sticky top-0'>
+              <tr className='hover'>
+                <th>
+                  <div className='text-2xl'>
+                    <p className='inline px-4'>
+                      <Link href={{ pathname: 'gatekeeper', query: { pcip: val.prism_ip } }}>
+                        PC {val.prism_ip} &#91; {val.timestamp_jst} &#93;
+                      </Link>
+                    </p>
+                  </div>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <DisplayCluster clusterList={clusterListSub} />
+            </tbody>
+          </table>
+        </div>
+      )
+    })
+  ) : (
+    <tr>
+      <td>empty</td>
+      <td className='w-32'>&mdash;</td>
+    </tr>
+  )
+
+  return <>{displayPc}</>
+}
+
+const fetchGet = () => {
+  const [data, setData] = useState<ResValues>()
+  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND}/api/pclist`
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch(requestUrl, { method: 'GET' })
+      const data = await response.json()
+      setData(data)
+    }
+    fetchData()
+  }, [])
+  //console.log('PC List:', data)
+  return data
+}
+
 const Index = () => {
+  const [pageLoading, setPageLoading] = useState(false)
+
+  // get PC list
+  const dataPc = fetchGet()
+
   const {
     register,
     handleSubmit,
@@ -21,6 +124,7 @@ const Index = () => {
   } = useForm<FormValues>()
 
   const onConnect: SubmitHandler<FormValues> = async (data) => {
+    setPageLoading(true)
     //console.log('Form input item: ', data)
 
     //????????????????????
@@ -44,13 +148,19 @@ const Index = () => {
     } else {
       alert('Failed to connect to backend')
     }
+    setPageLoading(false)
   }
 
   return (
     <>
+      {pageLoading && <Laoding />}
+
       <main data-theme='white' className='flex text-center items-center h-screen'>
         <div className='w-1/2'>
           <div className='text-2xl font-bold m-5'>PC LIST</div>
+          <div className='flex flex-col justify-center items-center'>
+            { dataPc ? <PcList dataPc={dataPc} /> : null }
+          </div>
         </div>
 
         <div className='w-1/2 bg-primary h-screen flex justify-center items-center flex flex-col'>

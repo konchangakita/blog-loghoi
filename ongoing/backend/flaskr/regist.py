@@ -153,7 +153,6 @@ class RegistGateway:
         return data
 
     def get_pccluster(self, request_json):
-        data = request_json
         data_pc = es.get_pclatest_document(request_json["pcip"])
         data_clusters = es.get_pccluster_document(data_pc[0]["prism_ip"], data_pc[0]["timestamp"])
 
