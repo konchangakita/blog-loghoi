@@ -7,6 +7,7 @@ import json
 
 import common
 
+# 外部にElasticsearchを立てた時用
 try:
     f = open("setting.json", "r")
     setting_json = json.load(f)

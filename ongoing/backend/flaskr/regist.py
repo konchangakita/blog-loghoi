@@ -102,40 +102,6 @@ class RegistGateway:
 
         return result
 
-    def regist_cluster(self, request_form):
-        request_form = connection_headers(request_form)
-
-        request_url = "https://" + prism_ip + ":9440/PrismGateway/services/rest/v2.0/cluster/"
-
-        print("Request URL >>>>> ", request_url)
-        try:
-            response = requests.request("get", request_url, headers=headers, verify=False, timeout=3.5)
-        except requests.exceptions.ConnectTimeout:
-            response = "Timeout shimasita"
-        print(response)
-
-        if hasattr(response, "status_code"):
-            if response.status_code == 200:
-                print("=== Connecting Cluster Successful! ===")
-                res = response.json()
-                input_list = request_form
-                input_list["name"] = res["name"]
-                input_list["uuid"] = res["uuid"]
-                print(">>>>> input data: ", input_list)
-
-                # input to Elasticsearch
-                input_size = es.input_cluster(input_list)
-
-                # ここの結果（テキストの内容）がGUI側で直接出る
-                result = "Connection Success"
-            else:
-                print(">>>>> Connection faild: status code ", response.status_code)
-                result = "Login faild"
-        else:
-            result = "Connection faild (VPN?)"
-
-        return result
-
     # get PC list from Elasticsearch
     def get_pcs(self):
         data = {}

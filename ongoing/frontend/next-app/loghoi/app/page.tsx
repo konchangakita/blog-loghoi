@@ -55,7 +55,7 @@ const DisplayCluster = ({ clusterList }: any) => {
 }
 
 const PcList = ({dataPc}: any) => {
-  console.log('dataPc', dataPc)
+  console.log('PC LIST', dataPc)
 
   const pcList = dataPc.pc_list
   const clusterList = dataPc.cluster_list
