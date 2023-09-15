@@ -1,0 +1,67 @@
+version: "3.8"
+services:
+  elasticsearch:
+    image: elasticsearch:7.17.9
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - 9200:9200
+      - 9300:9300
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elastic/es-data:/usr/share/elasticsearch/data:z
+    networks:
+      - local
+
+  kibana:
+    image: kibana:7.17.9
+    container_name: kibana
+    ports:
+      - 5601:5601
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - local
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    container_name: loghoi-backend
+    ports:
+      - 7776:7776
+    volumes:
+      - ./backend/flaskr:/usr/src/flaskr:z
+    command:
+      bash -c "cd /usr/src/flaskr
+      && tail -f /dev/null"
+    working_dir: /usr/src/flaskr
+    networks:
+      - local
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: loghoi-frontend
+    ports:
+      - 7777:7777
+    volumes:
+      - ./frontend/next-app:/usr/src/next-app:z
+    command:
+      bash -c "cd /usr/src/next-app/loghoi
+      && yarn
+      && tail -f /dev/null"
+    working_dir: /usr/src/next-app/loghoi
+    networks:
+      - local
+
+networks:
+  local:
+    driver: bridge
