@@ -36,5 +36,13 @@ def pclist():
     cluster_list = reg.get_pcs()
     return make_response(jsonify(cluster_list))
 
+# GET cluster list related to PC
+@app.route("/api/pccluster", methods=["POST"])
+def pccluster():
+    # print("request", request.json)
+    cluster_list = {}
+    cluster_list = reg.get_pccluster(request.json)
+    return make_response(jsonify(cluster_list))
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7776, debug=True)

@@ -5,6 +5,7 @@ import Image from 'next/image'
 
 //components
 import Laoding from '@/components/loading'
+import fetchGet from './api/fetchGet'
 
 // React Hook Form
 import { SubmitHandler, useForm } from 'react-hook-form'
@@ -54,7 +55,7 @@ const DisplayCluster = ({ clusterList }: any) => {
   return <>{clusters}</>
 }
 
-const PcList = ({dataPc}: any) => {
+const PcList = ({ dataPc }: any) => {
   console.log('PC LIST', dataPc)
 
   const pcList = dataPc.pc_list
@@ -96,26 +97,12 @@ const PcList = ({dataPc}: any) => {
   return <>{displayPc}</>
 }
 
-const fetchGet = () => {
-  const [data, setData] = useState<ResValues>()
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND}/api/pclist`
-  useEffect(() => {
-    const fetchData = async () => {
-      const response = await fetch(requestUrl, { method: 'GET' })
-      const data = await response.json()
-      setData(data)
-    }
-    fetchData()
-  }, [])
-  //console.log('PC List:', data)
-  return data
-}
-
 const Index = () => {
   const [pageLoading, setPageLoading] = useState(false)
 
   // get PC list
-  const dataPc = fetchGet()
+  const path: string = '/api/pclist'
+  const dataPc = fetchGet(path)
 
   const {
     register,
@@ -158,9 +145,7 @@ const Index = () => {
       <main data-theme='white' className='flex text-center items-center h-screen'>
         <div className='w-1/2'>
           <div className='text-2xl font-bold m-5'>PC LIST</div>
-          <div className='flex flex-col justify-center items-center'>
-            { dataPc ? <PcList dataPc={dataPc} /> : null }
-          </div>
+          <div className='flex flex-col justify-center items-center'>{dataPc ? <PcList dataPc={dataPc} /> : null}</div>
         </div>
 
         <div className='w-1/2 bg-primary h-screen flex justify-center items-center flex flex-col'>
