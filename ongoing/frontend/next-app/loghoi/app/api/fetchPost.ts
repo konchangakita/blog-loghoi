@@ -10,7 +10,7 @@ type ResValues = {
 }
 
 const fetchPost = (path: string, query: dict) => {
-  const [data, setData] = useState<ResValues>()
+  const [data, setData] = useState<dict>()
   const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND}${path}`
   const requestOptions = {
     method: 'POST',
