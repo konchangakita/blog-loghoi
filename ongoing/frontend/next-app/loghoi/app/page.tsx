@@ -4,7 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 
 //components
-import Laoding from '@/components/loading'
+import Laoding from './components/loading'
 import fetchGet from './api/fetchGet'
 
 // React Hook Form
@@ -167,7 +167,6 @@ const Index = () => {
           </div>
         </div>
       </main>
-      <footer className='text-center text-sm'>Copyright (C) Log Xploer Team. All Rights Reserved.</footer>
     </>
   )
 }

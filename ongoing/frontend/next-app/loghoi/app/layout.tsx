@@ -12,7 +12,7 @@ config.autoAddCss = false
 
 export const metadata: Metadata = {
   title: 'Log hoihoi',
-  description: 'Nutanix Log Xplorer',
+  description: 'Nutanix Log hoihoi',
 }
 
 export default function RootLayout({

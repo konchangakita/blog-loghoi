@@ -1,14 +1,23 @@
-import { cookies, headers } from 'next/headers'
+'use client'
+import { useSearchParams } from 'next/navigation'
+import { useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
 
-export default function Page() {
-  //console.log("process: ", process)
-  //console.log("cookies: ", cookies)
-  //console.log("headers: ", headers)
+//components
+import Navbar from '../components/navbar'
 
+interface dict {
+  [key: string]: any
+}
+
+const RealtimePage = () => {
+  const searchParams = useSearchParams()
 
   return (
-      <>
-        mokemoke
-      </>
-    )
+    <>
+      <Navbar />
+    </>
+  )
 }
+export default RealtimePage
