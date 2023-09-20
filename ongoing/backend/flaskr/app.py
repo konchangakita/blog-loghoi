@@ -1,18 +1,19 @@
 from flask import Flask
 from flask import render_template
 from flask import request
-from flask import make_response, jsonify
+from flask import make_response, jsonify, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from elasticsearch import Elasticsearch
 
 import regist
-import broker_rt, broker_sys
+import broker_rt, broker_sys, broker_hoi
 import common
 
 reg = regist.RegistGateway()
 rt = broker_rt.RealtimeLogGateway()
 sys = broker_sys.SyslogGateway()
+hoi = broker_hoi.HoiGateway()
 
 
 ELASTIC_SERVER = "http://elasticsearch:9200"
@@ -71,6 +72,49 @@ def rt_taillist():
 def sys_search():
     print(request.json)  # keyword, start_datetime, end_datetime
     data = sys.search_syslog(request.json)
+    return make_response(jsonify(data))
+
+
+# get filelist
+@app.route("/api/hoi/hoihoilist", methods=["POST"])
+def hoi_hoihoilist():
+    req = request.json
+    cluster_info = rt.get_cvmlist(req["cluster"])
+    hoihoilist = hoi.get_hoihoilist()
+    data = {"cluster_info": cluster_info, "hoihoilist": hoihoilist}
+    return make_response(jsonify(data))
+
+
+# hoihoi suru
+@app.route("/api/hoi/hoihoi", methods=["POST"])
+def hoi_hoihoi():
+    data = hoi.hoihoi(request.json["cvm"])
+    return make_response(jsonify(data))
+
+
+# download zip file
+@app.route("/api/hoi/download", methods=["POST"])
+def hoi_download():
+    req = request.json
+    filename = req["filename"]
+    directory = req["directory"]
+    output_path = hoi.get_output_path()
+    download_directory = output_path + "/" + directory
+    # print('filename ;:', filename)
+    return send_from_directory(
+        directory=download_directory, path=filename, as_attachment=True
+    )
+
+
+# get log content
+@app.route("/api/hoi/logdisplay", methods=["POST"])
+def hoi_logdisplay():
+    print(request.json)
+    req = request.json
+    log_directory = req["dir"]
+    log_file = req["log_file"]
+
+    data = hoi.get_logcontent(log_directory, log_file)
     return make_response(jsonify(data))
 
 

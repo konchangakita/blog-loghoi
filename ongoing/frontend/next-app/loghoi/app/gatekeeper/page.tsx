@@ -107,7 +107,7 @@ const ClusterTab = (res: any) => {
                 <div className='card-actions justify-center'>
                   <Link
                     href={{
-                      pathname: 'loghoi',
+                      pathname: 'correctlog',
                       query: { pcip: searchParams.get('pcip'), cluster: searchParams.get('cluster'), prism: searchParams.get('prism') },
                     }}
                   >
@@ -140,11 +140,13 @@ const GateKeeper = () => {
 
   return (
     <>
-      <Navbar />
-      <div className="bg-[url('/Desktop-BG-3DPurple.png')] bg-cover bg-center h-fit bg-violet-900">
-        <p className='pt-5 text-5xl text-white text-center'>Welcome to PC &#34;{searchParams.get('pcip')}&#34;</p>
-        {res ? <ClusterTab clusterList={res} /> : null}
-      </div>
+      <main className='h-screen'>
+        <Navbar />
+        <div className="bg-[url('/Desktop-BG-3DPurple.png')] bg-cover bg-center bg-violet-900 h-full">
+          <p className='pt-5 text-5xl text-white text-center'>Welcome to PC &#34;{searchParams.get('pcip')}&#34;</p>
+          {res ? <ClusterTab clusterList={res} /> : null}
+        </div>
+      </main>
     </>
   )
 }

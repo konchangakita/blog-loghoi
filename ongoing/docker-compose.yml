@@ -38,6 +38,7 @@ services:
       - 7776:7776
     volumes:
       - ./backend/flaskr:/usr/src/flaskr:z
+      - ./backend/output:/usr/src/output:z
     command: bash -c "cd /usr/src/flaskr
       && tail -f /dev/null"
     working_dir: /usr/src/flaskr

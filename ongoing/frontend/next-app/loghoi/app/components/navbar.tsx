@@ -28,9 +28,9 @@ const Navbar = () => {
 
               <ul tabIndex={0} className='menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52 text-black'>
                 <li>
-                  <Link href={{ pathname: 'realtime log', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
+                  <Link href={{ pathname: 'realtimelog', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
                     <FontAwesomeIcon icon={faFileLines} bounce style={{ fontSize: '21px' }} />
-                    Realtimelog
+                    Realtime log
                   </Link>
                 </li>
                 <li>
@@ -40,9 +40,9 @@ const Navbar = () => {
                   </Link>
                 </li>
                 <li>
-                  <Link href={{ pathname: 'correct log', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
+                  <Link href={{ pathname: 'correctlog', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
                     <FontAwesomeIcon icon={faBug} shake style={{ fontSize: '21px' }} />
-                    Standard Log
+                    Correct Log
                   </Link>
                 </li>
                 <li>
