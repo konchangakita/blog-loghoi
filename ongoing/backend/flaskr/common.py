@@ -1,6 +1,6 @@
 from datetime import datetime
 from datetime import timezone, timedelta
-from zoneinfo import ZoneInfo # 3.9
+from zoneinfo import ZoneInfo  # 3.9
 
 import re
 import paramiko
@@ -15,6 +15,19 @@ def change_jst(timestamp):
     jst_time = datetime.strftime(_jst_time, "%Y-%m-%d %H:%M:%S")
 
     return jst_time
+
+
+# UTC to JST for syslog
+def change_jst_sys(timestamp):
+    _utc = re.split("[T.]", timestamp)
+    utc = _utc[0] + " " + _utc[1]
+    utc_time = datetime.strptime(utc, "%Y-%m-%d %H:%M:%S")
+    _jst_time = utc_time.astimezone(timezone(timedelta(hours=+9)))
+    jst_time = datetime.strftime(_jst_time, "%Y-%m-%d %H:%M:%S")
+    jst_str = jst_time.replace(" ", "T")
+
+    return jst_str
+
 
 # JST to UTC from frontend
 def change_utc(timestamp):
@@ -31,6 +44,7 @@ def change_utc(timestamp):
     utc_str = utc_time.replace(" ", "T")
 
     return utc_str
+
 
 def change_timeslot(timeslot):
     timeslot_dict = []
@@ -55,6 +69,7 @@ def change_timestamp(timestamp):
 
     timestamp_dict.append({"utc_time": timestamp, "local_time": jst_time})
     return timestamp_dict
+
 
 # from _rt:get_session_rt, get_cvmlist
 def connect_ssh(hostname):

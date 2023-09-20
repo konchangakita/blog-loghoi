@@ -38,8 +38,7 @@ services:
       - 7776:7776
     volumes:
       - ./backend/flaskr:/usr/src/flaskr:z
-    command:
-      bash -c "cd /usr/src/flaskr
+    command: bash -c "cd /usr/src/flaskr
       && tail -f /dev/null"
     working_dir: /usr/src/flaskr
     networks:
@@ -54,11 +53,20 @@ services:
       - 7777:7777
     volumes:
       - ./frontend/next-app:/usr/src/next-app:z
-    command:
-      bash -c "cd /usr/src/next-app/loghoi
+    command: bash -c "cd /usr/src/next-app/loghoi
       && yarn
       && tail -f /dev/null"
     working_dir: /usr/src/next-app/loghoi
+    networks:
+      - local
+
+  syslog:
+    build:
+      context: ./syslog
+      dockerfile: dockerfile
+    container_name: loghoi-syslog
+    ports:
+      - 7515:7515
     networks:
       - local
 

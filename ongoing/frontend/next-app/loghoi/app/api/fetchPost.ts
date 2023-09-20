@@ -20,8 +20,12 @@ const fetchPost = (path: string, query: dict) => {
   useEffect(() => {
     const fetchData = async () => {
       const response = await fetch(requestUrl, requestOptions)
-      const data = await response.json()
-      setData(data)
+      if (response.status === 200) {
+        const data = await response.json()
+        setData(data)
+      } else {
+        alert('Failed to connect to backend')
+      }
     }
     fetchData()
   }, [])

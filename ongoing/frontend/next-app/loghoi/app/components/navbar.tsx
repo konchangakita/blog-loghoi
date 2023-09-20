@@ -10,6 +10,10 @@ import { faGear } from '@fortawesome/free-solid-svg-icons'
 
 const Navbar = () => {
   const searchParams = useSearchParams()
+  const pcip = searchParams.get('pcip')
+  const cluster = searchParams.get('cluster')
+  const prism = searchParams.get('prism')
+
   return (
     <>
       <div className=''>
@@ -24,19 +28,19 @@ const Navbar = () => {
 
               <ul tabIndex={0} className='menu menu-compact dropdown-content mt-3 p-2 shadow bg-base-100 rounded-box w-52 text-black'>
                 <li>
-                  <Link href={{ pathname: 'realtimelog', query: { pcip: searchParams.get('pcip'), cluster: searchParams.get('cluster') } }} className='hover:no-underline'>
+                  <Link href={{ pathname: 'realtime log', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
                     <FontAwesomeIcon icon={faFileLines} bounce style={{ fontSize: '21px' }} />
                     Realtimelog
                   </Link>
                 </li>
                 <li>
-                  <Link href={{ pathname: 'syslog', query: { pcip: searchParams.get('pcip'), cluster: searchParams.get('cluster') } }} className='hover:no-underline'>
+                  <Link href={{ pathname: 'syslog', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
                     <FontAwesomeIcon icon={faFileLines} style={{ fontSize: '21px' }} />
                     Syslog
                   </Link>
                 </li>
                 <li>
-                  <Link href={{ pathname: 'loghoi', query: { pcip: searchParams.get('pcip'), cluster: searchParams.get('cluster') } }} className='hover:no-underline'>
+                  <Link href={{ pathname: 'correct log', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
                     <FontAwesomeIcon icon={faBug} shake style={{ fontSize: '21px' }} />
                     Standard Log
                   </Link>
@@ -51,7 +55,7 @@ const Navbar = () => {
             </div>
 
             <div className='flex-none px-2'>
-              <Link href={{ pathname: '/gatekeeper', query: { pcip: searchParams.get('pcip'), cluster: searchParams.get('cluster') } }}>
+              <Link href={{ pathname: '/gatekeeper', query: { pcip: pcip, cluster: cluster, prism: prism } }}>
                 <Image src='/xplorer_logo-neg.png' alt='xplorer logo neg' width={124} height={35} />
               </Link>
             </div>

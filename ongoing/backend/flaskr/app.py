@@ -7,11 +7,12 @@ from flask_socketio import SocketIO, emit
 from elasticsearch import Elasticsearch
 
 import regist
-import broker_rt
+import broker_rt, broker_sys
 import common
 
 reg = regist.RegistGateway()
 rt = broker_rt.RealtimeLogGateway()
+sys = broker_sys.SyslogGateway()
 
 
 ELASTIC_SERVER = "http://elasticsearch:9200"
@@ -62,6 +63,14 @@ def rt_taillist():
     cluster_info = rt.get_cvmlist(req["cluster"])
     tail_file_list = rt.get_taillist()
     data = {"cluster_info": cluster_info, "tail_file_list": tail_file_list}
+    return make_response(jsonify(data))
+
+
+# Syslog search search & date/time
+@app.route("/api/sys/search", methods=["POST"])
+def sys_search():
+    print(request.json)  # keyword, start_datetime, end_datetime
+    data = sys.search_syslog(request.json)
     return make_response(jsonify(data))
 
 

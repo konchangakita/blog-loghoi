@@ -44,9 +44,11 @@ class ElasticAPI:
             es.indices.create(index=index_name)
 
             # for uuid search
-            if 'uuid_' in index_name:
+            if "uuid_" in index_name:
                 alias = "search_uuid"
-                es.indices.update_aliases(body={"actions": [{"add": {"index": index_name, "alias": alias}}]})
+                es.indices.update_aliases(
+                    body={"actions": [{"add": {"index": index_name, "alias": alias}}]}
+                )
 
     def put_rest_cluster(self, r_json, timestamp, index_name):
         es = self.es
@@ -93,22 +95,17 @@ class ElasticAPI:
 class ElasticGateway(ElasticAPI):
     def get_timeslot(self, cluster_name):
         es = self.es
-        index_name = 'uuid_vms'
-        query = {
-            "function_score" : {
-                "query": {"match": { 'cluster_name' : cluster_name}}
-            }
-        }
-        aggs =  {
-            "group_by_timestamp": {"terms": { "field" : "timestamp", "size" : 1000}}
-        }
+        index_name = "uuid_vms"
+        query = {"function_score": {"query": {"match": {"cluster_name": cluster_name}}}}
+        aggs = {"group_by_timestamp": {"terms": {"field": "timestamp", "size": 1000}}}
         res = es.search(index=index_name, query=query, aggs=aggs)
-        _timeslot = [slot['key_as_string'] for slot in res['aggregations']['group_by_timestamp']['buckets']]
+        _timeslot = [
+            slot["key_as_string"]
+            for slot in res["aggregations"]["group_by_timestamp"]["buckets"]
+        ]
         timeslot = sorted(_timeslot, reverse=True)
         timeslot_dict = common.change_timeslot(timeslot)
         return timeslot_dict
-
-
 
     # input PC
     def put_pc(self, input_data):
@@ -196,141 +193,197 @@ class ElasticGateway(ElasticAPI):
     def search_syslog_document(self, serial, keyword, start_datetime, end_datetime):
         es = self.es
         print(start_datetime, end_datetime)
-        search_serial = '*' + serial + '*'
-        search_keyword = '*' + keyword + '*'
+        search_serial = "*" + serial + "*"
+        search_keyword = "*" + keyword + "*"
 
-        print('serial >>>>>>>>>>>>>', search_serial)
-        print('keyword >>>>>>>>>>>>>', search_keyword)
-        print('time range(UTC) >>>>>>>>>>>>', start_datetime, '-', end_datetime)
+        print("serial >>>>>>>>>>>>>", search_serial)
+        print("keyword >>>>>>>>>>>>>", search_keyword)
+        print("time range(JST) >>>>>>>>>>>>", start_datetime, "-", end_datetime)
 
-        query =  {
-            "function_score" : {
-                "query": { "bool": { "must": [
-                    {"range": {
-                        "@timestamp": {
-                            "gte": start_datetime,
-                            "lte": end_datetime
-                        }
-                    }},
-                    { "query_string": {
-                        "default_field": "hostname",
-                        "query": search_serial
-                    }},
-                    { "query_string": {
-                        "default_field": "message",
-                        "query": search_keyword
-                    }}
-                ]}}
+        query = {
+            "function_score": {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "range": {
+                                    "@timestamp": {
+                                        "gte": start_datetime,
+                                        "lte": end_datetime,
+                                    }
+                                }
+                            },
+                            {
+                                "query_string": {
+                                    "default_field": "hostname",
+                                    "query": search_serial,
+                                }
+                            },
+                            {
+                                "query_string": {
+                                    "default_field": "message",
+                                    "query": search_keyword,
+                                }
+                            },
+                        ]
+                    }
+                }
             }
         }
+        print("query >>>>>>>>>>>>", query)
+
         res = es.search(index="filebeat-*", query=query, size=100)
         return [s["_source"] for s in res["hits"]["hits"]]
-
 
     def put_data_uuid(self, res):
         timestamp = datetime.utcnow()
         input_size = {}
 
         # cluster
-        cluster_json = res['cluster'].json()
-        cluster_name = cluster_json['name']
-        cluster_uuid = cluster_json['uuid']
+        cluster_json = res["cluster"].json()
+        cluster_name = cluster_json["name"]
+        cluster_uuid = cluster_json["uuid"]
 
         # vms
-        vms_json = res['vms'].json()
-        input_size['vms'] = self.put_rest_pe(vms_json, timestamp, cluster_name, cluster_uuid, index_name='uuid_vms')
+        vms_json = res["vms"].json()
+        input_size["vms"] = self.put_rest_pe(
+            vms_json, timestamp, cluster_name, cluster_uuid, index_name="uuid_vms"
+        )
 
         # storage_containers
-        storage_containers_json = res['storage_containers'].json()
-        input_size['storage_containers'] = self.put_rest_pe(storage_containers_json, timestamp, cluster_name, cluster_uuid, index_name='uuid_storage_containers')
+        storage_containers_json = res["storage_containers"].json()
+        input_size["storage_containers"] = self.put_rest_pe(
+            storage_containers_json,
+            timestamp,
+            cluster_name,
+            cluster_uuid,
+            index_name="uuid_storage_containers",
+        )
 
         # volume_group
-        volume_groups_json = res['volume_groups'].json()
-        input_size['volume_groups'] = self.put_rest_pe(volume_groups_json, timestamp, cluster_name, cluster_uuid, index_name='uuid_volume_groups')
+        volume_groups_json = res["volume_groups"].json()
+        input_size["volume_groups"] = self.put_rest_pe(
+            volume_groups_json,
+            timestamp,
+            cluster_name,
+            cluster_uuid,
+            index_name="uuid_volume_groups",
+        )
 
         # vfilers
-        vfilers_json = res['vfilers'].json()
-        if len(vfilers_json['entities']):
-            input_size['vfliers'] = self.put_rest_pe(vfilers_json, timestamp, cluster_name, cluster_uuid, index_name='uuid_vfilers')
+        vfilers_json = res["vfilers"].json()
+        if len(vfilers_json["entities"]):
+            input_size["vfliers"] = self.put_rest_pe(
+                vfilers_json,
+                timestamp,
+                cluster_name,
+                cluster_uuid,
+                index_name="uuid_vfilers",
+            )
 
             # shares
-            shares_json = res['shares'].json()
-            input_size['shares'] = self.put_rest_pe(shares_json, timestamp, cluster_name, cluster_uuid, index_name='uuid_shares')
+            shares_json = res["shares"].json()
+            input_size["shares"] = self.put_rest_pe(
+                shares_json,
+                timestamp,
+                cluster_name,
+                cluster_uuid,
+                index_name="uuid_shares",
+            )
 
             # share_details
-            share_details = res['res_share_details']
-            input_size['share_details'] = self.put_rest_pe(share_details, timestamp, cluster_name, cluster_uuid, index_name='uuid_share_details')
-
+            share_details = res["res_share_details"]
+            input_size["share_details"] = self.put_rest_pe(
+                share_details,
+                timestamp,
+                cluster_name,
+                cluster_uuid,
+                index_name="uuid_share_details",
+            )
 
         return cluster_name, input_size
 
-
     def get_uuidall_document(self, timestamp, cluster_name):
         es = self.es
-        alias = 'search_uuid'
-        query =  {
-            "function_score" : {
-                "query": { "bool": { "must": [
-                    {"match": { "timestamp" : timestamp}},
-                    {"match": { "cluster_name" : cluster_name}}
-                ]}}
+        alias = "search_uuid"
+        query = {
+            "function_score": {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"match": {"timestamp": timestamp}},
+                            {"match": {"cluster_name": cluster_name}},
+                        ]
+                    }
+                }
             }
         }
         res = es.search(index=alias, query=query, size=512)
-        return [ s for s in res['hits']['hits'] ]
-
+        return [s for s in res["hits"]["hits"]]
 
     def search_uuid_document(self, alias, timestamp, cluster_name, keyword):
         es = self.es
-        print("Keyword >>>>>> "+ keyword)
-        print('alias >>> '+ alias)
+        print("Keyword >>>>>> " + keyword)
+        print("alias >>> " + alias)
         fields = [
-            #"metadata.uuid.keyword", #vms v3
-            "uuid", #vms
-            "uuid.keyword", "attachment_list.vm_uuid", #volume_groups
-            "uuid.keyword", "containerUuid", "nvms.uuid", "nvms.fileServerUuid", "nvms.vmUuid", #vfilers
-            "uuid.keyword", "fileServerUuid", "containerUuid", # shares
-            "Share UUID", # share_details
-            "storage_container_uuid", "spec.resources.disk_list.storage_config.storage_container_reference.uuid", "disk_list.container_uuid",  # sotrage_containers
+            # "metadata.uuid.keyword", #vms v3
+            "uuid",  # vms
+            "uuid.keyword",
+            "attachment_list.vm_uuid",  # volume_groups
+            "uuid.keyword",
+            "containerUuid",
+            "nvms.uuid",
+            "nvms.fileServerUuid",
+            "nvms.vmUuid",  # vfilers
+            "uuid.keyword",
+            "fileServerUuid",
+            "containerUuid",  # shares
+            "Share UUID",  # share_details
+            "storage_container_uuid",
+            "spec.resources.disk_list.storage_config.storage_container_reference.uuid",
+            "disk_list.container_uuid",  # sotrage_containers
         ]
 
-        print('fields >>>>>>> ', end="")
+        print("fields >>>>>>> ", end="")
         print(fields)
 
-        query =  {
-            "function_score" : {
-                "query": { "bool": { "must": [
-                    {"match": { "cluster_name": cluster_name}},
-                    {"match": { "timestamp": timestamp}},
-                    {"multi_match": {
-                        "query": keyword,
-                        "fields": fields
-                    }}
-                ]}}
+        query = {
+            "function_score": {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"match": {"cluster_name": cluster_name}},
+                            {"match": {"timestamp": timestamp}},
+                            {"multi_match": {"query": keyword, "fields": fields}},
+                        ]
+                    }
+                }
             }
         }
-        #print(query)
+        # print(query)
         res = es.search(index=alias, query=query, size=512)
-        #print("res >>>>>")
-        #print(res)
-        #print([s['_source'] for s in res['hits']['hits'] ])
-        return [s for s in res['hits']['hits'] ]
+        # print("res >>>>>")
+        # print(res)
+        # print([s['_source'] for s in res['hits']['hits'] ])
+        return [s for s in res["hits"]["hits"]]
 
-    def search_uuidadditional_document(self, index_name, timestamp, cluster_name, multi_keyword):
+    def search_uuidadditional_document(
+        self, index_name, timestamp, cluster_name, multi_keyword
+    ):
         es = self.es
 
-        query =  {
-            "function_score" : {
-                "query": { "bool": { "must": [
-                        {"match": { "cluster_name": cluster_name}},
-                        {"match": { "timestamp": timestamp}},
-                        { "bool" : { "should" : multi_keyword}
-                        }
-                ]}}
+        query = {
+            "function_score": {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"match": {"cluster_name": cluster_name}},
+                            {"match": {"timestamp": timestamp}},
+                            {"bool": {"should": multi_keyword}},
+                        ]
+                    }
+                }
             }
         }
         res = es.search(index=index_name, query=query, size=512)
-        return [s for s in res['hits']['hits'] ]
-
-
-
+        return [s for s in res["hits"]["hits"]]
