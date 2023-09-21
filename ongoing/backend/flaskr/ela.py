@@ -125,8 +125,12 @@ class ElasticGateway(ElasticAPI):
         es = self.es
         sort = {"timestamp": {"order": "desc"}}
         collapse = {"field": "prism_ip.keyword"}
-        res = es.search(index="pc", sort=sort, collapse=collapse, size=5)
-        data = [s["_source"] for s in res["hits"]["hits"]]
+        # まだ一つも登録されていないとき用
+        try:
+            res = es.search(index="pc", sort=sort, collapse=collapse, size=5)
+            data = [s["_source"] for s in res["hits"]["hits"]]
+        except:
+            data = {}
         return data
 
     # get cluster list latest 5 and deduplication

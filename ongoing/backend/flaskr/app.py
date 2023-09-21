@@ -2,25 +2,26 @@ from flask import Flask
 from flask import render_template
 from flask import request
 from flask import make_response, jsonify, send_from_directory
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 from flask_socketio import SocketIO, emit
 from elasticsearch import Elasticsearch
 
 import regist
-import broker_rt, broker_sys, broker_hoi
+import broker_rt, broker_sys, broker_hoi, broker_uuid
 import common
 
 reg = regist.RegistGateway()
 rt = broker_rt.RealtimeLogGateway()
 sys = broker_sys.SyslogGateway()
 hoi = broker_hoi.HoiGateway()
+uuid = broker_uuid.UuidGateway()
 
 
 ELASTIC_SERVER = "http://elasticsearch:9200"
 es = Elasticsearch(ELASTIC_SERVER)
 
 app = Flask(__name__)
-cors = CORS(app, resources={r"*": {"origins": "*"}})
+CORS(app, resources={r"*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 
@@ -41,8 +42,9 @@ def regist():
 
 # GET PC List
 @app.route("/api/pclist", methods=["GET"])
+#@cross_origin(origins=["http://172.16.0.40:7777"], methods=["GET"])
 def pclist():
-    # print("request", request.json)
+    print("GET request")
     cluster_list = {}
     cluster_list = reg.get_pcs()
     return make_response(jsonify(cluster_list))
@@ -116,6 +118,52 @@ def hoi_logdisplay():
 
     data = hoi.get_logcontent(log_directory, log_file)
     return make_response(jsonify(data))
+
+
+
+# uuid
+# Top page - connecting Prism, and then Get VM/VG LIST
+@app.route('/api/uuid/connect', methods=['POST'])
+def connect():
+    data = {}
+    print('request', request.json)
+    data = uuid.connect_cluster(request.json)
+
+    return make_response(jsonify(data))
+
+
+@app.route('/api/uuid/latestdataset', methods=['POST'])
+def latestdataset():
+    req = request.json
+    cluster_name = req['cluster']
+    data = uuid.get_latestdataset(cluster_name)
+
+    print(data.keys())
+    return make_response(jsonify(data))
+
+# pcip, cluster, uuid
+@app.route('/api/uuid/contentdataset', methods=['POST', 'GET'] )
+def uuid_contentdataset():
+    req = request.json
+    data = uuid.get_contentdataset(req['cluster'], req['content'])
+
+    return make_response(jsonify(data))
+
+# pcip, cluster, uuid
+@app.route('/api/uuid/searchdataset', methods=['POST'] )
+def uuid_searchdataset():
+    req = request.json
+    print(req)
+    data = uuid.get_contentdataset(req['cluster'], req['search'])
+
+    return make_response(jsonify(data))
+
+
+
+
+
+
+
 
 
 ##############################

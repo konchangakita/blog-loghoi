@@ -88,10 +88,16 @@ const PcList = ({ dataPc }: any) => {
       )
     })
   ) : (
-    <tr>
-      <td>empty</td>
-      <td className='w-32'>&mdash;</td>
-    </tr>
+    <div>
+      <table>
+        <tbody>
+          <tr>
+            <td>empty</td>
+            <td className='w-32'>&mdash;</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   )
 
   return <>{displayPc}</>
@@ -153,7 +159,12 @@ const Index = () => {
           <div className='form-control'>
             <form onSubmit={handleSubmit(onConnect)}>
               <div className='flex flex-col'>
-                <input {...register('prism_ip', { required: true })} type='text' placeholder='Cluster IP' className='input input-info input-bordered m-1 w-64 text-lg' />
+                <input
+                  {...register('prism_ip', { required: true })}
+                  type='text'
+                  placeholder='Cluster IP'
+                  className='input input-info input-bordered m-1 w-64 text-lg'
+                />
                 {errors.prism_ip && <p className='text-red-600'>required.</p>}
                 <input {...register('prism_user')} type='text' placeholder='username' className='input input-info input-bordered m-1 w-64 text-lg' />
                 <div className='m-1 relative'>
