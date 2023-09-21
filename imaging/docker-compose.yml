@@ -1,0 +1,61 @@
+version: "3.8"
+services:
+  elasticsearch:
+    image: elasticsearch:7.17.9
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - 9200:9200
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elastic/es-data:/usr/share/elasticsearch/data:z
+    networks:
+      - local
+
+  kibana:
+    image: kibana:7.17.9
+    container_name: kibana
+    ports:
+      - 5601:5601
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - local
+
+  backend:
+    image: loghoi-backend:latest
+    container_name: loghoi-backend
+    ports:
+      - 7776:7776
+    volumes:
+      - ./backend/output:/usr/src/output:z
+    networks:
+      - local
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: loghoi-frontend
+    ports:
+      - 7777:7777
+    networks:
+      - local
+
+  syslog:
+    image: loghoi-filebeat:latest
+    container_name: loghoi-filebeat
+    ports:
+      - 7515:7515
+    networks:
+      - local
+
+networks:
+  local:
+    driver: bridge

@@ -1,0 +1,42 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+a {
+  color: #003778;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+nav {
+  background-color: #22272e;
+  padding: 5px;
+}
+
+footer {
+  justify-content: center;
+  align-items: center;
+}
+
+.hotx p:nth-child(2) {
+  display: none;
+}
+
+.hotx:hover p:nth-child(1) {
+  display: none;
+}
+.hotx:hover p:nth-child(2) {
+  display: block;
+}

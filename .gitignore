@@ -162,7 +162,11 @@ cython_debug/
 
 # personal data
 ongoing/elastic/es-data/nodes/0
-# use yarn
-ongoing/frontend/next-app/loghoi/package-lock.json
-
 ongoing/backend/output/*
+imaging/elastic/es-data/nodes/0
+imaging/backend/output/*
+
+
+# use yarn
+package-lock.json
+
