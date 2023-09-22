@@ -200,11 +200,11 @@ const CorrectPage = () => {
       <main data-theme='white' className='text-center items-center'>
         <Navbar />
         <div className='p-4 justify-center items-center'>
-          <p className='text-3xl text-primary p-2'>Correct Log</p>
+          <p className='text-3xl text-primary p-2'>Collect Log</p>
           <div className='flex flex-row h-full'>
             <div className='flex flex-col items-center'>
               <div className='btn btn-primary w-48' onClick={logCollection}>
-                Start Correct Log
+                Start Collect Log
               </div>
               <div className=''>{hoihoiList ? <LogFileList /> : null}</div>
               <div className='p-1'>

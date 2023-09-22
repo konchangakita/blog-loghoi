@@ -140,7 +140,7 @@ const ClusterTab = (res: any) => {
                 <Image src={'/xplorer.png'} width={80} height={80} alt={''} />
               </figure>
               <div className='card-body flex items-center'>
-                <h2 className='card-title text-gray-50'>Correct Log</h2>
+                <h2 className='card-title text-gray-50'>Collect Log</h2>
                 <div className='card-actions justify-center'>
                   <Link
                     href={{

@@ -42,7 +42,7 @@ const Navbar = () => {
                 <li>
                   <Link href={{ pathname: 'correctlog', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
                     <FontAwesomeIcon icon={faBug} shake style={{ fontSize: '21px' }} />
-                    Correct Log
+                    collect Log
                   </Link>
                 </li>
                 <li>
