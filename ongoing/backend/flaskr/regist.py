@@ -61,6 +61,7 @@ class RegistGateway:
                         cluster_data["hypervisor"] = val["status"]["resources"]["nodes"]["hypervisor_server_list"][0]["type"]
                         cluster_data["prism_ip"] = val["status"]["resources"]["network"]["external_ip"]
                         cluster_data["pc_ip"] = pcvm_info["prism_ip"]
+                        cluster_data["uuid"] = val["metadata"]['uuid']
                         # fmt: on
 
                         _cvm_list = []
@@ -68,7 +69,7 @@ class RegistGateway:
                             #Nameのフィールドがマッチした場合のみIPを拾っていれる処理。PCについてはNameのフィールドが空になる
                             if "name" in entity["status"]:
                                 #print(cluster_data["name"])
-                                if re.match(cluster_data["name"], entity["status"]["name"]):
+                                if re.match(cluster_data["uuid"], entity["status"]["cluster_reference"]["uuid"]):
                                     #対象のブロックシリアルのみ入れる
                                     cluster_data["block_serial_number"] = entity["status"]["resources"]["block"]["block_serial_number"]
                                     #クラスタ内のCVMIPのリストを入れる
