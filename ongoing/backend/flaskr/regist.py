@@ -3,14 +3,18 @@ import requests
 import re
 import common
 import ela
+
 es = ela.ElasticGateway()
+
 
 class RegistGateway:
     def connection_headers(self, request_form):
         prism_user = request_form["prism_user"]
         prism_pass = request_form["prism_pass"]
 
-        encoded_credentials = b64encode(bytes(f"{prism_user}:{prism_pass}", encoding="ascii")).decode("ascii")
+        encoded_credentials = b64encode(
+            bytes(f"{prism_user}:{prism_pass}", encoding="ascii")
+        ).decode("ascii")
         auth_header = f"Basic {encoded_credentials}"
         headers = {
             "Accept": "application/json",
@@ -23,12 +27,14 @@ class RegistGateway:
     # Registration of PC & Cluster & CVM info
     def regist_pc(self, request_form):
         headers = self.connection_headers(request_form)
-        #print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',request_form)
+        # print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',request_form)
         pcvm_info = request_form
-        #print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',pcvm_info)
+        # print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++',pcvm_info)
 
         # Get PC info
-        request_url = "https://" + pcvm_info["prism_ip"] + ":9440/api/nutanix/v3/clusters/list"
+        request_url = (
+            "https://" + pcvm_info["prism_ip"] + ":9440/api/nutanix/v3/clusters/list"
+        )
         payload = "{}"
 
         print("Request URL >>>>> ", request_url)
@@ -44,7 +50,11 @@ class RegistGateway:
             if response.status_code == 200:
                 print("####### Connecting Cluster Successful! #######")
                 # GET CVM info
-                request_url = "https://" + pcvm_info["prism_ip"] + ":9440/api/nutanix/v3/hosts/list"
+                request_url = (
+                    "https://"
+                    + pcvm_info["prism_ip"]
+                    + ":9440/api/nutanix/v3/hosts/list"
+                )
                 # fmt: off
                 response_cvm = requests.request("post", request_url, data=payload, headers=headers, verify=False, timeout=3.5)
                 # fmt: on
@@ -66,18 +76,32 @@ class RegistGateway:
 
                         _cvm_list = []
                         for entity in res_cvm["entities"]:
-                            #Nameのフィールドがマッチした場合のみIPを拾っていれる処理。PCについてはNameのフィールドが空になる
+                            # Nameのフィールドがマッチした場合のみIPを拾っていれる処理。PCについてはNameのフィールドが空になる
                             if "name" in entity["status"]:
-                                #print(cluster_data["name"])
-                                if re.match(cluster_data["uuid"], entity["status"]["cluster_reference"]["uuid"]):
-                                    #対象のブロックシリアルのみ入れる
-                                    cluster_data["block_serial_number"] = entity["status"]["resources"]["block"]["block_serial_number"]
-                                    #クラスタ内のCVMIPのリストを入れる
-                                    _cvm_list.append(entity["status"]["resources"]["controller_vm"]["ip"])
+                                # print(cluster_data["name"])
+                                if re.match(
+                                    cluster_data["uuid"],
+                                    entity["status"]["cluster_reference"]["uuid"],
+                                ):
+                                    # 対象のブロックシリアルのみ入れる
+                                    cluster_data["block_serial_number"] = entity[
+                                        "status"
+                                    ]["resources"]["block"]["block_serial_number"]
+                                    # クラスタ内のCVMIPのリストを入れる
+                                    _cvm_list.append(
+                                        entity["status"]["resources"]["controller_vm"][
+                                            "ip"
+                                        ]
+                                    )
 
-                            #prism centralのIPにマッチした場合にシリアルナンバーを取り出す
-                            elif entity["status"]["resources"]["controller_vm"]["ip"] == pcvm_info["prism_ip"]:
-                                pcvm_info["serial_number"] = entity["status"]["resources"]["serial_number"]
+                            # prism centralのIPにマッチした場合にシリアルナンバーを取り出す
+                            elif (
+                                entity["status"]["resources"]["controller_vm"]["ip"]
+                                == pcvm_info["prism_ip"]
+                            ):
+                                pcvm_info["serial_number"] = entity["status"][
+                                    "resources"
+                                ]["serial_number"]
                         cluster_data["cvms_ip"] = sorted(_cvm_list)
                         input_list.append(cluster_data)
 
@@ -111,7 +135,9 @@ class RegistGateway:
         for i, val in enumerate(data_pcs):
             timestamp_jst = common.change_jst(val["timestamp"])
             data_pcs[i]["timestamp_jst"] = timestamp_jst
-            data_pcs_clusters[val["prism_ip"]] = es.get_pccluster_document(val["prism_ip"], val["timestamp"])
+            data_pcs_clusters[val["prism_ip"]] = es.get_pccluster_document(
+                val["prism_ip"], val["timestamp"]
+            )
 
         data["pc_list"] = data_pcs
         data["cluster_list"] = data_pcs_clusters
@@ -121,7 +147,9 @@ class RegistGateway:
 
     def get_pccluster(self, request_json):
         data_pc = es.get_pclatest_document(request_json["pcip"])
-        data_clusters = es.get_pccluster_document(data_pc[0]["prism_ip"], data_pc[0]["timestamp"])
+        data_clusters = es.get_pccluster_document(
+            data_pc[0]["prism_ip"], data_pc[0]["timestamp"]
+        )
 
         print("get pccluster >>>>> ", data_clusters)
         return data_clusters

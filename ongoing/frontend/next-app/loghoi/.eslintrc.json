@@ -12,15 +12,7 @@
       "jsx": true
     }
   },
-  "extends": [
-    "eslint:recommended",
-    "next/core-web-vitals",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:react/recommended",
-    "airbnb",
-    "airbnb-typescript",
-    "prettier"
-  ],
+  "extends": ["eslint:recommended", "next/core-web-vitals", "plugin:@typescript-eslint/recommended", "plugin:react/recommended", "airbnb", "airbnb-typescript", "prettier"],
   "plugins": ["@typescript-eslint", "react"],
   "rules": {
     "react/react-in-jsx-scope": "off",
