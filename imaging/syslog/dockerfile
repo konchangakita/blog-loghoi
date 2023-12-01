@@ -1,4 +1,0 @@
-FROM elastic/filebeat:7.17.9
-
-COPY --chown=filebeat filebeat.yml /usr/share/filebeat/filebeat.yml
-RUN chmod go-w /usr/share/filebeat/filebeat.yml
