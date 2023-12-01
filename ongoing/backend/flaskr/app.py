@@ -47,9 +47,12 @@ def pclist():
 # GET cluster list related to PC
 @app.route("/api/pccluster", methods=["POST"])
 def pccluster():
-    # print("request", request.json)
+    req = request.json
+    print("request", req)
     cluster_list = {}
-    cluster_list = reg.get_pccluster(request.json)
+    if req["pcip"]:
+        cluster_list = reg.get_pccluster(request.json)
+
     return make_response(jsonify(cluster_list))
 
 
