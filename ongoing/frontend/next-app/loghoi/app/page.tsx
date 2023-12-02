@@ -3,7 +3,7 @@ import Image from 'next/image'
 import { Suspense } from 'react'
 
 //api
-import { getPclist } from './api/pclist/getPclist'
+import { getPclist } from './_api/pclist/getPclist'
 
 //components
 import Loading from '@/components/loading'

@@ -5,7 +5,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 //api
-import getClusterList from '@/app/api/getClusterList'
+import getClusterList from '@/app/_api/getClusterList'
 
 // React-hook-form
 import { SubmitHandler, useForm } from 'react-hook-form'
@@ -144,7 +144,7 @@ const ClusterTab = (res: any) => {
                 <div className='card-actions justify-center'>
                   <Link
                     href={{
-                      pathname: 'correctlog',
+                      pathname: 'collectlog',
                       query: { pcip: pcip, cluster: cluster, prism: prism },
                     }}
                   >
@@ -201,6 +201,28 @@ const ClusterTab = (res: any) => {
                       </div>
                     </div>
                   </form>
+                </div>
+              </div>
+            </div>
+            <div className='card w-64 glass m-8 p-4'>
+              <figure className='pt-3'>
+                <Image src={'/Nutanix-Logo-White-Digital.png'} width={200} height={59} alt={''} />
+              </figure>
+              <div className='card-body flex items-center'>
+                <h2 className='card-title text-gray-50'>Support & Insights Portal</h2>
+                <div className='text-white text-xs pb-5'>Open/View Cases, KB, SW downloads, Docs, Installed Base & Licenses</div>
+
+                <div className='card-actions justify-center'>
+                  <Link
+                    href={{
+                      pathname: 'https://portal.nutanix.com/',
+                    }}
+                    target='_blank'
+                  >
+                    <div className='text-white hover:no-underline'>
+                      <button className='btn btn-primary'>Launch</button>
+                    </div>
+                  </Link>
                 </div>
               </div>
             </div>
