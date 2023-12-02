@@ -4,14 +4,9 @@ interface dict {
   [key: string]: any
 }
 
-type ResValues = {
-  pc_list: dict
-  cluster_list: dict
-}
-
 const getClusterList = (query: dict) => {
   const [data, setData] = useState<dict>()
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND}/api/pccluster`
+  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/pccluster`
   const requestOptions = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
