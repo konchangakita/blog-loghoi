@@ -26,6 +26,18 @@ const Page = () => {
         <div className='flex flex-row h-full'>
           <div className='flex flex-col items-center'>
             <div className='btn btn-primary w-48'>Start Collect Log</div>
+            <div className='w-49 text-center'>
+              <div className='text-primary'>File / Log List</div>
+              <div className='h-96 overflow-auto'>
+                <div>Log1</div>
+                <div>Log2</div>
+                <div>Log3</div>
+                <div>Log4</div>
+                <div>Log5</div>
+                <div>Log6</div>
+                <div>Log7</div>
+              </div>
+            </div>
             <div className='p-1'>
               <div>
                 <div className='pt-2'>
