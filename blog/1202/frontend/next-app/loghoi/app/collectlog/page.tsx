@@ -21,7 +21,7 @@ const Page = () => {
   return (
     <>
       {pageLoading && <Laoding />}
-      <div className='p-4 justify-center items-center'>
+      <div data-theme='white' className='p-4 justify-center items-center'>
         <p className='text-3xl text-primary p-2'>Collect Log</p>
         <div className='flex flex-row h-full'>
           <div className='flex flex-col items-center'>
