@@ -23,7 +23,7 @@ c59146b3a090   kibana:7.17.9          "/bin/tini -- /usr/l…"   6 seconds ago  
 ## バックエンド  
 log-xplorer-backendのコンテナに接続する  
 ```
-docker exec -it loghoi-backend -backend bash
+docker exec -it loghoi-backend bash
 ```
 `/usr/src/flaskr`配下に移動 `python app.py`を実行する
 ```
