@@ -14,6 +14,7 @@ type FormValues = {
 }
 
 const PcRegister = () => {
+  console.log('env',process.env.NEXT_PUBLIC_BACKEND_HOST)
   const {
     register,
     handleSubmit,
@@ -31,7 +32,7 @@ const PcRegister = () => {
     // サーバのIPアドレスでもいけるが。。。？
     // .env から process.env.NEXT_PUBLIC_BACKEND
     //??????????????????????????????????????????????
-    const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND}/api/regist`
+    const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/regist`
     //const requestUrl = `172.16.0.6:7776/api/regist`
     console.log('request url: ', requestUrl)
     const requestOptions = {
