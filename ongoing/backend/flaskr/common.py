@@ -4,6 +4,10 @@ from zoneinfo import ZoneInfo  # 3.9
 
 import re
 import paramiko
+import ela
+
+
+es = ela.ElasticGateway()
 
 
 # UTC to JST from elastic
@@ -87,3 +91,21 @@ def connect_ssh(hostname):
         print(">>>>>>>> parmiko connecting failed dayo <<<<<<<<<")
 
     return client
+
+
+# Get CVM List with Prism Leader
+def get_cvmlist(cluster_name):
+    data = es.get_cvmlist_document(cluster_name)
+
+    # Get Prism leader
+    cvm = data[0]["cvms_ip"][0]
+    ssh = common.connect_ssh(cvm)
+    res = self.get_prism_leader(ssh)
+    res_json = json.loads(res)
+    _prism_leader = re.split(":", res_json["leader"])
+    prism_leader = _prism_leader[0]
+
+    cluster_data = data[0]
+    cluster_data["prism_leader"] = prism_leader
+
+    return cluster_data

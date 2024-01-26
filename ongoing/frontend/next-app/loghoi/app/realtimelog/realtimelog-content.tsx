@@ -7,8 +7,11 @@ import Link from 'next/link'
 //api
 import fetchPost from '@/app/_api/getTailList'
 
+// Lib
+import { LogFiles } from '@/lib/rt-logs'
+
 //components
-import LogViewer from '@/components/realtimelog-logview'
+import LogViewer from './realtimelog-logview'
 
 //fontawesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -28,41 +31,59 @@ const Content = () => {
     setFilter('')
   }
 
+  const [tailPath, setTailPath] = useState<string>('/home/nutanix/data/logs/genesis.out')
+  const [tailCecked, setTailChecked] = useState<string>('genesis')
+  const handleTailLog = (name: string, path: string) => {
+    console.log(path)
+    setTailChecked(name)
+    setTailPath(path)
+  }
+
   // Tailするファイル一覧 from setting_realtimelog.json
   const TailList = () => {
     return (
       <>
         <p className='border border-black p-1'>Log list</p>
         <form>
-          <div key=''>
-            <label className='label justify-start cursor-pointer pl-0.5 p-0 text-sm'>
-              <input type='radio' value='aaaaa' />
-              <div className='pl-1'>aaaaa</div>
-            </label>
-            <label className='label justify-start cursor-pointer pl-0.5 p-0 text-sm'>
-              <input type='radio' value='bbbbb' />
-              <div className='pl-1'>bbbbb</div>
-            </label>
-            <label className='label justify-start cursor-pointer pl-0.5 p-0 text-sm'>
-              <input type='radio' value='ccccc' />
-              <div className='pl-1'>ccccc</div>
-            </label>
-            <label className='label justify-start cursor-pointer pl-0.5 p-0 text-sm'>
-              <input type='radio' value='ddddd' />
-              <div className='pl-1'>ddddd</div>
-            </label>
-            <label className='label justify-start cursor-pointer pl-0.5 p-0 text-sm'>
-              <input type='radio' value='eeeee' />
-              <div className='pl-1'>eeeee</div>
-            </label>
-          </div>
+          {LogFiles.map((val) => {
+            return (
+              <div key={val.name}>
+                <label className='label justify-start cursor-pointer pl-0.5 p-0 text-sm'>
+                  <input type='radio' value={val.name} onChange={() => handleTailLog(val.name, val.path)} checked={tailCecked === val.name} />
+                  <div className='pl-1'>{val.name}</div>
+                </label>
+              </div>
+            )
+          })}
         </form>
       </>
     )
   }
 
   // CVM list, and connect to paramiko with checked cvm
+  type ResValues = {
+    pc_list: dict
+    cluster_list: dict
+  }
+
   function CvmList() {
+    const searchParams = useSearchParams()
+
+    console.log('cluster name', searchParams.get('cluster'))
+    const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
+    //const [data, setData] = useState<ResValues>()
+    const [data, setData] = useState()
+
+    useEffect(() => {
+      const fetchData = async () => {
+        const response = await fetch(requestUrl, { method: 'POST' })
+        const data = await response.json()
+        setData(data)
+      }
+      fetchData()
+    }, [])
+    console.log('CVM List:', data)
+
     return (
       <div>
         <div className=' pl-1 text-left'>CVM-1</div>

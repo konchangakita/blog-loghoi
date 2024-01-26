@@ -56,5 +56,13 @@ def pccluster():
     return make_response(jsonify(cluster_list))
 
 
+# Get CVM List from Elastic
+@app.route("/api/cvmlist", methods={"POST"})
+def cvmlist():
+    print('test')
+    cvm_list = 'test'
+    return make_response(jsonify(cvm_list))
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=7776, debug=True)

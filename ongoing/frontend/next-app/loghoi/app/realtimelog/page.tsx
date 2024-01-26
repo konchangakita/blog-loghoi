@@ -1,7 +1,10 @@
 import { Suspense } from 'react'
 
+// Lib
+import { LogFiles } from '@/lib/rt-logs'
+
 //components
-import Content from '@/components/realtimelog-content'
+import Content from './realtimelog-content'
 
 const RealtimelogPage = () => {
   return (

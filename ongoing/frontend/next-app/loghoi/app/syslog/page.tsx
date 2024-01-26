@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { useEffect, useState } from 'react'
 
 //components
-import Content from '@/components/realtimelog-content'
+import Content from '@/app/realtimelog/realtimelog-content'
 
 // need install
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
