@@ -3,6 +3,7 @@ from datetime import timezone, timedelta
 from zoneinfo import ZoneInfo  # 3.9
 
 import re
+import json
 import paramiko
 import ela
 
@@ -93,14 +94,28 @@ def connect_ssh(hostname):
     return client
 
 
+# Get Prism Leader 
+def get_prism_leader(ssh):
+    stdin, stdout, stderr = ssh.exec_command(
+        f"curl localhost:2019/prism/leader && echo"
+    )
+    for line in stdout:
+        output = line.strip()
+        print("[prism leader] >>>>>>>>>", output)
+    ssh.close()
+    print(">>>>>>>> parmiko close  <<<<<<<<<")
+
+    return output
+
+
 # Get CVM List with Prism Leader
 def get_cvmlist(cluster_name):
     data = es.get_cvmlist_document(cluster_name)
 
     # Get Prism leader
     cvm = data[0]["cvms_ip"][0]
-    ssh = common.connect_ssh(cvm)
-    res = self.get_prism_leader(ssh)
+    ssh = connect_ssh(cvm)
+    res = get_prism_leader(ssh)
     res_json = json.loads(res)
     _prism_leader = re.split(":", res_json["leader"])
     prism_leader = _prism_leader[0]

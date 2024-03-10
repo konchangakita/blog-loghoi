@@ -51,7 +51,7 @@ def pccluster():
     print("request", req)
     cluster_list = {}
     if req["pcip"]:
-        cluster_list = reg.get_pccluster(request.json)
+        cluster_list = reg.get_pccluster(req)
 
     return make_response(jsonify(cluster_list))
 
@@ -59,8 +59,11 @@ def pccluster():
 # Get CVM List from Elastic
 @app.route("/api/cvmlist", methods={"POST"})
 def cvmlist():
-    print('test')
-    cvm_list = 'test'
+    cluster_name = request.json
+
+    cvm_list = common.get_cvmlist(cluster_name)
+    print(cvm_list)
+
     return make_response(jsonify(cvm_list))
 
 

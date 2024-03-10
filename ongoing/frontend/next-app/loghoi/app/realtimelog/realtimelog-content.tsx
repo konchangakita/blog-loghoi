@@ -8,6 +8,7 @@ import Link from 'next/link'
 import fetchPost from '@/app/_api/getTailList'
 
 // Lib
+//import { LogFiles } from '@/lib/rt-logs'
 import { LogFiles } from '@/lib/rt-logs'
 
 //components
@@ -68,15 +69,28 @@ const Content = () => {
 
   function CvmList() {
     const searchParams = useSearchParams()
+    const ClusterName = searchParams.get('cluster')
+    const [cvmChecked, setcvmChecked] = useState<string>('')
+    const prismLeader: string = ''
+    useEffect(() => {
+      setcvmChecked(prismLeader)
+    }, [prismLeader])
 
-    console.log('cluster name', searchParams.get('cluster'))
+    console.log('cluster name', ClusterName)
+
     const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
+    const requestOptions = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ClusterName),
+    }
+
     //const [data, setData] = useState<ResValues>()
     const [data, setData] = useState()
 
     useEffect(() => {
       const fetchData = async () => {
-        const response = await fetch(requestUrl, { method: 'POST' })
+        const response = await fetch(requestUrl, requestOptions)
         const data = await response.json()
         setData(data)
       }
@@ -84,13 +98,34 @@ const Content = () => {
     }, [])
     console.log('CVM List:', data)
 
-    return (
-      <div>
-        <div className=' pl-1 text-left'>CVM-1</div>
-        <div className=' pl-1 text-left'>CVM-2</div>
-        <div className=' pl-1 text-left'>CVM-3</div>
-      </div>
-    )
+    if (data !== undefined) {
+      // Prism Leaderが取得できたら更新
+      const prismLeader: string = data ? data['prism_leader'] : ''
+
+      const handleOptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        e.preventDefault()
+        setcvmChecked(e.target.value)
+      }
+
+      const cvmsIp: any = data['cvms_ip']
+      const dispCvm = cvmsIp.map((val: string, idx: number) => {
+        const isLeader = val === prismLeader ? '*' : null
+        console.log(val)
+        return (
+          <div key={idx}>
+            <label className='label justify-normal cursor-pointer p-0'>
+              <input type='radio' name='cvm' value={val} className='radio radio-primary radio-xs' onChange={handleOptionChange} checked={cvmChecked === val} />
+              <div className='inline pl-1 text-left'>
+                {val}
+                <p className='inline text-xl text-red-700'>{isLeader}</p>
+              </div>
+            </label>
+          </div>
+        )
+      })
+      return <form>{dispCvm}</form>
+    }
+    return <></>
   }
 
   return (
@@ -122,6 +157,10 @@ const Content = () => {
                 </div>
                 <div className=''>
                   <CvmList />
+                </div>
+                <div className=''>
+                  <p className='inline text-xl text-red-700 '>*</p>
+                  <p className='inline text-xs text-red-700 '>Prism Leader</p>
                 </div>
               </div>
             </div>
