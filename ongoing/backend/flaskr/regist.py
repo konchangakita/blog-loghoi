@@ -3,6 +3,8 @@ import requests
 import re
 import common
 import ela
+import json
+
 
 es = ela.ElasticGateway()
 
@@ -158,3 +160,12 @@ class RegistGateway:
         data = es.get_allclusters_document()
         print(data)
         return data
+
+    def get_sshkey(self):
+        file_path = "./.ssh/ntnx-lockdown.pub"
+        try:
+            with open(file_path, "r") as file:
+                content = file.read()
+            return content
+        except Exception as e:
+            return json.dump({"error": str(e)})

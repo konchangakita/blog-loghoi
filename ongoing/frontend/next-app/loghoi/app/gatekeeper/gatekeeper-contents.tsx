@@ -28,7 +28,9 @@ const ClusterTab = (res: any) => {
   const prism = searchParams.get('prism')
 
   console.log(res)
-  const clusterList = res.clusterList
+  const clusterList = res.clusterList.cluster_list
+  const sshKey = res.clusterList.ssh_key
+
   const [isActive, setIsActive] = useState('')
 
   useEffect(() => {
@@ -83,7 +85,6 @@ const ClusterTab = (res: any) => {
         )
       })
     : null
-
   return (
     <>
       <div className='tabs flex justify-center text-white pt-4' key='test'>
@@ -92,6 +93,27 @@ const ClusterTab = (res: any) => {
 
       {isActive ? (
         <div>
+          <div className=''>
+            <div className='text-center text-wrap'>
+              <button className='btn' onClick={() => document.getElementById('my_modal_1').showModal()}>
+                Open SSH KEY
+              </button>
+              <dialog id='my_modal_1' className='modal text-wrap'>
+                <div className='modal-box w-11/12 max-w-5xl text-left '>
+                  <h3 className='font-bold text-lg'>Set the SSH-Key setting in Prism Element's Cluster Lockdown Configuration</h3>
+                  <div className='py-4 text-xs text-balance'>{sshKey}</div>
+                  <div className='modal-action'>
+                    <form method='dialog'>
+                      {/* if there is a button in form, it will close the modal */}
+                      <button className='btn'>Close</button>
+                    </form>
+                  </div>
+                </div>
+              </dialog>
+              <div className='text-xs text-gray-400'>Setting on Prism</div>
+            </div>
+          </div>
+
           <div className='flex justify-center '>
             <div className='card w-64 glass m-8 p-4'>
               <figure>

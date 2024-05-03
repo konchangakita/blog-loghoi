@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
 
 //components
-import Contents from '@/components/gatekeeper-contents'
+import Contents from './gatekeeper-contents'
 
 const GateKeeperPage = () => {
   return (

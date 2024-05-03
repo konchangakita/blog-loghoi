@@ -108,7 +108,7 @@ def get_prism_leader(ssh):
     return output
 
 
-# Get CVM List with Prism Leader
+# Get CVM List from Elastic and Prism Leader from CVM
 def get_cvmlist(cluster_name):
     data = es.get_cvmlist_document(cluster_name)
 
