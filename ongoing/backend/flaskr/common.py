@@ -90,6 +90,7 @@ def connect_ssh(hostname):
 
     except:
         print(">>>>>>>> parmiko connecting failed dayo <<<<<<<<<")
+        return False
 
     return client
 
@@ -111,16 +112,21 @@ def get_prism_leader(ssh):
 # Get CVM List from Elastic and Prism Leader from CVM
 def get_cvmlist(cluster_name):
     data = es.get_cvmlist_document(cluster_name)
+    cluster_data = data[0]
 
     # Get Prism leader
     cvm = data[0]["cvms_ip"][0]
     ssh = connect_ssh(cvm)
-    res = get_prism_leader(ssh)
-    res_json = json.loads(res)
-    _prism_leader = re.split(":", res_json["leader"])
-    prism_leader = _prism_leader[0]
+    
+    # Determine ssh is complete
+    if ssh:
+        res = get_prism_leader(ssh)
+        print('cvm_list res', res)
 
-    cluster_data = data[0]
-    cluster_data["prism_leader"] = prism_leader
+        res_json = json.loads(res)
+        _prism_leader = re.split(":", res_json["leader"])
+        prism_leader = _prism_leader[0]
+
+        cluster_data["prism_leader"] = prism_leader
 
     return cluster_data

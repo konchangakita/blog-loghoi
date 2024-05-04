@@ -99,8 +99,16 @@ const Content = () => {
     console.log('CVM List:', data)
 
     if (data !== undefined) {
+      // Prism Leaderが取得できていなかったら、CVMへsshできていないので、ssh Key設定のアラートをだす
+      if (data['prism_leader'] === undefined) {
+        alert('ssh key を Prism Elementで設定してください')
+      } else {
+      }
+
       // Prism Leaderが取得できたら更新
       const prismLeader: string = data ? data['prism_leader'] : ''
+
+      console.log('prismLeader to cvmChecked', prismLeader, cvmChecked)
 
       const handleOptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         e.preventDefault()
@@ -110,6 +118,7 @@ const Content = () => {
       const cvmsIp: any = data['cvms_ip']
       const dispCvm = cvmsIp.map((val: string, idx: number) => {
         const isLeader = val === prismLeader ? '*' : null
+        console.log('cvmChecked', cvmChecked)
         console.log(val)
         return (
           <div key={idx}>

@@ -2,6 +2,7 @@
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useState } from 'react'
 
 // fontアイコンの読み込み
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -15,10 +16,17 @@ const Navbar = () => {
   const cluster = searchParams.get('cluster')
   const prism = searchParams.get('prism')
 
+  const [isOpen, setIsOpen] = useState(false)
+
+  /* eslint-disable */
+  const sshKey =
+    'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDMgukyMIQG94wdRTucCfwtOPBXgGwQ7S4Q4jqa5dENsBRKTgfR5xNcNdyARXlRYCr0gp+5OlgD+cPxtepuFYQN0MYePDPU1lf7VdDg6VRD0iAqPrSvHerzyLUPt3CDQIprGZqc1mNAfNpC46BiJhESw6L5m9Ad0QurJanXLmv08kI0pII1rj/KhxZkFl0YlMis6/MoSRKicQONBJcYU7FkO9AKpPy3KaGe4gKnYweOx2erlmnUNKSiGNUTQGW0eDyrFPSM0YsmnVF3RP2s4BWJ8bKR0yRWYLp+EQcwDd2lW85JossuMGsBSdxvmrokSVR9vE9CnyS6qJkHWlVshkHayExMckJkkOG5L+sXLsG/f3cpR9N2AbdPxXZRlmPynPQiM0/yGZrSi9XhiHONrc6U/OEk1U/AVR08M4l6xORCB/HaU9sC6ne3rnBdBRmKXYiS9G3XTKz86HFNIok0dbQ4GeCQPdCIpnfn8AJc7V1EzT1Kufb1jzwAhtxlJPMMby0= root@ebf87c702d81'
+  /* eslint-enable */
+
   return (
     <>
       <div className=''>
-        <div className='navbar bg-neutral text-neutral-content'>
+        <div className='navbar bg-neutral text-neutral-content '>
           <div className='w-2/6 flex'>
             <div className='dropdown'>
               <label tabIndex={0} className='btn btn-square btn-ghost'>
@@ -60,6 +68,29 @@ const Navbar = () => {
                 <Image src='/xplorer_logo-neg.png' alt='xplorer logo neg' width={124} height={35} />
               </Link>
             </div>
+          </div>
+          <div className='flex-auto justify-end mr-4 '>
+            <button className='btn btn-neutral' onClick={() => setIsOpen(!isOpen)}>
+              Open SSH KEY
+            </button>
+            {isOpen && (
+              <div className='fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 '>
+                <div className='modal-box w-11/12 max-w-5xl text-left text-wrap '>
+                  <h3 className='font-bold text-gray-900 text-lg mb-2'>Copy ssh-key setting Prism Element's Cluster Lockdown Configuration</h3>
+                  <article className='break-words rounded-xl bg-gray-100 p-2'>
+                    <p className='p-2 text-xs text-gray-500 text-balance'>{sshKey}</p>
+                  </article>
+                  <div className='modal-action'>
+                    <form method='dialog'>
+                      {/* if there is a button in form, it will close the modal */}
+                      <button className='btn' onClick={() => setIsOpen(!isOpen)}>
+                        Close
+                      </button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

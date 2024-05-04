@@ -53,11 +53,11 @@ def pccluster():
     if req["pcip"]:
         cluster_list = reg.get_pccluster(req)
     sshkey = reg.get_sshkey()
-    res = {}
-    res['cluster_list'] = cluster_list
-    res['ssh_key'] = sshkey
+    #res = {}
+    #res['cluster_list'] = cluster_list
+    #res['ssh_key'] = sshkey
 
-    return make_response(jsonify(res))
+    return make_response(jsonify(cluster_list))
 
 
 # Get CVM List from Elastic
