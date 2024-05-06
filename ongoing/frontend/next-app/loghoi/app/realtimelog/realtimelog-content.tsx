@@ -69,6 +69,8 @@ const Content = () => {
 
   function CvmList() {
     const searchParams = useSearchParams()
+    const [isLoading, setLoading] = useState(true)
+
     const ClusterName = searchParams.get('cluster')
     const [cvmChecked, setcvmChecked] = useState<string>('')
     const prismLeader: string = ''
@@ -88,6 +90,7 @@ const Content = () => {
     //const [data, setData] = useState<ResValues>()
     const [data, setData] = useState()
 
+    /*
     useEffect(() => {
       const fetchData = async () => {
         const response = await fetch(requestUrl, requestOptions)
@@ -96,7 +99,20 @@ const Content = () => {
       }
       fetchData()
     }, [])
+    */
+    useEffect(() => {
+      fetch(requestUrl, requestOptions)
+        .then((res) => res.json())
+        .then((data) => {
+          setData(data)
+          setLoading(false)
+        })
+    }, [])
+
     console.log('CVM List:', data)
+
+    if (isLoading) return <p>Loading...</p>
+    if (!data) return <p>No profile data</p>
 
     if (data !== undefined) {
       // Prism Leaderが取得できていなかったら、CVMへsshできていないので、ssh Key設定のアラートをだす
@@ -107,6 +123,7 @@ const Content = () => {
 
       // Prism Leaderが取得できたら更新
       const prismLeader: string = data ? data['prism_leader'] : ''
+      const cvmChecked: string = prismLeader
 
       console.log('prismLeader to cvmChecked', prismLeader, cvmChecked)
 
