@@ -70,15 +70,13 @@ const Content = () => {
   function CvmList() {
     const searchParams = useSearchParams()
     const [isLoading, setLoading] = useState(true)
+    //const [data, setData] = useState<ResValues>()
+    const [data, setData] = useState()
 
     const ClusterName = searchParams.get('cluster')
-    const [cvmChecked, setcvmChecked] = useState<string>('')
-    const prismLeader: string = ''
-    useEffect(() => {
-      setcvmChecked(prismLeader)
-    }, [prismLeader])
 
-    console.log('cluster name', ClusterName)
+    const [prismLeader, setprismLeader] = useState<string>('')
+    const [cvmChecked, setcvmChecked] = useState<string>('')
 
     const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
     const requestOptions = {
@@ -87,19 +85,6 @@ const Content = () => {
       body: JSON.stringify(ClusterName),
     }
 
-    //const [data, setData] = useState<ResValues>()
-    const [data, setData] = useState()
-
-    /*
-    useEffect(() => {
-      const fetchData = async () => {
-        const response = await fetch(requestUrl, requestOptions)
-        const data = await response.json()
-        setData(data)
-      }
-      fetchData()
-    }, [])
-    */
     useEffect(() => {
       fetch(requestUrl, requestOptions)
         .then((res) => res.json())
@@ -109,7 +94,13 @@ const Content = () => {
         })
     }, [])
 
-    console.log('CVM List:', data)
+    useEffect(() => {
+      console.log('data kita')
+      if (data !== undefined && data['prism_leader'] !== undefined) {
+        setprismLeader(data['prism_leader'])
+        setcvmChecked(data['prism_leader'])
+      }
+    }, [data])
 
     if (isLoading) return <p>Loading...</p>
     if (!data) return <p>No profile data</p>
@@ -118,29 +109,28 @@ const Content = () => {
       // Prism Leaderが取得できていなかったら、CVMへsshできていないので、ssh Key設定のアラートをだす
       if (data['prism_leader'] === undefined) {
         alert('ssh key を Prism Elementで設定してください')
-      } else {
       }
 
-      // Prism Leaderが取得できたら更新
-      const prismLeader: string = data ? data['prism_leader'] : ''
-      const cvmChecked: string = prismLeader
-
-      console.log('prismLeader to cvmChecked', prismLeader, cvmChecked)
-
-      const handleOptionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        e.preventDefault()
-        setcvmChecked(e.target.value)
+      const handleOptionChange = (val: string) => {
+        //e.preventDefault()
+        console.log('change')
+        setcvmChecked(val)
       }
 
       const cvmsIp: any = data['cvms_ip']
       const dispCvm = cvmsIp.map((val: string, idx: number) => {
         const isLeader = val === prismLeader ? '*' : null
-        console.log('cvmChecked', cvmChecked)
-        console.log(val)
         return (
           <div key={idx}>
             <label className='label justify-normal cursor-pointer p-0'>
-              <input type='radio' name='cvm' value={val} className='radio radio-primary radio-xs' onChange={handleOptionChange} checked={cvmChecked === val} />
+              <input
+                type='radio'
+                name='cvm'
+                value={val}
+                className='radio radio-primary radio-xs'
+                onChange={() => handleOptionChange(val)}
+                checked={val === cvmChecked}
+              />
               <div className='inline pl-1 text-left'>
                 {val}
                 <p className='inline text-xl text-red-700'>{isLeader}</p>
