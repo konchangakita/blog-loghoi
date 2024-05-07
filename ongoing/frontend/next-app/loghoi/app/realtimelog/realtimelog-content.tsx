@@ -13,6 +13,7 @@ import { LogFiles } from '@/lib/rt-logs'
 
 //components
 import LogViewer from './realtimelog-logview'
+import Loading from '@/components/loading'
 
 //fontawesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -20,6 +21,18 @@ import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
 interface dict {
   [key: string]: any
+}
+
+type ResValues = {
+  block_serial_number: string
+  cvms_ip: []
+  hypervisor: string
+  name: string
+  pc_ip: string
+  prism_ip: string
+  prism_leader: string
+  timestamp: string
+  uuid: string
 }
 
 const Content = () => {
@@ -62,18 +75,41 @@ const Content = () => {
   }
 
   // CVM list, and connect to paramiko with checked cvm
-  type ResValues = {
-    pc_list: dict
-    cluster_list: dict
+  const ClusterName = searchParams.get('cluster')
+  const [isLoading, setLoading] = useState(true)
+  const [data, setData] = useState<ResValues>()
+
+  const [prismLeader, setprismLeader] = useState<string>('')
+  const [cvmChecked, setcvmChecked] = useState<string>('')
+  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
+  const requestOptions = {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(ClusterName),
   }
 
-  function CvmList() {
+  useEffect(() => {
+    fetch(requestUrl, requestOptions)
+      .then((res) => res.json())
+      .then((data) => {
+        setData(data)
+        setLoading(false)
+      })
+    if (data !== undefined && data['prism_leader'] !== undefined) {
+      setprismLeader(data['prism_leader'])
+      setcvmChecked(data['prism_leader'])
+    }
+    console.log('cluster data get')
+  }, [])
+
+  function CvmList999() {
     const searchParams = useSearchParams()
     const [isLoading, setLoading] = useState(true)
     //const [data, setData] = useState<ResValues>()
     const [data, setData] = useState()
 
     const ClusterName = searchParams.get('cluster')
+    const PrismIp = searchParams.get('prism')
 
     const [prismLeader, setprismLeader] = useState<string>('')
     const [cvmChecked, setcvmChecked] = useState<string>('')
@@ -85,6 +121,7 @@ const Content = () => {
       body: JSON.stringify(ClusterName),
     }
 
+    console.log('111')
     useEffect(() => {
       fetch(requestUrl, requestOptions)
         .then((res) => res.json())
@@ -102,13 +139,19 @@ const Content = () => {
       }
     }, [data])
 
-    if (isLoading) return <p>Loading...</p>
+    if (isLoading)
+      return (
+        <>
+          <p>Loading...</p>
+          <Loading />
+        </>
+      )
     if (!data) return <p>No profile data</p>
 
     if (data !== undefined) {
       // Prism Leaderが取得できていなかったら、CVMへsshできていないので、ssh Key設定のアラートをだす
       if (data['prism_leader'] === undefined) {
-        alert('ssh key を Prism Elementで設定してください')
+        alert('ssh key を cluster [' + PrismIp + '] の Prism Element で設定してください')
       }
 
       const handleOptionChange = (val: string) => {
@@ -144,8 +187,43 @@ const Content = () => {
     return <></>
   }
 
+  function CvmList(res: any) {
+    if (isLoading) return <p>Loading...</p>
+
+    const cvmsIp = res.cvmsIp
+    const prismLeader = res.prismLeader
+    const cvmChecked = res.cvmChecked
+    const handleOptionChange = (val: string) => {
+      setcvmChecked(val)
+    }
+
+    const dispCvm = cvmsIp.map((val: string, idx: number) => {
+      const isLeader = val === prismLeader ? '*' : null
+      return (
+        <div key={idx}>
+          <label className='label justify-normal cursor-pointer p-0'>
+            <input
+              type='radio'
+              name='cvm'
+              value={val}
+              className='radio radio-primary radio-xs'
+              onChange={() => handleOptionChange(val)}
+              checked={val === cvmChecked}
+            />
+            <div className='inline pl-1 text-left'>
+              {val}
+              <p className='inline text-xl text-red-700'>{isLeader}</p>
+            </div>
+          </label>
+        </div>
+      )
+    })
+    return <form>{dispCvm}</form>
+  }
+
   return (
     <>
+      {isLoading && <Loading />}
       <div className='p-1 flex justify-center'>
         <div className='m-1 relative  w-[480px] '>
           <input
@@ -172,7 +250,7 @@ const Content = () => {
                   <p className='border border-black p-1'>CVM list</p>
                 </div>
                 <div className=''>
-                  <CvmList />
+                  <CvmList cvmsIp={data ? data.cvms_ip : ''} prismLeader={data ? data.prism_leader : ''} cvmChecked={cvmChecked} />
                 </div>
                 <div className=''>
                   <p className='inline text-xl text-red-700 '>*</p>
