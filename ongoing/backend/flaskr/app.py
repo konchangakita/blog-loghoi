@@ -3,21 +3,23 @@ from flask import render_template
 from flask import request
 from flask import make_response, jsonify
 from flask_cors import CORS
+from flask_socketio import SocketIO, emit
 
 from elasticsearch import Elasticsearch
 
 import regist
 import common
+import broker_rt
 
 reg = regist.RegistGateway()
-
+rt = broker_rt.RealtimeLogGateway()
 
 ELASTIC_SERVER = "http://elasticsearch:9200"
 es = Elasticsearch(ELASTIC_SERVER)
 
 app = Flask(__name__)
 CORS(app, resources={r"*": {"origins": "*"}})
-
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Just for GUI
 @app.route("/")
@@ -71,5 +73,54 @@ def cvmlist():
     return make_response(jsonify(cvm_list))
 
 
+
+
+
+
+
+
+
+
+##############################
+# socketio
+##########################
+ssh_connection = {}
+
+
+@socketio.on("connect")
+def socket_connect():
+    print(">>>>>>>> Websocket connected <<<<<<<<<")
+    # socketio.emit("message", {"data": "Connected", "sid": request.sid})
+    print("sid", request.sid)
+    print("After connected")
+
+@socketio.on("disconnect")
+def socket_disconnect():
+    print(">>>>>>>> Websocket disconnected <<<<<<<<<")
+    sid = request.sid
+    ssh = ssh_connection.get(sid)
+    if ssh:
+        ssh.close()
+        print(">>>>>>>> parmiko close <<<<<<<<<")
+        del ssh_connection[sid]
+
+@socketio.on("message")
+def recive_message(msg):
+    print("recive message")
+    emit("message", msg)
+
+# msg {cvm, tail_name, tail_path}
+@socketio.on("log")
+def recive_log(msg):
+    print("###### start tail -f", msg)
+    cvm = msg["cvm"]
+    print("socket receive >>>>>>>>>>>>>", msg)
+    ssh = common.connect_ssh(cvm)
+    ssh_connection[request.sid] = ssh
+    rt.get_rtlog(socketio, ssh, msg)
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=7776, debug=True)
+    #app.run(host="0.0.0.0", port=7776, debug=True)
+    socketio.run(app, host="0.0.0.0", port=7776, debug=True)
+

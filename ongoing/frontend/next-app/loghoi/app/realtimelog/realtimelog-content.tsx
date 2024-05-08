@@ -174,7 +174,7 @@ const Content = () => {
                   <p className='border border-black p-1'>CVM list</p>
                 </div>
                 <div className=''>
-                  <CvmList cvmsIp={data ? data.cvms_ip : ''} prismLeader={data ? prismLeader : ''} cvmChecked={cvmChecked} />
+                  <CvmList cvmsIp={data ? data.cvms_ip : ''} prismLeader={prismLeader} cvmChecked={cvmChecked} />
                 </div>
                 <div className=''>
                   <p className='inline text-xl text-red-700 '>*</p>
@@ -184,7 +184,7 @@ const Content = () => {
             </div>
           </div>
           <div className='p-1 flex basis-11/12 flex-col'>
-            <LogViewer />
+            <LogViewer cvmChecked={cvmChecked} tailName={tailCecked} tailPath={tailPath} filter={filter} />
           </div>
         </div>
       </div>
