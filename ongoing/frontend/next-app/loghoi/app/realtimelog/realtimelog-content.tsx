@@ -37,6 +37,7 @@ type ResValues = {
 
 const Content = () => {
   const searchParams = useSearchParams()
+  const PrismIp = searchParams.get('prism')
 
   // filter word
   const [filter, setFilter] = useState<string>('')
@@ -94,98 +95,20 @@ const Content = () => {
       .then((data) => {
         setData(data)
         setLoading(false)
+        console.log('data get from cvm')
+        if (data !== undefined && data['prism_leader'] !== undefined) {
+          setprismLeader(data['prism_leader'])
+          setcvmChecked(data['prism_leader'])
+        } else {
+          // Prism Leaderが取得できていなかったら、CVMへsshできていないので、ssh Key設定のアラートをだす
+          if (data['prism_leader'] === undefined) {
+            alert('ssh key を cluster [' + PrismIp + '] の Prism Element で設定してください')
+          }
+        }
       })
-    if (data !== undefined && data['prism_leader'] !== undefined) {
-      setprismLeader(data['prism_leader'])
-      setcvmChecked(data['prism_leader'])
-    }
-    console.log('cluster data get')
+
+    console.log('cluster data get', prismLeader, cvmChecked)
   }, [])
-
-  function CvmList999() {
-    const searchParams = useSearchParams()
-    const [isLoading, setLoading] = useState(true)
-    //const [data, setData] = useState<ResValues>()
-    const [data, setData] = useState()
-
-    const ClusterName = searchParams.get('cluster')
-    const PrismIp = searchParams.get('prism')
-
-    const [prismLeader, setprismLeader] = useState<string>('')
-    const [cvmChecked, setcvmChecked] = useState<string>('')
-
-    const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
-    const requestOptions = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(ClusterName),
-    }
-
-    console.log('111')
-    useEffect(() => {
-      fetch(requestUrl, requestOptions)
-        .then((res) => res.json())
-        .then((data) => {
-          setData(data)
-          setLoading(false)
-        })
-    }, [])
-
-    useEffect(() => {
-      console.log('data kita')
-      if (data !== undefined && data['prism_leader'] !== undefined) {
-        setprismLeader(data['prism_leader'])
-        setcvmChecked(data['prism_leader'])
-      }
-    }, [data])
-
-    if (isLoading)
-      return (
-        <>
-          <p>Loading...</p>
-          <Loading />
-        </>
-      )
-    if (!data) return <p>No profile data</p>
-
-    if (data !== undefined) {
-      // Prism Leaderが取得できていなかったら、CVMへsshできていないので、ssh Key設定のアラートをだす
-      if (data['prism_leader'] === undefined) {
-        alert('ssh key を cluster [' + PrismIp + '] の Prism Element で設定してください')
-      }
-
-      const handleOptionChange = (val: string) => {
-        //e.preventDefault()
-        console.log('change')
-        setcvmChecked(val)
-      }
-
-      const cvmsIp: any = data['cvms_ip']
-      const dispCvm = cvmsIp.map((val: string, idx: number) => {
-        const isLeader = val === prismLeader ? '*' : null
-        return (
-          <div key={idx}>
-            <label className='label justify-normal cursor-pointer p-0'>
-              <input
-                type='radio'
-                name='cvm'
-                value={val}
-                className='radio radio-primary radio-xs'
-                onChange={() => handleOptionChange(val)}
-                checked={val === cvmChecked}
-              />
-              <div className='inline pl-1 text-left'>
-                {val}
-                <p className='inline text-xl text-red-700'>{isLeader}</p>
-              </div>
-            </label>
-          </div>
-        )
-      })
-      return <form>{dispCvm}</form>
-    }
-    return <></>
-  }
 
   function CvmList(res: any) {
     if (isLoading) return <p>Loading...</p>
@@ -195,6 +118,7 @@ const Content = () => {
     const cvmChecked = res.cvmChecked
     const handleOptionChange = (val: string) => {
       setcvmChecked(val)
+      console.log('change cvm', val)
     }
 
     const dispCvm = cvmsIp.map((val: string, idx: number) => {
@@ -250,7 +174,7 @@ const Content = () => {
                   <p className='border border-black p-1'>CVM list</p>
                 </div>
                 <div className=''>
-                  <CvmList cvmsIp={data ? data.cvms_ip : ''} prismLeader={data ? data.prism_leader : ''} cvmChecked={cvmChecked} />
+                  <CvmList cvmsIp={data ? data.cvms_ip : ''} prismLeader={data ? prismLeader : ''} cvmChecked={cvmChecked} />
                 </div>
                 <div className=''>
                   <p className='inline text-xl text-red-700 '>*</p>
