@@ -1,0 +1,52 @@
+body{
+  background-color: rgb(202, 214, 226);
+  padding: 0px;
+  font-size: 14px;
+  color: rgb(50, 50, 50);
+}
+
+nav{
+  height: 40px;
+}
+
+footer {
+  text-align: center;
+  font-size: 80%;
+}
+
+h2{
+  margin: 20px auto;
+}
+
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.content{
+  max-width: 80%;
+  background-color: whitesmoke;
+  box-shadow: 0 0 10px rgba(0, 0, 0, .3);
+  margin: 10px auto;
+  padding: 20px;
+  text-align: center;
+}
+
+.content form {
+  margin-bottom: 10px;
+}
+
+.list{
+  background-color: white;
+  max-width: 80%;
+  margin-top: 10px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 10px 20px 20px 20px;
+
+  border: 1px solid;
+}
+
+

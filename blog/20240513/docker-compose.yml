@@ -60,16 +60,6 @@ services:
     networks:
       - local
 
-  syslog:
-    build:
-      context: ./syslog
-      dockerfile: dockerfile
-    container_name: loghoi-syslog
-    ports:
-      - 7515:7515
-    networks:
-      - local
-
 networks:
   local:
     driver: bridge
