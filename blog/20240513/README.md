@@ -1,3 +1,4 @@
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/29d7eb60-2b90-4024-bedf-49f419fa1a1b)
 # スタート方法
 そのうちフロントエンドとバックエンドは自動起動にする  
 今は開発フェイズなので、デバッグしやすいように手動起動  
@@ -85,4 +86,37 @@ https://nextjs.org/telemetry
 
 - 起動確認  
 ブラウザで、`localhost:7777` にアクセス  
-![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/cd1deacb-9e10-4807-95e0-068176eaae00)
+Prism Central の情報入力して登録します
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/9f357520-df3c-4a2d-9b55-7c58e262d8c6)
+
+
+## ログほいほい  
+登録した Prism Central を選択  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/ae461b5c-fe2d-442c-a6c9-1f35f837ac17)
+  
+Realtime Log を選択  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/e11cf7f2-3c08-4c27-8f1d-5c7b9e43144a)
+  
+SSH KEY をクラスタに登録する  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/61812355-d5d5-4dbb-ad97-727a5b9433be)
+  
+SSH KEYをコピー  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/71cf4ac7-5d99-4b68-8a00-351721899ba2)
+  
+Prismに SSH KEY 登録  
+Prismにログインしクラスタロックダウンの設定ページで、公開鍵を登録  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/4f2b7fa9-faf5-4ec6-93ab-e70574026da1)  
+<img src="https://github.com/konchangakita/blog-loghoi/assets/64240365/da7c2942-f91b-423e-adff-12d8517a7494" width="400">  
+  
+ログを選んで、Tail -f 開始  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/ffec398c-663d-4b63-a42d-dd691b736e19)
+
+
+
+
+
+
+
+
+
+
