@@ -76,9 +76,9 @@ const Navbar = () => {
             {isOpen && (
               <div className='fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 '>
                 <div className='modal-box w-11/12 max-w-5xl text-left text-wrap '>
-                  <h3 className='font-bold text-gray-900 text-lg mb-2'>Copy ssh-key setting Prism Element's Cluster Lockdown Configuration</h3>
+                  <h3 className='font-bold text-gray-900 text-lg mb-2 '>Copy ssh-key setting Prism Element's Cluster Lockdown Configuration</h3>
                   <article className='break-words rounded-xl bg-gray-100 p-2'>
-                    <p className='p-2 text-xs text-gray-500 text-balance'>{sshKey}</p>
+                    <p className='p-2 text-xs text-gray-500 text-balance select-all'>{sshKey}</p>
                   </article>
                   <div className='modal-action'>
                     <form method='dialog'>

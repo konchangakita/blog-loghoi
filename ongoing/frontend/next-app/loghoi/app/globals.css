@@ -18,10 +18,16 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+  background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
+}
+
+.antiscrollbar-vertical::-webkit-scrollbar {
+  width: 7px;
+}
+.antiscrollbar-vertical::-webkit-scrollbar-track {
+  background-color: #ffffff;
+}
+.antiscrollbar-vertical::-webkit-scrollbar-thumb {
+  background-color: grey;
+  border-radius: 7px;
 }

@@ -49,7 +49,6 @@ const Content = () => {
   const [tailPath, setTailPath] = useState<string>('/home/nutanix/data/logs/genesis.out')
   const [tailCecked, setTailChecked] = useState<string>('genesis')
   const handleTailLog = (name: string, path: string) => {
-    console.log(path)
     setTailChecked(name)
     setTailPath(path)
   }
@@ -59,18 +58,21 @@ const Content = () => {
     return (
       <>
         <p className='border border-black p-1'>Log list</p>
-        <form>
-          {LogFiles.map((val) => {
-            return (
-              <div key={val.name}>
-                <label className='label justify-start cursor-pointer pl-0.5 p-0 text-sm'>
-                  <input type='radio' value={val.name} onChange={() => handleTailLog(val.name, val.path)} checked={tailCecked === val.name} />
-                  <div className='pl-1'>{val.name}</div>
-                </label>
-              </div>
-            )
-          })}
-        </form>
+        <p className='font-extrabold bg-purple-100 rounded-full'>{tailCecked}</p>
+        <div className='h-[460px] overflow-auto overflow-x-hidden scroll-py-1 scroll-padding antiscrollbar-vertical'>
+          <form>
+            {LogFiles.map((val, idx: number) => {
+              return (
+                <div className='hover:bg-gray-200' key={idx}>
+                  <label className='label justify-start cursor-pointer pl-0.5 p-0 text-sm'>
+                    <input type='radio' value={val.name} onChange={() => handleTailLog(val.name, val.path)} checked={tailCecked === val.name} />
+                    <div className='pl-1'>{val.name}</div>
+                  </label>
+                </div>
+              )
+            })}
+          </form>
+        </div>
       </>
     )
   }
@@ -164,8 +166,8 @@ const Content = () => {
       </div>
       <div className='p-1'>
         <div className='p-1 flex flex-nowrap justify-center items-start'>
-          <div className='form-control flex basis-1/12 p-1 border'>
-            <div>
+          <div className='form-control flex basis-1/12 p-1 border '>
+            <div className=''>
               <TailList />
             </div>
             <div className='p-1'>
