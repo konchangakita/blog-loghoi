@@ -4,7 +4,7 @@ import { Suspense } from 'react'
 import { LogFiles } from '@/lib/rt-logs'
 
 //components
-import Content from './realtimelog-content'
+import RealtimelogContent from './realtimelog-content'
 
 const RealtimelogPage = () => {
   return (
@@ -14,7 +14,7 @@ const RealtimelogPage = () => {
           <p className='text-3xl text-primary p-1'>Realtime Log Viewer &lt;tail -f&gt;</p>
         </div>
         <Suspense fallback={<p>Loading feed...</p>}>
-          <Content />
+          <RealtimelogContent />
         </Suspense>
       </div>
     </>

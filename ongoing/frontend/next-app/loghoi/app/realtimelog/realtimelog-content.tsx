@@ -4,9 +4,6 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
-//api
-import fetchPost from '@/app/_api/getTailList'
-
 // Lib
 //import { LogFiles } from '@/lib/rt-logs'
 import { LogFiles } from '@/lib/rt-logs'
@@ -35,7 +32,7 @@ type ResValues = {
   uuid: string
 }
 
-const Content = () => {
+const RealtimelogContent = () => {
   const searchParams = useSearchParams()
   const PrismIp = searchParams.get('prism')
 
@@ -59,7 +56,7 @@ const Content = () => {
       <>
         <p className='border border-black p-1'>Log list</p>
         <p className='font-extrabold bg-purple-100 rounded-full'>{tailCecked}</p>
-        <div className='h-[460px] overflow-auto overflow-x-hidden scroll-py-1 scroll-padding antiscrollbar-vertical'>
+        <div className='h-[460px] overflow-auto overflow-x-hidden scroll-py-1 scroll-padding antiscrollbar-vertical antiscrollbar-w-7'>
           <form>
             {LogFiles.map((val, idx: number) => {
               return (
@@ -193,4 +190,4 @@ const Content = () => {
     </>
   )
 }
-export default Content
+export default RealtimelogContent

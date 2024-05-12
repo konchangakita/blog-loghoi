@@ -21,8 +21,11 @@ body {
   background: linear-gradient(to bottom, transparent, rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
 }
 
-.antiscrollbar-vertical::-webkit-scrollbar {
+.antiscrollbar-w-7::-webkit-scrollbar {
   width: 7px;
+}
+.antiscrollbar-w-12::-webkit-scrollbar {
+  width: 12px;
 }
 .antiscrollbar-vertical::-webkit-scrollbar-track {
   background-color: #ffffff;

@@ -5,19 +5,11 @@ filebeat.inputs:
 
 # Output先をElasticSearchに設定
 output.elasticsearch:
-  hosts: ["10.149.131.126:9200"]
+  hosts: ["elasticsearch:9200"]
   protocol: "http"
 
 setup.kibana:
-  host: "10.149.131.126:5601"
-# old
-# System moduleを有効化
-#filebeat.modules:
-#  - module: system
-
-#output.elasticsearch:
-#  hosts: ["172.16.0.131:9200"]
-
+  host: "kibana:5601"
 # FilebeatのConfig設定
 #filebeat.config.modules:
 #  enabled: true

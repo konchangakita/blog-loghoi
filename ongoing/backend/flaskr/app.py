@@ -9,10 +9,11 @@ from elasticsearch import Elasticsearch
 
 import regist
 import common
-import broker_rt
+import broker_rt, broker_sys
 
 reg = regist.RegistGateway()
 rt = broker_rt.RealtimeLogGateway()
+sys = broker_sys.SyslogGateway()
 
 ELASTIC_SERVER = "http://elasticsearch:9200"
 es = Elasticsearch(ELASTIC_SERVER)
@@ -73,7 +74,12 @@ def cvmlist():
     return make_response(jsonify(cvm_list))
 
 
-
+# Syslog search search & date/time
+@app.route("/api/sys/search", methods=["POST"])
+def sys_search():
+    print(request.json)  # keyword, start_datetime, end_datetime
+    data = sys.search_syslog(request.json)
+    return make_response(jsonify(data))
 
 
 
