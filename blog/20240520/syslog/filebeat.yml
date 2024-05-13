@@ -1,0 +1,21 @@
+filebeat.inputs:
+  - type: syslog
+    protocol.tcp:
+      host: "0.0.0.0:7515"
+
+# Output先をElasticSearchに設定
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  protocol: "http"
+
+setup.kibana:
+  host: "kibana:5601"
+# FilebeatのConfig設定
+#filebeat.config.modules:
+#  enabled: true
+#  path: ${path.config}/modules.d/*.yml
+
+# ElasticSearchのIndex名を変更
+#output.elasticsearch.index: "syslogtest-%{[agent.version]}-%{+yyyy.MM.dd}"
+#setup.template.name: "syslogtest"
+#setup.template.pattern: "syslogtest-*"
