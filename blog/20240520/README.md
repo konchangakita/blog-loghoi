@@ -116,9 +116,90 @@ Prismにログインしクラスタロックダウンの設定ページで、公
   
 ログを選んで、Tail -f 開始  
 ![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/ffec398c-663d-4b63-a42d-dd691b736e19)
+  
+<br>
+<br>
+  
+## リアルタイムログビューワー
+
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/5325b098-5124-42a4-abd0-3338975d0ad5)
 
 
 
+
+### クラスタ側でsyslog設定は CVM でCLIでの設定が必要  
+Acropolis Advanced Administration Guide  
+https://portal.nutanix.com/page/documents/details?targetId=Advanced-Admin-AOS-v6_5:set-rsyslog-config-c.html
+
+cvmにssh  
+```sh
+ncli
+````
+
+なぜかTCPじゃないとうまくいかなかったので
+１．syslogサーバの登録  
+```sh
+rsyslog-config add-server name=elastic-filebeat ip-address=xx.xxx.xxx.xxx port=7515 network-protocol=TCP relp-enabled=false
+```
+
+実行結果サンプル
+```sh
+<ncli> rsyslog-config add-server name=elastic-filebeat ip-address=10.38.4.22 port=7515 network-protocol=TCP relp-enabled=false
+
+    Name                      : elastic-filebeat
+    IP Address                : 10.38.4.22
+    Port                      : 7515
+    Protocol                  : TCP
+    Relp Enabled              : false
+```
+
+２．送信対象のモジュールを指定（ERROR以上）  
+```sh
+rsyslog-config add-module server-name=elastic-filebeat module-name=CASSANDRA level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=CEREBRO level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=CURATOR level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=GENESIS level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=PRISM level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=STARGATE level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=SYSLOG_MODULE level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=ZOOKEEPER level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=UHURA level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=LAZAN level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=API_AUDIT level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=CALM level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=EPSILON level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=ACROPOLIS level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=MINERVA_CVM level=ERROR include-monitor-logs=false
+rsyslog-config add-module server-name=elastic-filebeat module-name=FLOW level=ERROR include-monitor-logs=false
+```
+  
+実行結果サンプル  
+```  
+<ncli> rsyslog-config add-module server-name=elastic-filebeat module-name=CASSANDRA level=ERROR include-monitor-logs=false
+
+    RSyslog Servers           : elastic-filebeat
+    Module Name               : CASSANDRA
+    Log Level                 : ERROR
+    Include Monitor Logs      : false
+<ncli> rsyslog-config add-module server-name=elastic-filebeat module-name=CEREBRO level=ERROR include-monitor-logs=false
+
+    RSyslog Servers           : elastic-filebeat
+    Module Name               : CEREBRO
+    Log Level                 : ERROR
+    Include Monitor Logs      : false
+（以下略）
+```
+  
+
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/c98cd032-1842-48c0-b376-ec5b2af7dbb1)
+  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/cac88e5e-5fe7-4d13-b157-8190f5cbcfe0)
+  
+  
+中身は Elasticsearch なので Kibana でも確認も可能  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/049eb1b6-6a29-4b03-a2f8-df56f0191183)
+  
+![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/63c52611-84b8-4b32-8848-c85beb827eea)
 
 
 
