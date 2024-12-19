@@ -60,8 +60,8 @@ log-xplorer-backendのコンテナに接続する
 ```
 docker exec -it loghoi-frontend bash
 ```
-`/usr/src/next-app/log-xplorer` 配下で `yarn`  
-`/usr/src/next-app/log-xplorer` 配下で `npm run dev`  
+`/usr/src/next-app/loghoi` 配下で `yarn`  
+`/usr/src/next-app/loghoi` 配下で `npm run dev`  
 ```
 npm run dev
 
