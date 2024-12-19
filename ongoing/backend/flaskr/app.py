@@ -9,11 +9,12 @@ from elasticsearch import Elasticsearch
 
 import regist
 import common
-import broker_rt, broker_sys
+import broker_rt, broker_sys, broker_col
 
 reg = regist.RegistGateway()
 rt = broker_rt.RealtimeLogGateway()
 sys = broker_sys.SyslogGateway()
+col = broker_col.CollectLogGateway()
 
 ELASTIC_SERVER = "http://elasticsearch:9200"
 es = Elasticsearch(ELASTIC_SERVER)
@@ -82,8 +83,19 @@ def sys_search():
     return make_response(jsonify(data))
 
 
+##############################
+# Collect Log
+##########################
 
+# get log and zip
+@app.route("/api/col/getlogs", methods=["POST"])
+def col_get():
+    print(request.json)
+    data = request.json
+    data2 = col.collect_logs(request.json['cvm'])
+    print(data2)
 
+    return make_response(jsonify(data))
 
 
 
