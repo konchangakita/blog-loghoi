@@ -95,7 +95,7 @@ def col_get():
     data2 = col.collect_logs(request.json['cvm'])
     print(data2)
 
-    return make_response(jsonify(data))
+    return make_response(jsonify(data2))
 
 
 

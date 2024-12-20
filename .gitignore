@@ -172,3 +172,6 @@ package-lock.json
 
 next
 next2023
+
+# backend log dir
+output
