@@ -37,20 +37,20 @@
       "command": "/home/nutanix/prism/cli/ncli alert ls max-alerts=16"
     },
     {
-      "name": "ncli_license_get-license",
-      "command": "/home/nutanix/prism/cli/ncli license get-license"
-    },
-    {
       "name": "ncli_license_get-allowances",
       "command": "/home/nutanix/prism/cli/ncli license get-allowances"
     },
     {
-      "name": "zeus_config_printer",
-      "command": "/usr/local/nutanix/bin/zeus_config_printer"
-    },
-    {
       "name": "nodetool_-h_0_ring",
       "command": "/usr/local/nutanix/apache-cassandra/bin/nodetool -h 0 ring"
+    },
+    {
+      "name": "ncli_license_get-license",
+      "command": "/home/nutanix/prism/cli/ncli license get-license"
+    },
+    {
+      "name": "zeus_config_printer",
+      "command": "/usr/local/nutanix/bin/zeus_config_printer"
     }
   ]
 }

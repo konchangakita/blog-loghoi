@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation'
 
 // component
 import Laoding from '@/components/loading'
+import { Console } from 'console'
 
 interface dict {
   [key: string]: string
@@ -34,6 +35,16 @@ const CollectlogContnet = () => {
   const [data, setData] = useState<ResValues>()
   const [prismLeader, setprismLeader] = useState<string>('')
   const [cvmChecked, setcvmChecked] = useState<string>('')
+
+  // Zip list
+  const [zipList, setZipList] = useState<string[]>([])
+  const [selectedZip, setSelectedZip] = useState<string | null>(null)
+  const [loadingZip, setLoadingZip] = useState(false)
+  const [logInZip, setLogInZip] = useState<string[]>([])
+
+  // 真ん中の表示用
+  const [displayLog, setDisplayLog] = useState<string>()
+
   const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
   const requestOptions = {
     method: 'POST',
@@ -117,6 +128,53 @@ const CollectlogContnet = () => {
       alert('Failed to connect to backend')
       setLoading(false)
     }
+
+    // ziplistの更新
+    const listRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/ziplist`)
+    const listJson = await listRes.json()
+    setZipList(listJson)
+  }
+
+  // Ziplistの取得
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/ziplist`)
+      .then((res) => res.json())
+      .then((data) => setZipList(data))
+  }, [])
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const zipName = e.target.value
+    setSelectedZip(zipName)
+    if (zipName) {
+      setLoadingZip(true)
+      fetch(`${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/logs_in_zip/${zipName}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (Array.isArray(data)) {
+            setLogInZip(data)
+          } else {
+            setLogInZip([])
+          }
+          setLoadingZip(false)
+        })
+    } else {
+      // 空選択時
+      setLogInZip([])
+    }
+  }
+
+  // 真ん中表示用
+  const handleDisplayLog = (logFile: string) => {
+    const requestOptions = {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ log_file: logFile, zip_name: selectedZip }),
+    }
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/logdisplay`, requestOptions)
+      .then((res) => res.json())
+      .then((data) => {
+        setDisplayLog(data)
+      })
   }
 
   return (
@@ -128,15 +186,46 @@ const CollectlogContnet = () => {
             Start Collect Log
           </button>
           <div className='w-49 text-center'>
+            <div className='text-primary py-1'>
+              <div className='flex justify-center py-1'>
+                <select className='select select-primary w-48 max-w-xs text-sm' onChange={handleSelectChange} value={selectedZip ?? ''}>
+                  <option value='' className='text-center'>
+                    -- Please select --
+                  </option>
+                  {zipList.length
+                    ? zipList.map((zip) => (
+                        <option value={zip} key={zip}>
+                          {zip}
+                        </option>
+                      ))
+                    : null}
+                </select>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div>
+              <button className='btn btn-secondary w-48'>
+                <a href={`http://localhost:7776/api/col/download/${selectedZip}`}>ZIP File Download</a>
+              </button>
+            </div>
+          </div>
+          <div className='w-49 text-center'>
             <div className='text-primary'>File / Log List</div>
             <div className='h-96 overflow-auto'>
-              <div>Log1</div>
-              <div>Log2</div>
-              <div>Log3</div>
-              <div>Log4</div>
-              <div>Log5</div>
-              <div>Log6</div>
-              <div>Log7</div>
+              {loadingZip ? (
+                <p>ログ一覧取得中...</p>
+              ) : (
+                <ul className='menu break-all bg-base-100 w-44 text-left text-xs py-0'>
+                  {logInZip.map((log) => (
+                    <li key={log}>
+                      <div className='py-0.5' onClick={() => handleDisplayLog(log)}>
+                        {log}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
 
@@ -160,7 +249,7 @@ const CollectlogContnet = () => {
             <div className='w-[640px]'>
               <pre className='px-2'>
                 <code>
-                  <p className='text-xs m-0 p-0'></p>
+                  <p className='text-xs m-0 p-0'>{displayLog}</p>
                 </code>
               </pre>
             </div>

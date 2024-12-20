@@ -1,7 +1,7 @@
 from flask import Flask
 from flask import render_template
 from flask import request
-from flask import make_response, jsonify
+from flask import make_response, jsonify, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 
@@ -70,7 +70,7 @@ def cvmlist():
     cluster_name = request.json
 
     cvm_list = common.get_cvmlist(cluster_name)
-    print(cvm_list)
+    #print(cvm_list)
 
     return make_response(jsonify(cvm_list))
 
@@ -89,13 +89,40 @@ def sys_search():
 
 # get log and zip
 @app.route("/api/col/getlogs", methods=["POST"])
-def col_get():
+def col_getlogs():
     print(request.json)
-    data = request.json
-    data2 = col.collect_logs(request.json['cvm'])
-    print(data2)
+    data = col.collect_logs(request.json['cvm'])
 
-    return make_response(jsonify(data2))
+    return make_response(jsonify(data))
+
+# get zip list
+@app.route("/api/col/ziplist", methods=["GET"])
+def col_pclist():
+    data = col.get_ziplist()
+    return jsonify(data)
+
+# get zip内のログ一覧
+@app.route("/api/col/logs_in_zip/<zip_name>", methods=["GET"])
+def col_logs_in_zip(zip_name):
+    #data = [ "file1", "file2", "file3"]
+    data = col.get_logs_in_zip(zip_name)
+    return jsonify(data)
+
+# get zip内のログ一覧
+@app.route("/api/col/logdisplay", methods=["POST"])
+def col_logdisplay():
+    log_file = request.json['log_file']
+    zip_name = request.json['zip_name']
+    data = col.get_logcontent(log_file, zip_name)
+    return jsonify(data)
+
+# zipファイルのダウンロード
+@app.route("/api/col/download/<zip_name>", methods=["GET"])
+def col_download(zip_name):
+    zip_path = col.download_zip(zip_name)
+    if not zip_path:
+        return jsonify({"error": "File not found"}), 404
+    return send_file(zip_path, as_attachment=True, download_name=zip_name)
 
 
 
@@ -103,7 +130,6 @@ def col_get():
 # socketio
 ##########################
 ssh_connection = {}
-
 
 @socketio.on("connect")
 def socket_connect():

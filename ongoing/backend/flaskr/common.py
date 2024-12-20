@@ -121,7 +121,7 @@ def get_cvmlist(cluster_name):
     # Determine ssh is complete
     if ssh:
         res = get_prism_leader(ssh)
-        print('cvm_list res', res)
+        #print('cvm_list res', res)
 
         res_json = json.loads(res)
         _prism_leader = re.split(":", res_json["leader"])
