@@ -1,0 +1,108 @@
+{
+  "LOGFILE_LIST": [
+    {
+      "name": "acropolis",
+      "src_path": "/home/nutanix/data/logs/acropolis.out"
+    },
+    {
+      "name": "acropolis-scheduler",
+      "src_path": "/home/nutanix/data/logs/acropolis-scheduler.out"
+    },
+    {
+      "name": "alert_manager",
+      "src_path": "/home/nutanix/data/logs/alert_manager.out"
+    },
+    {
+      "name": "anduril",
+      "src_path": "/home/nutanix/data/logs/anduril.out"
+    },
+    {
+      "name": "aplos_engine",
+      "src_path": "/home/nutanix/data/logs/aplos_engine.out"
+    },
+    {
+      "name": "aplos",
+      "src_path": "/home/nutanix/data/logs/aplos.out"
+    },
+    {
+      "name": "arithmos_collector",
+      "src_path": "/home/nutanix/data/logs/arithmos_collector.out"
+    },
+    {
+      "name": "arithmos",
+      "src_path": "/home/nutanix/data/logs/arithmos.out"
+    },
+    {
+      "name": "athena",
+      "src_path": "/home/nutanix/data/logs/athena.out"
+    },
+    {
+      "name": "atlc",
+      "src_path": "/home/nutanix/data/logs/atlc.out"
+    },
+    {
+      "name": "atlc_service_monitor",
+      "src_path": "/home/nutanix/data/logs/atlc_service_monitor.out"
+    },
+    {
+      "name": "cassandra",
+      "src_path": "/home/nutanix/data/logs/cassandra.out"
+    },
+    {
+      "name": "catalina",
+      "src_path": "/home/nutanix/data/logs/catalina.out"
+    },
+    {
+      "name": "catalog",
+      "src_path": "/home/nutanix/data/logs/catalog.out"
+    },
+    {
+      "name": "cerebro",
+      "src_path": "/home/nutanix/data/logs/cerebro.out"
+    },
+    {
+      "name": "cfs",
+      "src_path": "/home/nutanix/data/logs/cfs.out"
+    },
+    {
+      "name": "chronos",
+      "src_path": "/home/nutanix/data/logs/chronos.out"
+    },
+    {
+      "name": "cim_service",
+      "src_path": "/home/nutanix/data/logs/cim_service.out"
+    },
+    {
+      "name": "cluster_config",
+      "src_path": "/home/nutanix/data/logs/cluster_config.out"
+    },
+    {
+      "name": "cluster_health",
+      "src_path": "/home/nutanix/data/logs/cluster_health.out"
+    },
+    {
+      "name": "cluster_sync",
+      "src_path": "/home/nutanix/data/logs/cluster_sync.out"
+    },
+    {
+      "name": "command_collector",
+      "src_path": "/home/nutanix/data/logs/command_collector.out"
+    },
+    {
+      "name": "counters_collector",
+      "src_path": "/home/nutanix/data/logs/counters_collector.out"
+    },
+    {
+      "name": "curator_cli",
+      "src_path": "/home/nutanix/data/logs/curator_cli.out"
+    },
+    {
+      "name": "curator",
+      "src_path": "/home/nutanix/data/logs/curator.out"
+    },
+    {
+      "name": "delphi",
+      "src_path": "/home/nutanix/data/logs/delphi.out"
+    }
+  ]
+}
