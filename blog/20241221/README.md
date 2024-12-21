@@ -200,10 +200,22 @@ rsyslog-config add-module server-name=elastic-filebeat module-name=FLOW level=ER
 ![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/049eb1b6-6a29-4b03-a2f8-df56f0191183)
   
 ![image](https://github.com/konchangakita/blog-loghoi/assets/64240365/63c52611-84b8-4b32-8848-c85beb827eea)
+  
+  
+## コレクトログ & ビューワー
 
+![image](https://github.com/user-attachments/assets/07a9882b-1da9-4a16-9699-43f330edcd5d)
 
+ログの取得　→　zipファイルまで
+![image](https://github.com/user-attachments/assets/8b9b8e47-32f4-4f43-9b10-9ab3d9217f88)
 
+zipファイルの一覧
+![image](https://github.com/user-attachments/assets/5dce45b2-2255-41a8-8966-7a0a55810200)
 
+zipファイル内のログ一覧表示
+![image](https://github.com/user-attachments/assets/5d3991df-68fd-45d4-afb2-ab57ff37e0e5)
 
+ログビューワー
+![image](https://github.com/user-attachments/assets/6e7488b6-40f2-47c7-99c2-86ae8afc65ef)
 
 
