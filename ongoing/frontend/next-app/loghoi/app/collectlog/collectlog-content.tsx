@@ -30,6 +30,7 @@ const CollectlogContnet = () => {
 
   // loading
   const [loading, setLoading] = useState(true)
+  const [loadingDisp, setLoadingDsip] = useState(false)
 
   // CVM list, and connect to paramiko with checked cvm
   const [data, setData] = useState<ResValues>()
@@ -165,6 +166,7 @@ const CollectlogContnet = () => {
 
   // 真ん中表示用
   const handleDisplayLog = (logFile: string) => {
+    setLoadingDsip(true)
     const requestOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -174,6 +176,7 @@ const CollectlogContnet = () => {
       .then((res) => res.json())
       .then((data) => {
         setDisplayLog(data)
+        setLoadingDsip(false)
       })
   }
 
@@ -249,7 +252,7 @@ const CollectlogContnet = () => {
             <div className='w-[640px]'>
               <pre className='px-2'>
                 <code>
-                  <p className='text-xs m-0 p-0'>{displayLog}</p>
+                  <p className='text-xs m-0 p-0'>{loadingDisp ? <p>Loading...</p> : displayLog}</p>
                 </code>
               </pre>
             </div>
