@@ -111,7 +111,7 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
         ) : (
           <label htmlFor='my-modal'>
             <div className='hotx btn btn-secondary btn-wide btn-outline' onClick={handleDisconnect}>
-              <p className=''>"tail -f {tailName}" NOW</p>
+              <p className=''>"tail -f {tailName}",</p>
               <p className=''>stop?</p>{' '}
             </div>
           </label>

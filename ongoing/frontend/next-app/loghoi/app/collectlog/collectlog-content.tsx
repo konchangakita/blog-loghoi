@@ -3,7 +3,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 // component
-import Laoding from '@/components/loading'
+import Loading from '@/components/loading'
+import Collecting from '@/components/collecting'
 import { Console } from 'console'
 
 interface dict {
@@ -30,6 +31,7 @@ const CollectlogContnet = () => {
 
   // loading
   const [loading, setLoading] = useState(true)
+  const [collecting, setCollecting] = useState(false)
   const [loadingDisp, setLoadingDsip] = useState(false)
 
   // CVM list, and connect to paramiko with checked cvm
@@ -110,7 +112,7 @@ const CollectlogContnet = () => {
 
   // get log
   const handleGetLogs = async () => {
-    setLoading(true)
+    setCollecting(true)
 
     const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/getlogs`
     const requestOptions = {
@@ -124,10 +126,10 @@ const CollectlogContnet = () => {
       const resJson = await response.json()
       console.log(resJson)
       //location.reload()
-      setLoading(false)
+      setCollecting(false)
     } else {
       alert('Failed to connect to backend')
-      setLoading(false)
+      setCollecting(false)
     }
 
     // ziplistの更新
@@ -152,6 +154,8 @@ const CollectlogContnet = () => {
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
+            data.sort()
+            console.log(data)
             setLogInZip(data)
           } else {
             setLogInZip([])
@@ -182,7 +186,8 @@ const CollectlogContnet = () => {
 
   return (
     <>
-      {loading && <Laoding />}
+      {collecting && <Collecting />}
+      {loading && <Loading />}
       <div className='flex flex-row h-full'>
         <div className='flex flex-col items-center'>
           <button className='btn btn-primary w-48' onClick={handleGetLogs}>
