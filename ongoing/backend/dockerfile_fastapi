@@ -1,0 +1,30 @@
+FROM python:3.12-slim
+
+# 作業ディレクトリ設定
+WORKDIR /usr/src
+
+# システム依存関係インストール
+RUN apt-get update && apt-get install -y \
+    openssh-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python依存関係インストール  
+COPY requirements_fastapi.txt /usr/src/
+RUN pip install --no-cache-dir -r requirements_fastapi.txt
+
+# アプリケーションファイルをコピー
+COPY flaskr/ /usr/src/flaskr/
+
+# 共通ライブラリ用ディレクトリ作成
+RUN mkdir -p /usr/src/shared
+
+# 実行ユーザー作成（セキュリティ向上）
+RUN useradd -m -s /bin/bash loghoi
+USER loghoi
+
+# ポート公開
+EXPOSE 7776
+
+# デフォルトコマンド
+CMD ["python", "/usr/src/flaskr/app_fastapi.py"]
