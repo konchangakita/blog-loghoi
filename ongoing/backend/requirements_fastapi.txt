@@ -1,0 +1,30 @@
+# LogHoi Backend Requirements (FastAPI版)
+
+# FastAPI Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+
+# WebSocket Support
+python-socketio==5.13.0
+python-engineio==4.12.2
+
+# Database & Search
+elasticsearch==8.9.0
+elastic-transport==8.4.0
+
+# SSH & Network
+paramiko==3.3.1
+requests==2.31.0
+
+# CORS & Security
+python-multipart==0.0.6
+
+# Development & Testing
+pytest==7.4.0
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Optional: Development tools
+black==23.7.0
+uvloop==0.19.0  # Performance boost for uvicorn

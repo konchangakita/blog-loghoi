@@ -1,0 +1,18 @@
+# Test Requirements for LogHoi
+# 既存のrequirements.txtに加えてテスト用依存関係
+
+# テストフレームワーク
+pytest==7.4.0
+pytest-cov==4.1.0
+pytest-mock==3.11.1
+pytest-flask==1.2.0
+
+# モック・テスト用ユーティリティ
+responses==0.23.1
+factory-boy==3.3.0
+
+# テスト用データベース（必要に応じて）
+pytest-elasticsearch==3.0.0
+
+# コードカバレッジ
+coverage==7.3.0
