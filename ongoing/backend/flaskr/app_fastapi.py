@@ -138,9 +138,18 @@ async def regist_pc(request: PCRegistRequest) -> Dict[str, Any]:
     """PC登録API"""
     print(f">>>> receive /api/regist: {request.prism_ip} <<<<<")
     try:
-        data = reg.regist_pc(request.dict())
-        print(">>>>> res: ", data)
-        return data
+        result = reg.regist_pc(request.dict())
+        print(">>>>> res: ", result)
+        
+        # 文字列レスポンスを辞書形式に変換
+        if isinstance(result, str):
+            return {
+                "status": "success" if "Success" in result else "error",
+                "message": result,
+                "prism_ip": request.prism_ip
+            }
+        else:
+            return result
     except Exception as e:
         print(f"❌ PC登録エラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))

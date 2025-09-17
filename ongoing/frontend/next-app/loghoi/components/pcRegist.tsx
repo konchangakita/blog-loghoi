@@ -23,35 +23,40 @@ const PcRegister = () => {
   } = useForm<FormValues>()
 
   const onConnect: SubmitHandler<FormValues> = async (data) => {
-    //const [pageLoading, setPageLoading] = useState(false)
-
-    //setPageLoading(true)
-    //console.log('Form input item: ', data)
-
-    //????????????????????
-    // localhostのままでよいのか。。。？
-    // サーバのIPアドレスでもいけるが。。。？
-    // .env から process.env.NEXT_PUBLIC_BACKEND
-    //??????????????????????????????????????????????
-    const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/regist`
-    //const requestUrl = `172.16.0.6:7776/api/regist`
-    console.log('request url: ', requestUrl)
-    const requestOptions = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
+    try {
+      const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/regist`
+      console.log('request url: ', requestUrl)
+      console.log('request data: ', data)
+      
+      const requestOptions = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      }
+      
+      const response = await fetch(requestUrl, requestOptions)
+      console.log('response status: ', response.status)
+      
+      if (response.status === 200) {
+        const res_json = await response.json()
+        console.log('response data: ', res_json)
+        
+        // レスポンスの内容を適切に表示
+        if (res_json.status === 'success') {
+          alert(`✅ 成功: ${res_json.message}`)
+        } else {
+          alert(`❌ エラー: ${res_json.message}`)
+        }
+        location.reload()
+      } else {
+        const errorText = await response.text()
+        console.error('API Error:', response.status, errorText)
+        alert(`❌ API接続エラー (${response.status}): ${errorText}`)
+      }
+    } catch (error) {
+      console.error('Network Error:', error)
+      alert(`❌ ネットワークエラー: ${error.message}`)
     }
-    const response = await fetch(requestUrl, requestOptions)
-    if (response.status === 200) {
-      const res_json = await response.json()
-      console.log(res_json)
-      // moda ni shitai
-      alert(res_json)
-      location.reload()
-    } else {
-      alert('Failed to connect to backend')
-    }
-    //setPageLoading(false)
   }
 
   return (
