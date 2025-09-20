@@ -112,21 +112,36 @@ def get_prism_leader(ssh):
 # Get CVM List from Elastic and Prism Leader from CVM
 def get_cvmlist(cluster_name):
     data = es.get_cvmlist_document(cluster_name)
+    if not data:
+        raise Exception(f"Cluster {cluster_name} not found")
+    
     cluster_data = data[0]
 
-    # Get Prism leader
+    # Get Prism leader (try SSH connection, but don't fail if it doesn't work)
     cvm = data[0]["cvms_ip"][0]
+    print(f"Attempting SSH connection to CVM: {cvm}")
     ssh = connect_ssh(cvm)
     
     # Determine ssh is complete
     if ssh:
-        res = get_prism_leader(ssh)
-        #print('cvm_list res', res)
+        try:
+            res = get_prism_leader(ssh)
+            print(f'CVM list res: {res}')
 
-        res_json = json.loads(res)
-        _prism_leader = re.split(":", res_json["leader"])
-        prism_leader = _prism_leader[0]
+            res_json = json.loads(res)
+            _prism_leader = re.split(":", res_json["leader"])
+            prism_leader = _prism_leader[0]
 
-        cluster_data["prism_leader"] = prism_leader
+            cluster_data["prism_leader"] = prism_leader
+            print(f"Prism leader set to: {prism_leader}")
+        except Exception as e:
+            print(f"Error getting prism leader: {e}")
+            # SSH接続は成功したが、Prism Leaderの取得に失敗した場合
+            cluster_data["prism_leader"] = None
+    else:
+        print(f"SSH connection failed to CVM: {cvm}")
+        # SSH接続に失敗した場合、デフォルトで最初のCVMをPrism Leaderとして設定
+        cluster_data["prism_leader"] = cvm
+        print(f"Setting default prism leader to first CVM: {cvm}")
 
     return cluster_data

@@ -191,7 +191,12 @@ async def get_pccluster(request: PCClusterRequest) -> Dict[str, Any]:
 async def get_cvmlist_api(cluster_name: Dict[str, str]) -> Dict[str, Any]:
     """CVM一覧取得API"""
     try:
-        cvm_list = get_cvmlist(cluster_name)
+        # 辞書からcluster_nameを抽出
+        cluster_name_str = cluster_name.get("cluster_name", "")
+        if not cluster_name_str:
+            raise HTTPException(status_code=400, detail="cluster_name is required")
+        
+        cvm_list = get_cvmlist(cluster_name_str)
         # リストではなく辞書として返す（元のFlask版に合わせる）
         return {"cvm_list": cvm_list} if isinstance(cvm_list, list) else cvm_list
     except Exception as e:
