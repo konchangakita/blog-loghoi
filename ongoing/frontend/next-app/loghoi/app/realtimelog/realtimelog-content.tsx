@@ -109,15 +109,41 @@ const RealtimelogContent = () => {
     console.log('cluster data get', prismLeader, cvmChecked)
   }, [])
 
-  function CvmList(res: any) {
+  function CvmList({ cvmsIp, prismLeader, cvmChecked }: { cvmsIp: any, prismLeader: string, cvmChecked: string }) {
     if (isLoading) return <p>Loading...</p>
 
-    const cvmsIp = res.cvmsIp
-    const prismLeader = res.prismLeader
-    const cvmChecked = res.cvmChecked
+    // cvmsIpが存在しない場合のエラーハンドリング
+    if (!cvmsIp) {
+      console.error('cvmsIp is undefined')
+      return (
+        <div className="text-red-500 p-4">
+          Error: CVM IP data is not available
+        </div>
+      )
+    }
+
+    // cvmsIpが配列でない場合のエラーハンドリング
+    if (!Array.isArray(cvmsIp)) {
+      console.error('cvmsIp is not an array:', cvmsIp)
+      return (
+        <div className="text-red-500 p-4">
+          Error: CVM IP data is not in valid format
+        </div>
+      )
+    }
     const handleOptionChange = (val: string) => {
       setcvmChecked(val)
       console.log('change cvm', val)
+    }
+
+    // cvmsIpが配列でない場合のエラーハンドリング
+    if (!Array.isArray(cvmsIp)) {
+      console.error('cvmsIp is not an array:', cvmsIp)
+      return (
+        <div className="text-red-500 p-4">
+          Error: CVM IP data is not available or invalid format
+        </div>
+      )
     }
 
     const dispCvm = cvmsIp.map((val: string, idx: number) => {
