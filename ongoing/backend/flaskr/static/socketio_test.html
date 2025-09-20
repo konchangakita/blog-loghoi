@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Socket.IO Test Client</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .log-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        .controls {
+            margin: 10px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Socket.IO Test Client</h1>
+        
+        <div id="status" class="status disconnected">
+            ❌ 未接続
+        </div>
+        
+        <div class="controls">
+            <button id="connectBtn" onclick="connect()">接続</button>
+            <button id="disconnectBtn" onclick="disconnect()" disabled>切断</button>
+            <button id="testLogBtn" onclick="testLogStream()" disabled>テストログ開始</button>
+            <button id="clearBtn" onclick="clearLogs()">ログクリア</button>
+        </div>
+        
+        <div class="log-container" id="logContainer">
+            <div>Socket.IO テストクライアントが起動しました</div>
+            <div>接続ボタンをクリックしてSocket.IOサーバーに接続してください</div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        let isConnected = false;
+
+        function updateStatus(message, className) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${className}`;
+        }
+
+        function addLog(message) {
+            const logContainer = document.getElementById('logContainer');
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function connect() {
+            if (isConnected) return;
+            
+            updateStatus('🔄 接続中...', 'connecting');
+            addLog('Socket.IOサーバーに接続中...');
+            
+            socket = io('http://localhost:7776');
+            
+            socket.on('connect', function() {
+                isConnected = true;
+                updateStatus('✅ 接続済み', 'connected');
+                addLog('✅ Socket.IOサーバーに接続しました');
+                
+                document.getElementById('connectBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                document.getElementById('testLogBtn').disabled = false;
+            });
+            
+            socket.on('disconnect', function() {
+                isConnected = false;
+                updateStatus('❌ 切断されました', 'disconnected');
+                addLog('❌ Socket.IOサーバーから切断されました');
+                
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('disconnectBtn').disabled = true;
+                document.getElementById('testLogBtn').disabled = true;
+            });
+            
+            socket.on('log_data', function(data) {
+                addLog(`📊 ログデータ: ${data.log}`);
+            });
+            
+            socket.on('log_error', function(data) {
+                addLog(`❌ エラー: ${data.error}`);
+            });
+            
+            socket.on('message', function(data) {
+                addLog(`💬 メッセージ: ${JSON.stringify(data)}`);
+            });
+        }
+
+        function disconnect() {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+        }
+
+        function testLogStream() {
+            if (!isConnected) return;
+            
+            addLog('🚀 テストログストリーミングを開始します...');
+            socket.emit('test_log');
+        }
+
+        function clearLogs() {
+            document.getElementById('logContainer').innerHTML = '';
+            addLog('ログをクリアしました');
+        }
+
+        // ページ読み込み時の初期化
+        addLog('Socket.IO テストクライアントが準備完了しました');
+    </script>
+</body>
+</html>

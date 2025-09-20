@@ -1,13 +1,13 @@
 import sys
 import os
 from typing import Dict, Any, List
-import asyncio
+import json
 
 # 共通ライブラリのパスを追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../shared'))
 
 # FastAPI関連インポート
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
@@ -53,10 +53,6 @@ class LogDisplayRequest(BaseModel):
     log_file: str
     zip_name: str
 
-class WebSocketLogMessage(BaseModel):
-    cvm: str
-    tail_name: str
-    tail_path: str
 
 # ========================================
 # FastAPI Application Setup
@@ -69,6 +65,7 @@ app = FastAPI(
     docs_url="/docs",  # Swagger UI
     redoc_url="/redoc"  # ReDoc
 )
+
 
 # CORS設定
 app.add_middleware(
@@ -90,31 +87,6 @@ col = CollectLogGateway()
 
 # Elasticsearch接続
 es = Elasticsearch(Config.ELASTICSEARCH_URL)
-
-# WebSocket接続管理
-class ConnectionManager:
-    def __init__(self):
-        self.active_connections: List[WebSocket] = []
-        self.ssh_connections: Dict[str, Any] = {}
-
-    async def connect(self, websocket: WebSocket, client_id: str):
-        await websocket.accept()
-        self.active_connections.append(websocket)
-        print(f">>>>>>>> WebSocket connected: {client_id} <<<<<<<<<")
-
-    def disconnect(self, websocket: WebSocket, client_id: str):
-        self.active_connections.remove(websocket)
-        # SSH接続があれば閉じる
-        if client_id in self.ssh_connections:
-            ssh = self.ssh_connections[client_id]
-            ssh.close()
-            del self.ssh_connections[client_id]
-            print(f">>>>>>>> SSH connection closed: {client_id} <<<<<<<<<")
-
-    async def send_personal_message(self, message: str, websocket: WebSocket):
-        await websocket.send_text(message)
-
-manager = ConnectionManager()
 
 # ========================================
 # Web UI Routes
@@ -280,85 +252,7 @@ async def download_zip(zip_name: str):
         print(f"❌ ZIPダウンロードエラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-# ========================================
-# WebSocket Endpoint
-# ========================================
 
-@app.websocket("/ws/log/{client_id}")
-async def websocket_log_endpoint(websocket: WebSocket, client_id: str):
-    """WebSocketログ監視エンドポイント"""
-    await manager.connect(websocket, client_id)
-    try:
-        while True:
-            # メッセージ受信
-            data = await websocket.receive_json()
-            message = WebSocketLogMessage(**data)
-            
-            print(f"###### WebSocket log request: {message}")
-            
-            # SSH接続確立
-            ssh = connect_ssh(message.cvm)
-            manager.ssh_connections[client_id] = ssh
-            
-            # リアルタイムログ開始
-            await start_realtime_log(websocket, ssh, message)
-            
-    except WebSocketDisconnect:
-        manager.disconnect(websocket, client_id)
-        print(f">>>>>>>> WebSocket disconnected: {client_id} <<<<<<<<<")
-    except Exception as e:
-        print(f"❌ WebSocketエラー: {e}")
-        manager.disconnect(websocket, client_id)
-
-async def start_realtime_log(websocket: WebSocket, ssh, message: WebSocketLogMessage):
-    """リアルタイムログ配信（非同期版）"""
-    try:
-        # SSH経由でtailコマンド実行
-        stdin, stdout, stderr = ssh.exec_command(f"tail -f -n 20 {message.tail_path}")
-        
-        # 非同期でログ行を送信
-        for line in stdout:
-            log_data = {
-                "name": message.tail_name,
-                "line": line.strip(),
-                "timestamp": str(asyncio.get_event_loop().time())
-            }
-            await websocket.send_json(log_data)
-            
-    except Exception as e:
-        print(f"❌ リアルタイムログエラー: {e}")
-        await websocket.send_json({"error": str(e)})
-
-# ========================================
-# Health Check & Info
-# ========================================
-
-@app.get("/health")
-async def health_check():
-    """ヘルスチェックAPI"""
-    return {
-        "status": "healthy",
-        "service": "LogHoi FastAPI",
-        "version": "2.0.0",
-        "elasticsearch": Config.ELASTICSEARCH_URL
-    }
-
-@app.get("/info")
-async def app_info():
-    """アプリケーション情報API"""
-    return {
-        "name": "LogHoi",
-        "description": "Nutanix Log Collection and Real-time Monitoring",
-        "version": "2.0.0",
-        "framework": "FastAPI",
-        "features": [
-            "PC/Cluster Management",
-            "Real-time Log Monitoring", 
-            "Syslog Search",
-            "Log Collection & Download",
-            "WebSocket Communication"
-        ]
-    }
 
 # ========================================
 # Application Startup

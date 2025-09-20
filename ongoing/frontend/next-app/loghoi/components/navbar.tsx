@@ -17,6 +17,49 @@ const Navbar = () => {
   const prism = searchParams.get('prism')
 
   const [isOpen, setIsOpen] = useState(false)
+  const [showCopied, setShowCopied] = useState(false)
+
+  // クリップボードにコピーする関数（フォールバック対応）
+  const copyToClipboard = async (text: string) => {
+    try {
+      // モダンブラウザのClipboard APIを試行
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text)
+        showCopiedMessage()
+        return
+      }
+      
+      // フォールバック: 古いブラウザやHTTP環境での対応
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      
+      const successful = document.execCommand('copy')
+      document.body.removeChild(textArea)
+      
+      if (successful) {
+        showCopiedMessage()
+      } else {
+        alert('クリップボードへのコピーに失敗しました。手動でコピーしてください。')
+      }
+    } catch (err) {
+      console.error('クリップボードコピーエラー:', err)
+      alert('クリップボードへのコピーに失敗しました。手動でコピーしてください。')
+    }
+  }
+
+  // コピー完了メッセージを表示する関数
+  const showCopiedMessage = () => {
+    setShowCopied(true)
+    setTimeout(() => {
+      setShowCopied(false)
+    }, 1000)
+  }
 
   /* eslint-disable */
   const sshKey =
@@ -76,15 +119,45 @@ const Navbar = () => {
             {isOpen && (
               <div className='fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 '>
                 <div className='modal-box w-11/12 max-w-5xl text-left text-wrap '>
-                  <h3 className='font-bold text-gray-900 text-lg mb-2 '>Copy ssh-key setting Prism Element's Cluster Lockdown Configuration</h3>
-                  <article className='break-words rounded-xl bg-gray-100 p-2'>
-                    <p className='p-2 text-xs text-gray-500 text-balance select-all'>{sshKey}</p>
+                  <h3 className='font-bold text-gray-900 text-lg mb-2 '>
+                    ssh-keyをコピーして Prism ElementのクラスターロックダウンへSSH Keyを追加してください
+                  </h3>
+                  <article className='break-words rounded-xl bg-gray-100 p-2 relative'>
+                    <p 
+                      className='p-2 text-xs text-gray-500 text-balance select-all cursor-pointer hover:bg-gray-200 transition-colors'
+                      onClick={() => {
+                        copyToClipboard(sshKey)
+                      }}
+                      title='クリックしてSSHキーをコピー'
+                    >
+                      {sshKey}
+                    </p>
+                    
+                    {/* Copied! ポップアップ - SSHキーの近くに表示 */}
+                    {showCopied && (
+                      <div className='absolute top-2 right-2 bg-green-500 text-white px-3 py-1 rounded-lg shadow-lg transform transition-all duration-300 ease-in-out z-10'>
+                        <div className='flex items-center space-x-1'>
+                          <svg className='w-4 h-4' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                            <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M5 13l4 4L19 7' />
+                          </svg>
+                          <span className='text-sm font-medium'>Copied!</span>
+                        </div>
+                      </div>
+                    )}
                   </article>
                   <div className='modal-action'>
+                    <button 
+                      className='btn btn-primary'
+                      onClick={() => {
+                        copyToClipboard(sshKey)
+                      }}
+                    >
+                      キーをコピー
+                    </button>
                     <form method='dialog'>
                       {/* if there is a button in form, it will close the modal */}
                       <button className='btn' onClick={() => setIsOpen(!isOpen)}>
-                        Close
+                        閉じる
                       </button>
                     </form>
                   </div>

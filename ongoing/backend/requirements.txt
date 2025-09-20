@@ -15,3 +15,6 @@ jupyterlab-pygments==0.2.2
 jupyterlab_server==2.24.0
 paramiko==3.3.1
 requests==2.31.0
+fastapi==0.104.1
+uvicorn==0.24.0
+python-socketio==5.10.0
