@@ -40,3 +40,4 @@ echo "4. APIドキュメント: $API_BASE_URL/docs"
 echo ""
 
 echo "=== テスト完了 ==="
+
