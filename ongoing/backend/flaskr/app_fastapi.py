@@ -172,7 +172,15 @@ async def get_pccluster(request: PCClusterRequest) -> Dict[str, Any]:
     try:
         cluster_list = {}
         if request.pcip:
-            cluster_list = reg.get_pccluster(request.dict())
+            cluster_data = reg.get_pccluster(request.dict())
+            # 配列レスポンスを辞書形式に変換
+            if isinstance(cluster_data, list):
+                cluster_list = {
+                    "clusters": cluster_data,
+                    "count": len(cluster_data)
+                }
+            else:
+                cluster_list = cluster_data
         sshkey = reg.get_sshkey()
         return cluster_list
     except Exception as e:

@@ -240,8 +240,30 @@ const ClusterTab = (res: any) => {
 const Contents = () => {
   const searchParams = useSearchParams()
   const pcIp = searchParams.get('pcip')
-  const clusterList = getClusterList({ pcip: pcIp })
-  console.log(clusterList)
+  const { data: clusterList, loading, error } = getClusterList({ pcip: pcIp })
+  console.log('Cluster List:', clusterList)
+
+  if (loading) {
+    return (
+      <>
+        <p className='pt-5 text-5xl text-white text-center'>Welcome to PC &#34;{pcIp}&#34;</p>
+        <div className='flex justify-center items-center h-64'>
+          <div className='text-white text-xl'>Loading cluster information...</div>
+        </div>
+      </>
+    )
+  }
+
+  if (error) {
+    return (
+      <>
+        <p className='pt-5 text-5xl text-white text-center'>Welcome to PC &#34;{pcIp}&#34;</p>
+        <div className='flex justify-center items-center h-64'>
+          <div className='text-red-500 text-xl'>Error: {error}</div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>
