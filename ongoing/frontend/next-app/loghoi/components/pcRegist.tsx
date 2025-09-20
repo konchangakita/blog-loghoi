@@ -55,7 +55,8 @@ const PcRegister = () => {
       }
     } catch (error) {
       console.error('Network Error:', error)
-      alert(`❌ ネットワークエラー: ${error.message}`)
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`❌ ネットワークエラー: ${errorMessage}`)
     }
   }
 
