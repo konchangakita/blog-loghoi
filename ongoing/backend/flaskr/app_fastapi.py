@@ -292,8 +292,9 @@ async def disconnect(sid):
     print(f"SocketIO クライアント {sid} が切断しました")
     
     # SSH接続とログ監視を停止
+    print(f"SSH接続とログ監視を停止開始 (切断: {sid})")
     await stop_ssh_log_monitoring()
-    print(f"SSH接続とログ監視を停止しました (切断: {sid})")
+    print(f"SSH接続とログ監視を停止完了 (切断: {sid})")
 
 @sio.event
 async def start_tail_f(sid, data):

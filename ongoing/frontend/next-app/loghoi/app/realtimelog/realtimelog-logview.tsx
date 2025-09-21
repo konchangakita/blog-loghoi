@@ -118,6 +118,70 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
     }
   }
 
+  // ログクリア
+  const handleClearLogs = () => {
+    console.log('Clearing logs...')
+    setLogs([])
+    console.log('Logs cleared')
+  }
+
+  // 統合開始ボタン: SocketIO接続 + tail -f Start
+  const handleStartAll = () => {
+    if (isConnecting) {
+      console.log('Already connecting...')
+      return
+    }
+
+    if (!tailName) {
+      console.log('ログ名が選択されていません')
+      alert('ログ名を選択してください')
+      return
+    }
+
+    console.log('Starting SocketIO connection and tail -f...')
+    setIsConnecting(true)
+    
+    // SocketIO接続
+    const newsocket = io('http://localhost:7776/', {
+      transports: ['polling', 'websocket'],
+      upgrade: true,
+      rememberUpgrade: false,
+      timeout: 20000,
+      forceNew: true
+    })
+    
+    console.log('SocketIO object created:', newsocket)
+    setSocket(newsocket)
+  }
+
+  // 統合停止ボタン: tail -f Stop + SocketIO切断
+  const handleStopAll = () => {
+    console.log('Stopping tail -f and disconnecting SocketIO...')
+    
+    if (socket && socket.connected) {
+      // tail -f停止
+      console.log('Emitting stop_tail_f event...')
+      socket.emit('stop_tail_f', {})
+    }
+    
+    // SocketIO切断
+    if (socket) {
+      console.log('Disconnecting SocketIO...')
+      socket.disconnect()
+      setSocket(null)
+    }
+    
+    setIsActive(false)
+    setIsConnecting(false)
+    
+    // モーダルを閉じる
+    const modal = document.getElementById('my-modal') as HTMLInputElement
+    if (modal) {
+      console.log('Closing modal...')
+      modal.checked = false
+    }
+  }
+
   // SocketIOイベントリスナーを登録
   useEffect(() => {
     if (socket) {
@@ -159,6 +223,18 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
         console.log('Socket ID:', socket.id)
         setIsActive(false) // 初期状態は非アクティブ
         setIsConnecting(false) // 接続完了
+        
+        // 接続成功後、自動的にtail -fを開始
+        if (tailName) {
+          console.log('Auto-starting tail -f after connection...')
+          setTimeout(() => {
+            socket.emit('start_tail_f', {
+              cvm_ip: cvmChecked,
+              log_path: tailPath,
+              log_name: tailName
+            })
+          }, 1000) // 1秒待機してから開始
+        }
       })
 
       socket.on('disconnect', () => {
@@ -198,12 +274,12 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
   // page遷移で disconnect
   useEffect(() => {
     const handleRouteChange = () => {
-      handleDisconnect()
+      handleStopAll() // SocketIO + SSH両方を切断
     }
     
     // ページの再読み込み・閉じる時に確実に切断
     const handleBeforeUnload = () => {
-      handleDisconnect()
+      handleStopAll() // SocketIO + SSH両方を切断
     }
     
     console.log('beforeHistoryChange on')
@@ -229,60 +305,46 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
   return (
     <>
       <div className='flex justify-center items-center m-2 space-x-2'>
-        {/* SocketIO接続ボタン */}
-        {isConnecting ? (
-          <div className='btn btn-primary btn-outline btn-disabled'>
-            <span className="loading loading-spinner loading-sm"></span>
-            接続中...
-          </div>
-        ) : !socket || !socket.connected ? (
-          <div className='btn btn-primary btn-outline' onClick={handleConnect}>
-            SocketIO接続
-          </div>
-        ) : (
-          <div className='btn btn-secondary btn-outline' onClick={handleDisconnect}>
-            SocketIO切断
-          </div>
-        )}
-
-        {/* tail -f ボタン */}
-        {isConnecting ? (
-          <div className='btn btn-disabled btn-outline'>
-            tail -f Start (接続中...)
-          </div>
-        ) : socket && socket.connected ? (
-          !isActive ? (
+        {/* 統合ボタンとログクリアボタン */}
+        <div className='flex gap-2'>
+          {/* 統合開始/停止ボタン */}
+          {isConnecting ? (
+            <div className='btn btn-primary btn-outline btn-disabled'>
+              <span className="loading loading-spinner loading-sm"></span>
+              接続中...
+            </div>
+          ) : !socket || !socket.connected ? (
             !tailName ? (
               <div className='btn btn-disabled btn-outline'>
-                tail -f Start (ログ名未選択)
+                ログ取得開始 (ログ名未選択)
               </div>
             ) : (
-              <div className='btn btn-success btn-outline' onClick={handleStartTailF}>
-                tail -f Start
+              <div className='btn btn-success btn-outline' onClick={handleStartAll}>
+                ログ取得開始
               </div>
             )
           ) : (
             <label htmlFor='my-modal'>
-              <div className='btn btn-warning btn-outline'>
-                tail -f Stop
+              <div className='btn btn-error btn-outline'>
+                ログ取得停止
               </div>
             </label>
-          )
-        ) : (
-          <div className='btn btn-disabled btn-outline'>
-            tail -f Start (SocketIO未接続)
+          )}
+          
+          {/* ログクリアボタン */}
+          <div className='btn btn-warning btn-outline' onClick={handleClearLogs}>
+            ログクリア
           </div>
-        )}
+        </div>
 
-        {/* tail -f停止確認モーダル */}
+        {/* ログ取得停止確認モーダル */}
         <input type='checkbox' id='my-modal' className='modal-toggle' />
         <label htmlFor='my-modal' className='modal cursor-pointer'>
           <label className='modal-box relative text-left' htmlFor=''>
-            <p className='text-lg font-bold'>tail -f停止確認</p>
-            <p className='py-4'>tail -fを停止しますか？</p>
+            <p className='text-lg font-bold'>ログ取得停止します</p>
             <div className='modal-action'>
-              <button className='btn btn-error' onClick={handleStopTailF}>
-                停止
+              <button className='btn btn-error' onClick={handleStopAll}>
+                STOP
               </button>
               <label htmlFor='my-modal' className='btn'>
                 キャンセル
