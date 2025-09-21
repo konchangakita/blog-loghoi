@@ -22,6 +22,7 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
   const [logs, setLogs] = useState<dict[]>([])
   const logViewRef = useRef<HTMLDivElement>(null)
   const [socket, setSocket] = useState<Socket | null>(null)
+  const [isConnecting, setIsConnecting] = useState(false)
 
   // FileをSaveするための関数を定義
   const handleDownload = () => {
@@ -46,7 +47,14 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
 
   // connect SocketIO
   const handleConnect = () => {
+    if (isConnecting || (socket && socket.connected)) {
+      console.log('Already connecting or connected')
+      return
+    }
+
     console.log('Starting SocketIO connection...')
+    setIsConnecting(true)
+    
     // Docker Compose環境では、ブラウザから直接アクセスするためlocalhostを使用
     const newsocket = io('http://localhost:7776/', {
       transports: ['polling', 'websocket'],
@@ -55,9 +63,7 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
       timeout: 20000,
       forceNew: true
     })
-    //const websocketBackend = 'http://' + hostname + ':7776/'
-    //const websocketBackend = `${process.env.NEXT_PUBLIC_BACKEND_HOST}`
-    //const newsocket = io(websocketBackend)
+    
     console.log('SocketIO object created:', newsocket)
     setSocket(newsocket)
   }
@@ -69,29 +75,46 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
       socket.disconnect()
       setSocket(null)
       setIsActive(false)
+      setIsConnecting(false)
     }
   }
 
   // tail -f start
   const handleStartTailF = () => {
-    if (socket && socket.connected) {
-      console.log('Starting tail -f...')
-      socket.emit('start_tail_f', {
-        cvm_ip: cvmChecked,
-        log_path: tailPath
-      })
-    } else {
+    if (!socket || !socket.connected) {
       console.log('SocketIO not connected')
+      return
     }
+    
+    if (!tailName) {
+      console.log('ログ名が選択されていません')
+      alert('ログ名を選択してください')
+      return
+    }
+    
+    console.log('Starting tail -f...')
+    socket.emit('start_tail_f', {
+      cvm_ip: cvmChecked,
+      log_path: tailPath,
+      log_name: tailName
+    })
   }
 
   // tail -f stop
   const handleStopTailF = () => {
+    console.log('handleStopTailF called, socket connected:', socket?.connected)
     if (socket && socket.connected) {
-      console.log('Stopping tail -f...')
+      console.log('Emitting stop_tail_f event...')
       socket.emit('stop_tail_f', {})
+      
+      // モーダルを閉じる
+      const modal = document.getElementById('my-modal') as HTMLInputElement
+      if (modal) {
+        console.log('Closing modal...')
+        modal.checked = false
+      }
     } else {
-      console.log('SocketIO not connected')
+      console.log('SocketIO not connected, cannot stop tail -f')
     }
   }
 
@@ -109,7 +132,7 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
       socket.on('log', (msg) => {
         console.log('receive log:', msg)
         setLogs((logs) => {
-          const newLogs = [...logs, { name: tailName, line: msg.line }]
+          const newLogs = [...logs, { name: msg.name || tailName, line: msg.line }]
           console.log('Updated logs:', newLogs)
           return newLogs
         })
@@ -117,10 +140,15 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
 
       // tail -f ステータスを受信
       socket.on('tail_f_status', (data) => {
-        console.log('tail -f status:', data)
+        console.log('tail -f status received:', data)
         if (data.status === 'started') {
+          console.log('Setting isActive to true')
           setIsActive(true)
         } else if (data.status === 'stopped') {
+          console.log('Setting isActive to false')
+          setIsActive(false)
+        } else if (data.status === 'error') {
+          console.log('tail -f error:', data.message)
           setIsActive(false)
         }
       })
@@ -130,15 +158,18 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
         console.log('Socket connected state:', socket.connected)
         console.log('Socket ID:', socket.id)
         setIsActive(false) // 初期状態は非アクティブ
+        setIsConnecting(false) // 接続完了
       })
 
       socket.on('disconnect', () => {
         console.log('Disconnected from SocketIO server')
         setIsActive(false)
+        setIsConnecting(false) // 接続状態をリセット
       })
 
       socket.on('connect_error', (error) => {
         console.error('SocketIO connection error:', error)
+        setIsConnecting(false) // 接続エラー時も接続状態をリセット
       })
     }
 
@@ -199,7 +230,12 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
     <>
       <div className='flex justify-center items-center m-2 space-x-2'>
         {/* SocketIO接続ボタン */}
-        {!socket || !socket.connected ? (
+        {isConnecting ? (
+          <div className='btn btn-primary btn-outline btn-disabled'>
+            <span className="loading loading-spinner loading-sm"></span>
+            接続中...
+          </div>
+        ) : !socket || !socket.connected ? (
           <div className='btn btn-primary btn-outline' onClick={handleConnect}>
             SocketIO接続
           </div>
@@ -210,11 +246,21 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
         )}
 
         {/* tail -f ボタン */}
-        {socket && socket.connected ? (
+        {isConnecting ? (
+          <div className='btn btn-disabled btn-outline'>
+            tail -f Start (接続中...)
+          </div>
+        ) : socket && socket.connected ? (
           !isActive ? (
-            <div className='btn btn-success btn-outline' onClick={handleStartTailF}>
-              tail -f Start
-            </div>
+            !tailName ? (
+              <div className='btn btn-disabled btn-outline'>
+                tail -f Start (ログ名未選択)
+              </div>
+            ) : (
+              <div className='btn btn-success btn-outline' onClick={handleStartTailF}>
+                tail -f Start
+              </div>
+            )
           ) : (
             <label htmlFor='my-modal'>
               <div className='btn btn-warning btn-outline'>
@@ -252,8 +298,16 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
             <code>
               {filteredLogs.map((log: dict, i) => {
                 return (
-                  <div className='text-xs m-0' key={i}>
-                    <p className='inline text-primary'>{log.name}</p> {log.line}
+                  <div className='text-xs m-0 flex items-start' key={i}>
+                    <span className='text-gray-500 mr-1 min-w-[40px] flex-shrink-0 text-right'>
+                      {String(i + 1).padStart(4, ' ')}
+                    </span>
+                    <span className='text-primary font-bold mr-1 min-w-[80px] flex-shrink-0'>
+                      [{log.name}]
+                    </span>
+                    <span className='text-gray-300 flex-1 break-all'>
+                      {log.line}
+                    </span>
                   </div>
                 )
               })}

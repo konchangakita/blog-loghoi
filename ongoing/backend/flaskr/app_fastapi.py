@@ -126,7 +126,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 socket_app = socketio.ASGIApp(sio, app, socketio_path='/socket.io/')
 
 # SSH接続とログ取得の実装
-async def start_ssh_log_monitoring(cvm_ip: str, log_path: str):
+async def start_ssh_log_monitoring(cvm_ip: str, log_path: str, log_name: str):
     """SSH接続でログ監視を開始"""
     global ssh_connection, ssh_log_task
     
@@ -171,8 +171,8 @@ async def start_ssh_log_monitoring(cvm_ip: str, log_path: str):
         print("過去のログ取得完了")
         
         # リアルタイム監視を開始
-        print(f"リアルタイム監視を開始: {log_path}")
-        ssh_log_task = asyncio.create_task(monitor_realtime_logs(ssh_connection, log_path))
+        print(f"リアルタイム監視を開始: {log_path} (ログ名: {log_name})")
+        ssh_log_task = asyncio.create_task(monitor_realtime_logs(ssh_connection, log_path, log_name))
         
         return True
         
@@ -183,7 +183,7 @@ async def start_ssh_log_monitoring(cvm_ip: str, log_path: str):
             ssh_connection = None
         return False
 
-async def monitor_realtime_logs(ssh, log_path):
+async def monitor_realtime_logs(ssh, log_path, log_name):
     """リアルタイムログ監視（再接続機能付き）"""
     global ssh_connection, ssh_log_task
     
@@ -191,77 +191,88 @@ async def monitor_realtime_logs(ssh, log_path):
     reconnect_count = 0
     max_reconnects = 5
     
-    while reconnect_count < max_reconnects:
-        try:
-            print(f"SSH接続でtail -fを実行: {log_path} (再接続回数: {reconnect_count})")
-            stdin, stdout, stderr = ssh.exec_command(f"tail -f {log_path}")
-            
-            # リアルタイムログを読み取り
-            while True:
-                try:
-                    # 非同期でstdoutを読み取り
-                    line = stdout.readline()
-                    if not line:
-                        print(f"stdoutが終了しました (再接続回数: {reconnect_count})")
-                        break
-                    
-                    line_count += 1
-                    print(f"リアルタイムログ [{line_count}]: {line.strip()}")
-                    
-                    # SocketIOでログを送信
-                    try:
-                        await sio.emit('log', {
-                            'line': line.strip(),
-                            'line_number': line_count,
-                            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
-                        })
-                    except Exception as e:
-                        print(f"SocketIOログ送信エラー: {e}")
-                    
-                    # 100行ごとに接続状態を確認
-                    if line_count % 100 == 0:
-                        print(f"接続状態確認 - 処理済み行数: {line_count}")
-                    
-                    # 少し待機してから次の行を読み取り
-                    await asyncio.sleep(0.1)
-                    
-                except Exception as e:
-                    print(f"ログ読み取りエラー: {e}")
-                    break
-            
-            # 正常終了の場合はループを抜ける
-            if not line:
-                break
+    try:
+        while reconnect_count < max_reconnects:
+            try:
+                print(f"SSH接続でtail -fを実行: {log_path} (再接続回数: {reconnect_count})")
+                stdin, stdout, stderr = ssh.exec_command(f"tail -f {log_path}")
                 
-        except Exception as e:
-            print(f"リアルタイムログ監視エラー: {e}")
-            reconnect_count += 1
-            
-            if reconnect_count < max_reconnects:
-                print(f"SSH接続を再接続します ({reconnect_count}/{max_reconnects})")
-                try:
-                    # SSH接続を閉じる
-                    if ssh:
-                        ssh.close()
-                    
-                    # 新しいSSH接続を確立
-                    ssh = connect_ssh("10.38.112.31")  # 固定IPを使用
-                    if ssh:
-                        ssh_connection = ssh
-                        print(f"SSH再接続成功 ({reconnect_count}/{max_reconnects})")
-                        await asyncio.sleep(5)  # 5秒待機してから再試行
-                    else:
-                        print(f"SSH再接続失敗 ({reconnect_count}/{max_reconnects})")
-                        await asyncio.sleep(10)  # 10秒待機してから再試行
+                # リアルタイムログを読み取り
+                while True:
+                    try:
+                        # 非同期でstdoutを読み取り
+                        line = stdout.readline()
+                        if not line:
+                            print(f"stdoutが終了しました (再接続回数: {reconnect_count})")
+                            break
                         
-                except Exception as reconnect_error:
-                    print(f"SSH再接続エラー: {reconnect_error}")
-                    await asyncio.sleep(10)
-            else:
-                print(f"最大再接続回数に達しました ({max_reconnects})")
-                break
-    
-    print("リアルタイムログ監視を終了しました")
+                        line_count += 1
+                        print(f"リアルタイムログ [{line_count}]: {line.strip()}")
+                        
+                        # SocketIOでログを送信
+                        try:
+                            await sio.emit('log', {
+                                'name': log_name,  # 動的に設定されたログ名
+                                'line': line.strip(),
+                                'line_number': line_count,
+                                'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+                            })
+                        except Exception as e:
+                            print(f"SocketIOログ送信エラー: {e}")
+                        
+                        # 100行ごとに接続状態を確認
+                        if line_count % 100 == 0:
+                            print(f"接続状態確認 - 処理済み行数: {line_count}")
+                        
+                        # 少し待機してから次の行を読み取り
+                        await asyncio.sleep(0.1)
+                        
+                    except asyncio.CancelledError:
+                        print("ログ監視タスクがキャンセルされました")
+                        raise
+                    except Exception as e:
+                        print(f"ログ読み取りエラー: {e}")
+                        break
+            
+                # 正常終了の場合はループを抜ける
+                if not line:
+                    break
+                    
+            except Exception as e:
+                print(f"リアルタイムログ監視エラー: {e}")
+                reconnect_count += 1
+                
+                if reconnect_count < max_reconnects:
+                    print(f"SSH接続を再接続します ({reconnect_count}/{max_reconnects})")
+                    try:
+                        # SSH接続を閉じる
+                        if ssh:
+                            ssh.close()
+                        
+                        # 新しいSSH接続を確立
+                        ssh = connect_ssh("10.38.112.31")  # 固定IPを使用
+                        if ssh:
+                            ssh_connection = ssh
+                            print(f"SSH再接続成功 ({reconnect_count}/{max_reconnects})")
+                            await asyncio.sleep(5)  # 5秒待機してから再試行
+                        else:
+                            print(f"SSH再接続失敗 ({reconnect_count}/{max_reconnects})")
+                            await asyncio.sleep(10)  # 10秒待機してから再試行
+                            
+                    except Exception as reconnect_error:
+                        print(f"SSH再接続エラー: {reconnect_error}")
+                        await asyncio.sleep(10)
+                else:
+                    print(f"最大再接続回数に達しました ({max_reconnects})")
+                    break
+        
+    except asyncio.CancelledError:
+        print("ログ監視タスクがキャンセルされました")
+        raise
+    except Exception as e:
+        print(f"ログ監視タスクで予期しないエラー: {e}")
+    finally:
+        print("リアルタイムログ監視を終了しました")
 
 # ========================================
 # SocketIO Event Handlers
@@ -292,9 +303,16 @@ async def start_tail_f(sid, data):
     try:
         cvm_ip = data.get('cvm_ip', '10.38.112.31')
         log_path = data.get('log_path', '/home/nutanix/data/logs/genesis.out')
+        log_name = data.get('log_name')
+        if not log_name:
+            await sio.emit('tail_f_status', {
+                'status': 'error',
+                'message': 'ログ名が指定されていません'
+            }, to=sid)
+            return
         
         # SSH接続とログ監視を開始
-        success = await start_ssh_log_monitoring(cvm_ip, log_path)
+        success = await start_ssh_log_monitoring(cvm_ip, log_path, log_name)
         
         if success:
             await sio.emit('tail_f_status', {
@@ -346,9 +364,17 @@ async def stop_ssh_log_monitoring():
     
     # ログタスクを停止
     if ssh_log_task:
+        print("ログタスクをキャンセル中...")
         ssh_log_task.cancel()
-        ssh_log_task = None
-        print("ログタスクを停止しました")
+        try:
+            await ssh_log_task
+        except asyncio.CancelledError:
+            print("ログタスクが正常にキャンセルされました")
+        except Exception as e:
+            print(f"ログタスクキャンセル中にエラー: {e}")
+        finally:
+            ssh_log_task = None
+            print("ログタスクを停止しました")
     
     # SSH接続を閉じる
     if ssh_connection:
