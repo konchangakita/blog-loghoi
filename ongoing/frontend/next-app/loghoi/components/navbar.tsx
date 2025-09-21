@@ -117,8 +117,14 @@ const Navbar = () => {
               Open SSH KEY
             </button>
             {isOpen && (
-              <div className='fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50 '>
-                <div className='modal-box w-11/12 max-w-5xl text-left text-wrap '>
+              <div 
+                className='fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-50'
+                onClick={() => setIsOpen(false)}
+              >
+                <div 
+                  className='modal-box w-11/12 max-w-5xl text-left text-wrap'
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <h3 className='font-bold text-gray-900 text-lg mb-2 '>
                     ssh-keyをコピーして Prism ElementのクラスターロックダウンへSSH Keyを追加してください
                   </h3>
