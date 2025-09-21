@@ -1,18 +1,27 @@
 import sys
 import os
 from typing import Dict, Any, List
-import json
+import asyncio
+import threading
+import time
 
 # 共通ライブラリのパスを追加
 sys.path.append(os.path.join(os.path.dirname(__file__), '../../shared'))
 
 # FastAPI関連インポート
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 import uvicorn
+
+# SocketIO関連インポート
+import socketio
+
+# SSH接続管理用のグローバル変数
+ssh_connection = None
+ssh_log_task = None
 
 # Elasticsearch
 from elasticsearch import Elasticsearch
@@ -25,7 +34,7 @@ from gateways import (
     CollectLogGateway,
     ElasticGateway
 )
-from utils.common import connect_ssh, get_cvmlist
+from common import connect_ssh, get_cvmlist
 from config import Config
 
 # ========================================
@@ -53,6 +62,10 @@ class LogDisplayRequest(BaseModel):
     log_file: str
     zip_name: str
 
+class WebSocketLogMessage(BaseModel):
+    cvm: str
+    tail_name: str
+    tail_path: str
 
 # ========================================
 # FastAPI Application Setup
@@ -65,6 +78,36 @@ app = FastAPI(
     docs_url="/docs",  # Swagger UI
     redoc_url="/redoc"  # ReDoc
 )
+
+# SocketIOサーバーの作成
+sio = socketio.AsyncServer(
+    cors_allowed_origins="*",
+    async_mode='asgi',
+    logger=True,
+    engineio_logger=True,
+    socketio_path='/socket.io/'
+)
+
+# SSH接続とログ取得の管理関数
+def get_ssh_connection():
+    """現在のSSH接続状態を取得"""
+    global ssh_connection
+    return ssh_connection
+
+def set_ssh_connection(connection):
+    """SSH接続を設定"""
+    global ssh_connection
+    ssh_connection = connection
+
+def get_ssh_log_task():
+    """現在のSSHログタスクを取得"""
+    global ssh_log_task
+    return ssh_log_task
+
+def set_ssh_log_task(task):
+    """SSHログタスクを設定"""
+    global ssh_log_task
+    ssh_log_task = task
 
 
 # CORS設定
@@ -79,6 +122,242 @@ app.add_middleware(
 # 静的ファイル配信
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# SocketIOをFastAPIに統合
+socket_app = socketio.ASGIApp(sio, app, socketio_path='/socket.io/')
+
+# SSH接続とログ取得の実装
+async def start_ssh_log_monitoring(cvm_ip: str, log_path: str):
+    """SSH接続でログ監視を開始"""
+    global ssh_connection, ssh_log_task
+    
+    # 既存の接続がある場合はクリーンアップ
+    if ssh_connection:
+        print("既存のSSH接続をクリーンアップします")
+        try:
+            ssh_connection.close()
+        except Exception as e:
+            print(f"既存SSH接続のクリーンアップエラー: {e}")
+        ssh_connection = None
+    
+    # 既存のログタスクがある場合は停止
+    if ssh_log_task:
+        print("既存のログタスクを停止します")
+        ssh_log_task.cancel()
+        ssh_log_task = None
+    
+    try:
+        print(f"SSH接続を開始: {cvm_ip}")
+        ssh_connection = connect_ssh(cvm_ip)
+        if not ssh_connection:
+            print(f"SSH接続に失敗しました: {cvm_ip}")
+            return False
+        
+        print(f"SSH接続成功: {cvm_ip}")
+        
+        # 過去20行のログを取得（別のSSH接続を使用）
+        print(f"過去のログを取得中: {log_path}")
+        ssh_history = connect_ssh(cvm_ip)
+        if ssh_history:
+            stdin_history, stdout_history, stderr_history = ssh_history.exec_command(f"tail -n 20 {log_path}")
+            
+            # 過去のログを読み取り
+            for line in stdout_history:
+                if line.strip():
+                    print(f"過去ログ: {line.strip()}")
+            
+            # 過去ログ用のSSH接続を閉じる
+            ssh_history.close()
+        
+        print("過去のログ取得完了")
+        
+        # リアルタイム監視を開始
+        print(f"リアルタイム監視を開始: {log_path}")
+        ssh_log_task = asyncio.create_task(monitor_realtime_logs(ssh_connection, log_path))
+        
+        return True
+        
+    except Exception as e:
+        print(f"SSH接続エラー: {e}")
+        if ssh_connection:
+            ssh_connection.close()
+            ssh_connection = None
+        return False
+
+async def monitor_realtime_logs(ssh, log_path):
+    """リアルタイムログ監視（再接続機能付き）"""
+    global ssh_connection, ssh_log_task
+    
+    line_count = 0
+    reconnect_count = 0
+    max_reconnects = 5
+    
+    while reconnect_count < max_reconnects:
+        try:
+            print(f"SSH接続でtail -fを実行: {log_path} (再接続回数: {reconnect_count})")
+            stdin, stdout, stderr = ssh.exec_command(f"tail -f {log_path}")
+            
+            # リアルタイムログを読み取り
+            while True:
+                try:
+                    # 非同期でstdoutを読み取り
+                    line = stdout.readline()
+                    if not line:
+                        print(f"stdoutが終了しました (再接続回数: {reconnect_count})")
+                        break
+                    
+                    line_count += 1
+                    print(f"リアルタイムログ [{line_count}]: {line.strip()}")
+                    
+                    # SocketIOでログを送信
+                    try:
+                        await sio.emit('log', {
+                            'line': line.strip(),
+                            'line_number': line_count,
+                            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
+                        })
+                    except Exception as e:
+                        print(f"SocketIOログ送信エラー: {e}")
+                    
+                    # 100行ごとに接続状態を確認
+                    if line_count % 100 == 0:
+                        print(f"接続状態確認 - 処理済み行数: {line_count}")
+                    
+                    # 少し待機してから次の行を読み取り
+                    await asyncio.sleep(0.1)
+                    
+                except Exception as e:
+                    print(f"ログ読み取りエラー: {e}")
+                    break
+            
+            # 正常終了の場合はループを抜ける
+            if not line:
+                break
+                
+        except Exception as e:
+            print(f"リアルタイムログ監視エラー: {e}")
+            reconnect_count += 1
+            
+            if reconnect_count < max_reconnects:
+                print(f"SSH接続を再接続します ({reconnect_count}/{max_reconnects})")
+                try:
+                    # SSH接続を閉じる
+                    if ssh:
+                        ssh.close()
+                    
+                    # 新しいSSH接続を確立
+                    ssh = connect_ssh("10.38.112.31")  # 固定IPを使用
+                    if ssh:
+                        ssh_connection = ssh
+                        print(f"SSH再接続成功 ({reconnect_count}/{max_reconnects})")
+                        await asyncio.sleep(5)  # 5秒待機してから再試行
+                    else:
+                        print(f"SSH再接続失敗 ({reconnect_count}/{max_reconnects})")
+                        await asyncio.sleep(10)  # 10秒待機してから再試行
+                        
+                except Exception as reconnect_error:
+                    print(f"SSH再接続エラー: {reconnect_error}")
+                    await asyncio.sleep(10)
+            else:
+                print(f"最大再接続回数に達しました ({max_reconnects})")
+                break
+    
+    print("リアルタイムログ監視を終了しました")
+
+# ========================================
+# SocketIO Event Handlers
+# ========================================
+
+@sio.event
+async def connect(sid, environ, auth=None):
+    """SocketIO接続時の処理"""
+    print(f"SocketIO クライアント {sid} が接続しました")
+    
+    # 接続確認メッセージを送信
+    await sio.emit('message', {'data': f'LogHoiサーバーに接続しました (ID: {sid})'}, to=sid)
+
+@sio.event
+async def disconnect(sid):
+    """SocketIO切断時の処理"""
+    print(f"SocketIO クライアント {sid} が切断しました")
+    
+    # SSH接続とログ監視を停止
+    await stop_ssh_log_monitoring()
+    print(f"SSH接続とログ監視を停止しました (切断: {sid})")
+
+@sio.event
+async def start_tail_f(sid, data):
+    """tail -f開始イベント"""
+    print(f"tail -f開始要求: {data} (SID: {sid})")
+    
+    try:
+        cvm_ip = data.get('cvm_ip', '10.38.112.31')
+        log_path = data.get('log_path', '/home/nutanix/data/logs/genesis.out')
+        
+        # SSH接続とログ監視を開始
+        success = await start_ssh_log_monitoring(cvm_ip, log_path)
+        
+        if success:
+            await sio.emit('tail_f_status', {
+                'status': 'started',
+                'message': f'tail -f開始: {cvm_ip}'
+            }, to=sid)
+            print(f"tail -f開始成功: {sid}")
+        else:
+            await sio.emit('tail_f_status', {
+                'status': 'error',
+                'message': f'SSH接続失敗: {cvm_ip}'
+            }, to=sid)
+            print(f"tail -f開始失敗: {sid}")
+            
+    except Exception as e:
+        print(f"tail -f開始エラー: {e}")
+        await sio.emit('tail_f_status', {
+            'status': 'error',
+            'message': f'tail -f開始エラー: {str(e)}'
+        }, to=sid)
+
+@sio.event
+async def stop_tail_f(sid, data):
+    """tail -f停止イベント"""
+    print(f"tail -f停止要求: {data} (SID: {sid})")
+    
+    try:
+        # SSH接続とログ監視を停止
+        await stop_ssh_log_monitoring()
+        
+        await sio.emit('tail_f_status', {
+            'status': 'stopped',
+            'message': 'tail -f停止'
+        }, to=sid)
+        print(f"tail -f停止成功: {sid}")
+        
+    except Exception as e:
+        print(f"tail -f停止エラー: {e}")
+        await sio.emit('tail_f_status', {
+            'status': 'error',
+            'message': f'tail -f停止エラー: {str(e)}'
+        }, to=sid)
+
+async def stop_ssh_log_monitoring():
+    """SSH接続とログ監視を停止"""
+    global ssh_connection, ssh_log_task
+    
+    print("SSH接続とログ監視を停止中...")
+    
+    # ログタスクを停止
+    if ssh_log_task:
+        ssh_log_task.cancel()
+        ssh_log_task = None
+        print("ログタスクを停止しました")
+    
+    # SSH接続を閉じる
+    if ssh_connection:
+        ssh_connection.close()
+        ssh_connection = None
+        print("SSH接続を閉じました")
+
+# SSH接続管理機能は上記のAPIエンドポイントで実装済み
+
 # Gateway インスタンス初期化
 reg = RegistGateway()
 rt = RealtimeLogGateway()
@@ -87,6 +366,123 @@ col = CollectLogGateway()
 
 # Elasticsearch接続
 es = Elasticsearch(Config.ELASTICSEARCH_URL)
+
+# ========================================
+# SSH Log Monitoring API Endpoints
+# ========================================
+
+class LogMonitoringRequest(BaseModel):
+    cvm_ip: str
+    log_path: str = "/home/nutanix/data/logs/genesis.out"
+
+@app.post("/api/ssh-log/start")
+async def start_log_monitoring(request: LogMonitoringRequest):
+    """SSH接続でログ監視を開始"""
+    try:
+        print(f"ログ監視開始要求: {request.cvm_ip}, {request.log_path}")
+        
+        # 既存の接続があるかチェック
+        if get_ssh_connection():
+            print("既存のSSH接続が存在します")
+            return {
+                "status": "warning",
+                "message": "既存のSSH接続が存在します。新しい接続を開始する前に既存の接続を停止してください。"
+            }
+        
+        # SSH接続とログ監視を開始
+        success = await start_ssh_log_monitoring(request.cvm_ip, request.log_path)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": f"SSH接続とログ監視を開始しました: {request.cvm_ip}"
+            }
+        else:
+            return {
+                "status": "error",
+                "message": f"SSH接続に失敗しました: {request.cvm_ip}"
+            }
+            
+    except Exception as e:
+        print(f"ログ監視開始エラー: {e}")
+        return {
+            "status": "error",
+            "message": f"ログ監視開始エラー: {str(e)}"
+        }
+
+@app.post("/api/ssh-log/stop")
+async def stop_log_monitoring():
+    """SSH接続とログ監視を停止"""
+    try:
+        global ssh_connection, ssh_log_task
+        
+        print("ログ監視停止要求")
+        
+        # ログタスクを停止
+        if ssh_log_task:
+            ssh_log_task.cancel()
+            ssh_log_task = None
+            print("ログタスクを停止しました")
+        
+        # SSH接続を閉じる
+        if ssh_connection:
+            ssh_connection.close()
+            ssh_connection = None
+            print("SSH接続を閉じました")
+        
+        return {
+            "status": "success",
+            "message": "SSH接続とログ監視を停止しました"
+        }
+        
+    except Exception as e:
+        print(f"ログ監視停止エラー: {e}")
+        return {
+            "status": "error",
+            "message": f"ログ監視停止エラー: {str(e)}"
+        }
+
+@app.get("/api/ssh-log/status")
+async def get_log_monitoring_status():
+    """SSH接続とログ監視の状態を取得"""
+    try:
+        ssh_conn = get_ssh_connection()
+        log_task = get_ssh_log_task()
+        
+        return {
+            "status": "success",
+            "ssh_connected": ssh_conn is not None,
+            "log_monitoring_active": log_task is not None and not log_task.done(),
+            "ssh_connection": str(ssh_conn) if ssh_conn else None
+        }
+        
+    except Exception as e:
+        print(f"ステータス取得エラー: {e}")
+        return {
+            "status": "error",
+            "message": f"ステータス取得エラー: {str(e)}"
+        }
+
+# SocketIO関連の関数は削除済み（SSH接続とログ取得機能は上記のAPIエンドポイントで実装）
+
+# WebSocket接続管理
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket, client_id: str):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        print(f">>>>>>>> WebSocket connected: {client_id} <<<<<<<<<")
+
+    def disconnect(self, websocket: WebSocket, client_id: str):
+        self.active_connections.remove(websocket)
+        print(f">>>>>>>> WebSocket disconnected: {client_id} <<<<<<<<<")
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+manager = ConnectionManager()
 
 # ========================================
 # Web UI Routes
@@ -252,20 +648,106 @@ async def download_zip(zip_name: str):
         print(f"❌ ZIPダウンロードエラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# ========================================
+# WebSocket Endpoint
+# ========================================
 
+@app.websocket("/ws/log/{client_id}")
+async def websocket_log_endpoint(websocket: WebSocket, client_id: str):
+    """WebSocketログ監視エンドポイント"""
+    await manager.connect(websocket, client_id)
+    try:
+        while True:
+            # メッセージ受信
+            data = await websocket.receive_json()
+            message = WebSocketLogMessage(**data)
+            
+            print(f"###### WebSocket log request: {message}")
+            
+            # SSH接続確立
+            ssh = connect_ssh(message.cvm)
+            
+            # リアルタイムログ開始
+            await start_realtime_log(websocket, ssh, message)
+            
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, client_id)
+        print(f">>>>>>>> WebSocket disconnected: {client_id} <<<<<<<<<")
+    except Exception as e:
+        print(f"❌ WebSocketエラー: {e}")
+        manager.disconnect(websocket, client_id)
+
+async def start_realtime_log(websocket: WebSocket, ssh, message: WebSocketLogMessage):
+    """リアルタイムログ配信（非同期版）"""
+    try:
+        # SSH経由でtailコマンド実行
+        stdin, stdout, stderr = ssh.exec_command(f"tail -f -n 20 {message.tail_path}")
+        
+        # 非同期でログ行を送信
+        for line in stdout:
+            log_data = {
+                "name": message.tail_name,
+                "line": line.strip(),
+                "timestamp": str(asyncio.get_event_loop().time())
+            }
+            await websocket.send_json(log_data)
+            
+    except Exception as e:
+        print(f"❌ リアルタイムログエラー: {e}")
+        await websocket.send_json({"error": str(e)})
+
+# ========================================
+# Health Check & Info
+# ========================================
+
+@app.get("/health")
+async def health_check():
+    """ヘルスチェックAPI"""
+    return {
+        "status": "healthy",
+        "service": "LogHoi FastAPI",
+        "version": "2.0.0",
+        "elasticsearch": Config.ELASTICSEARCH_URL
+    }
+
+@app.get("/info")
+async def app_info():
+    """アプリケーション情報API"""
+    return {
+        "name": "LogHoi",
+        "description": "Nutanix Log Collection and Real-time Monitoring",
+        "version": "2.0.0",
+        "framework": "FastAPI",
+        "features": [
+            "PC/Cluster Management",
+            "Real-time Log Monitoring", 
+            "Syslog Search",
+            "Log Collection & Download",
+            "WebSocket Communication"
+        ]
+    }
 
 # ========================================
 # Application Startup
 # ========================================
 
-if __name__ == "__main__":
+# アプリケーション起動時の処理
+async def startup_event():
+    """アプリケーション起動時の処理"""
     print("🚀 Starting LogHoi FastAPI Backend")
     print(f"📊 Elasticsearch: {Config.ELASTICSEARCH_URL}")
     print(f"🌐 Server: {Config.FLASK_HOST}:{Config.FLASK_PORT}")
     print(f"📖 API Documentation: http://{Config.FLASK_HOST}:{Config.FLASK_PORT}/docs")
-    
+
+# アプリケーション起動時のメッセージ
+print("🚀 Starting LogHoi FastAPI Backend")
+print(f"📊 Elasticsearch: {Config.ELASTICSEARCH_URL}")
+print(f"🌐 Server: {Config.FLASK_HOST}:{Config.FLASK_PORT}")
+print(f"📖 API Documentation: http://{Config.FLASK_HOST}:{Config.FLASK_PORT}/docs")
+
+if __name__ == "__main__":
     uvicorn.run(
-        "app_fastapi:app",
+        "app_fastapi:socket_app",
         host=Config.FLASK_HOST,
         port=Config.FLASK_PORT,
         reload=Config.FLASK_DEBUG,
