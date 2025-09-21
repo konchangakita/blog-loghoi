@@ -99,8 +99,8 @@ const CollectlogContnet = () => {
               onChange={() => handleOptionChange(val)}
               checked={val === cvmChecked}
             />
-            <div className='inline pl-1 text-left'>
-              {val}
+            <div className='inline pl-1 text-left select-text'>
+              <span className='select-text'>{val}</span>
               <p className='inline text-xl text-red-700'>{isLeader}</p>
             </div>
           </label>
