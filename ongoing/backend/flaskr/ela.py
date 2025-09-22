@@ -239,6 +239,51 @@ class ElasticGateway(ElasticAPI):
         res = es.search(index="filebeat-*", query=query, size=100)
         return [s["_source"] for s in res["hits"]["hits"]]
 
+    def search_syslog_document_with_hostname_pattern(self, hostname_pattern, keyword, start_datetime, end_datetime):
+        es = self.es
+        print(start_datetime, end_datetime)
+        search_hostname_pattern = "*" + hostname_pattern + "*"
+        search_keyword = "*" + keyword + "*"
+
+        print("hostname_pattern >>>>>>>>>>>>>", search_hostname_pattern)
+        print("keyword >>>>>>>>>>>>>", search_keyword)
+        print("time range(JST) >>>>>>>>>>>>", start_datetime, "-", end_datetime)
+
+        query = {
+            "function_score": {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "range": {
+                                    "@timestamp": {
+                                        "gte": start_datetime,
+                                        "lte": end_datetime,
+                                    }
+                                }
+                            },
+                            {
+                                "query_string": {
+                                    "default_field": "hostname",
+                                    "query": search_hostname_pattern,
+                                }
+                            },
+                            {
+                                "query_string": {
+                                    "default_field": "message",
+                                    "query": search_keyword,
+                                }
+                            },
+                        ]
+                    }
+                }
+            }
+        }
+        print("query >>>>>>>>>>>>", query)
+
+        res = es.search(index="filebeat-*", query=query, size=100)
+        return [s["_source"] for s in res["hits"]["hits"]]
+
     def put_data_uuid(self, res):
         timestamp = datetime.utcnow()
         input_size = {}

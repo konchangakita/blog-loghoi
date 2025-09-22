@@ -54,6 +54,7 @@ class SyslogSearchRequest(BaseModel):
     start_datetime: str
     end_datetime: str
     serial: str = None
+    cluster: str = None
 
 class LogCollectionRequest(BaseModel):
     cvm: str
@@ -607,11 +608,34 @@ async def search_syslog(request: SyslogSearchRequest) -> Dict[str, Any]:
     """Syslog検索API"""
     print(f"POST /api/sys/search: {request}")
     try:
-        data = sys_gateway.search_syslog(request.dict())
-        return data
+        # リクエストデータを辞書に変換
+        request_data = request.dict()
+        
+        # クラスター名を取得（URLパラメータから）
+        # フロントエンドから送信されるデータ構造に合わせる
+        search_data = {
+            "keyword": request_data.get("keyword", ""),
+            "start_datetime": request_data.get("start_datetime", ""),
+            "end_datetime": request_data.get("end_datetime", ""),
+            "serial": request_data.get("serial", ""),
+            "cluster": request_data.get("cluster", "")  # クラスター名を追加
+        }
+        
+        data = sys_gateway.search_syslog(search_data)
+        
+        # 結果を適切な形式で返す
+        return {
+            "status": "success",
+            "data": data,
+            "count": len(data)
+        }
     except Exception as e:
         print(f"❌ Syslog検索エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "status": "error",
+            "message": str(e),
+            "data": []
+        }
 
 # ========================================
 # Log Collection API
