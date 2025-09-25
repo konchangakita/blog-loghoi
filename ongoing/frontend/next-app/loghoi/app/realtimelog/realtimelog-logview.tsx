@@ -55,8 +55,29 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
     console.log('Starting SocketIO connection...')
     setIsConnecting(true)
     
-    // Docker Compose環境では、ブラウザから直接アクセスするためlocalhostを使用
-    const newsocket = io('http://localhost:7776/', {
+    // 動的にSocketIO接続URLを決定
+    let socketUrl: string
+    try {
+      const currentHost = window.location.hostname
+      const currentProtocol = window.location.protocol
+      const currentPort = window.location.port
+      
+      // リモートエクスプローラー経由の場合は現在のポートを使用
+      if (currentPort && currentPort !== '3000') {
+        socketUrl = `${currentProtocol}//${currentHost}:${currentPort}/`
+      } else {
+        // ローカル開発環境の場合は7776を使用
+        socketUrl = 'http://localhost:7776/'
+      }
+      
+      console.log('SocketIO接続URL:', socketUrl)
+    } catch (error) {
+      // フォールバック: デフォルトのlocalhost:7776
+      socketUrl = 'http://localhost:7776/'
+      console.log('フォールバック接続URL:', socketUrl)
+    }
+    
+    const newsocket = io(socketUrl, {
       transports: ['polling', 'websocket'],
       upgrade: true,
       rememberUpgrade: false,
@@ -141,8 +162,30 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
     console.log('Starting SocketIO connection and tail -f...')
     setIsConnecting(true)
     
+    // 動的にSocketIO接続URLを決定
+    let socketUrl: string
+    try {
+      const currentHost = window.location.hostname
+      const currentProtocol = window.location.protocol
+      const currentPort = window.location.port
+      
+      // リモートエクスプローラー経由の場合は現在のポートを使用
+      if (currentPort && currentPort !== '3000') {
+        socketUrl = `${currentProtocol}//${currentHost}:${currentPort}/`
+      } else {
+        // ローカル開発環境の場合は7776を使用
+        socketUrl = 'http://localhost:7776/'
+      }
+      
+      console.log('SocketIO接続URL:', socketUrl)
+    } catch (error) {
+      // フォールバック: デフォルトのlocalhost:7776
+      socketUrl = 'http://localhost:7776/'
+      console.log('フォールバック接続URL:', socketUrl)
+    }
+    
     // SocketIO接続
-    const newsocket = io('http://localhost:7776/', {
+    const newsocket = io(socketUrl, {
       transports: ['polling', 'websocket'],
       upgrade: true,
       rememberUpgrade: false,
@@ -245,6 +288,13 @@ export default function LogViewer({ cvmChecked, tailName, tailPath, filter }: Ch
 
       socket.on('connect_error', (error) => {
         console.error('SocketIO connection error:', error)
+        console.error('エラー詳細:', {
+          message: error.message,
+          description: error.description,
+          context: error.context,
+          type: error.type,
+          url: socketUrl
+        })
         setIsConnecting(false) // 接続エラー時も接続状態をリセット
       })
     }
