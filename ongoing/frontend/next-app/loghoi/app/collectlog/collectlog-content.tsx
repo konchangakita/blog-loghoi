@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 // component
 import Loading from '@/components/loading'
@@ -48,7 +49,7 @@ const CollectlogContnet = () => {
   // 真ん中の表示用
   const [displayLog, setDisplayLog] = useState<string>()
 
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
+  const requestUrl = `${getBackendUrl()}/api/cvmlist`
   const requestOptions = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -114,7 +115,7 @@ const CollectlogContnet = () => {
   const handleGetLogs = async () => {
     setCollecting(true)
 
-    const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/getlogs`
+    const requestUrl = `${getBackendUrl()}/api/col/getlogs`
     const requestOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -133,14 +134,14 @@ const CollectlogContnet = () => {
     }
 
     // ziplistの更新
-    const listRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/ziplist`)
+    const listRes = await fetch(`${getBackendUrl()}/api/col/ziplist`)
     const listJson = await listRes.json()
     setZipList(listJson)
   }
 
   // Ziplistの取得
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/ziplist`)
+    fetch(`${getBackendUrl()}/api/col/ziplist`)
       .then((res) => res.json())
       .then((data) => setZipList(data))
   }, [])
@@ -150,7 +151,7 @@ const CollectlogContnet = () => {
     setSelectedZip(zipName)
     if (zipName) {
       setLoadingZip(true)
-      fetch(`${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/logs_in_zip/${zipName}`)
+      fetch(`${getBackendUrl()}/api/col/logs_in_zip/${zipName}`)
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
@@ -176,7 +177,7 @@ const CollectlogContnet = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ log_file: logFile, zip_name: selectedZip }),
     }
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/col/logdisplay`, requestOptions)
+    fetch(`${getBackendUrl()}/api/col/logdisplay`, requestOptions)
       .then((res) => res.json())
       .then((data) => {
         setDisplayLog(data)
@@ -214,7 +215,7 @@ const CollectlogContnet = () => {
           <div>
             <div>
               <button className='btn btn-secondary w-48'>
-                <a href={`http://localhost:7776/api/col/download/${selectedZip}`}>ZIP File Download</a>
+                <a href={`${getBackendUrl()}/api/col/download/${selectedZip}`}>ZIP File Download</a>
               </button>
             </div>
           </div>

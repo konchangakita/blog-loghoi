@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 interface dict {
   [key: string]: any
@@ -9,7 +10,7 @@ const getClusterList = (query: dict) => {
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/pccluster`
+  const requestUrl = `${getBackendUrl()}/api/pccluster`
   const requestOptions = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

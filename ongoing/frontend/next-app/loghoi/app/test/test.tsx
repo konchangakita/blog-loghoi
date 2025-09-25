@@ -1,6 +1,7 @@
 'use client'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 // Lib
 import { LogFiles } from '@/lib/rt-logs'
@@ -11,7 +12,7 @@ const TestPage = () => {
   const [data, setData] = useState(null)
   const [isLoading, setLoading] = useState(true)
 
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
+  const requestUrl = `${getBackendUrl()}/api/cvmlist`
   const requestOptions = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

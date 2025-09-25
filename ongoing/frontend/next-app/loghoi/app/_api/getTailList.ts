@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 interface dict {
   [key: string]: any
@@ -6,7 +7,7 @@ interface dict {
 
 const fetchPost = (query: dict) => {
   const [data, setData] = useState<dict>()
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/rt/taillist`
+  const requestUrl = `${getBackendUrl()}/api/rt/taillist`
   const requestOptions = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

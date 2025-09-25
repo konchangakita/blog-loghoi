@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation'
+import { getBackendUrl } from '../../../lib/getBackendUrl'
 
 interface dict {
   [key: string]: any
@@ -11,7 +12,8 @@ type PcLists = {
 
 export async function getPclist() {
   //const res = await fetch('http://172.16.0.6:7776/api/pclist', { method: 'GET', cache: 'no-store' })
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_IP}/api/pclist`
+  
+  const requestUrl = `${getBackendUrl()}/api/pclist`
   //const requestUrl = `http://172.16.0.6:7776/api/pclist`
 
   const res = await fetch(requestUrl, { method: 'GET', cache: 'no-store' })

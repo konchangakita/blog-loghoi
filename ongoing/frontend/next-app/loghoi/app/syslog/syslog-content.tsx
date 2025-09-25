@@ -2,6 +2,7 @@
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { saveAs } from 'file-saver'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 // need install
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
@@ -123,8 +124,7 @@ const SyslogContent = () => {
       cluster: cluster || '' // URLパラメータから取得
     }
     
-    const backendHost = process.env.NEXT_PUBLIC_BACKEND_HOST
-    const requestUrl = `${backendHost}/api/sys/search`
+    const requestUrl = `${getBackendUrl()}/api/sys/search`
     const requestOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

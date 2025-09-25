@@ -1,6 +1,7 @@
 'use client'
 import Link from 'next/link'
 import Image from 'next/image'
+import { getBackendUrl } from '../lib/getBackendUrl'
 
 import { useEffect, useState } from 'react'
 
@@ -39,7 +40,7 @@ const DisplayCluster = ({ clusterList }: any) => {
 }
 
 export default function PcList2() {
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/pclist`
+  const requestUrl = `${getBackendUrl()}/api/pclist`
   const [data, setData] = useState<ResValues>()
 
   useEffect(() => {

@@ -50,3 +50,4 @@ echo ""
 echo "統合ブランチをリモートにプッシュするには:"
 echo "git push origin $INTEGRATION_BRANCH"
 
+

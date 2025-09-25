@@ -3,6 +3,7 @@ import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 //api
 import getClusterList from '@/app/_api/getClusterList'
@@ -57,7 +58,7 @@ const ClusterTab = (res: any) => {
       }),
     }
 
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND}/api/uuid/connect`, requestOptions)
+    const response = await fetch(`${getBackendUrl()}/api/uuid/connect`, requestOptions)
     if (response.status === 200) {
       const res_json = await response.json()
       console.log(res_json)

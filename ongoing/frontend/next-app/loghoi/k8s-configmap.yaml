@@ -1,0 +1,198 @@
+# Kubernetes ConfigMap for Frontend Configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loghoi-frontend-config
+  namespace: loghoi
+data:
+  # バックエンド設定
+  NEXT_PUBLIC_BACKEND_URL: "http://loghoi-backend-service:7776"
+  NEXT_PUBLIC_BACKEND_HOST: "loghoi-backend-service"
+  NEXT_PUBLIC_BACKEND_PORT: "7776"
+  NEXT_PUBLIC_BACKEND_PROTOCOL: "http"
+  
+  # 機能フラグ
+  NEXT_PUBLIC_FEATURE_REALTIME_LOGS: "true"
+  NEXT_PUBLIC_FEATURE_CHAT_ROOM: "false"
+  NEXT_PUBLIC_FEATURE_HEALTH_CHECK: "true"
+  
+  # ログ設定
+  LOG_LEVEL: "info"
+  LOG_CONSOLE: "true"
+  LOG_REMOTE: "false"
+  
+  # 認証設定
+  NEXT_PUBLIC_AUTH_ENABLED: "false"
+  
+  # ヘルスチェック設定
+  BACKEND_HEALTH_CHECK_PATH: "/health"
+  BACKEND_HEALTH_CHECK_TIMEOUT: "5000"
+  BACKEND_RETRY_ATTEMPTS: "3"
+  BACKEND_RETRY_DELAY: "1000"
+
+---
+# Kubernetes Secret for Sensitive Configuration
+apiVersion: v1
+kind: Secret
+metadata:
+  name: loghoi-frontend-secret
+  namespace: loghoi
+type: Opaque
+data:
+  # Base64 encoded values
+  AUTH_SECRET_KEY: <base64-encoded-secret-key>
+  NEXT_PUBLIC_AUTH_TOKEN: <base64-encoded-token>
+
+---
+# Kubernetes Service for Backend
+apiVersion: v1
+kind: Service
+metadata:
+  name: loghoi-backend-service
+  namespace: loghoi
+spec:
+  selector:
+    app: loghoi-backend
+  ports:
+    - name: http
+      port: 7776
+      targetPort: 7776
+      protocol: TCP
+  type: ClusterIP
+
+---
+# Kubernetes Deployment for Frontend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loghoi-frontend
+  namespace: loghoi
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: loghoi-frontend
+  template:
+    metadata:
+      labels:
+        app: loghoi-frontend
+    spec:
+      containers:
+      - name: frontend
+        image: loghoi-frontend:latest
+        ports:
+        - containerPort: 3000
+        env:
+        # ConfigMapから環境変数を設定
+        - name: NEXT_PUBLIC_BACKEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: loghoi-frontend-config
+              key: NEXT_PUBLIC_BACKEND_URL
+        - name: NEXT_PUBLIC_BACKEND_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: loghoi-frontend-config
+              key: NEXT_PUBLIC_BACKEND_HOST
+        - name: NEXT_PUBLIC_BACKEND_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: loghoi-frontend-config
+              key: NEXT_PUBLIC_BACKEND_PORT
+        - name: NEXT_PUBLIC_BACKEND_PROTOCOL
+          valueFrom:
+            configMapKeyRef:
+              name: loghoi-frontend-config
+              key: NEXT_PUBLIC_BACKEND_PROTOCOL
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: loghoi-frontend-config
+              key: LOG_LEVEL
+        # Secretから機密情報を設定
+        - name: AUTH_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: loghoi-frontend-secret
+              key: AUTH_SECRET_KEY
+        - name: NEXT_PUBLIC_AUTH_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: loghoi-frontend-secret
+              key: NEXT_PUBLIC_AUTH_TOKEN
+        # Kubernetes環境変数
+        - name: KUBERNETES_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: KUBERNETES_POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: KUBERNETES_POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+
+---
+# Kubernetes Service for Frontend
+apiVersion: v1
+kind: Service
+metadata:
+  name: loghoi-frontend-service
+  namespace: loghoi
+spec:
+  selector:
+    app: loghoi-frontend
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP
+  type: LoadBalancer
+
+---
+# Kubernetes Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loghoi-ingress
+  namespace: loghoi
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - host: loghoi.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: loghoi-frontend-service
+            port:
+              number: 80
+
+
+
+

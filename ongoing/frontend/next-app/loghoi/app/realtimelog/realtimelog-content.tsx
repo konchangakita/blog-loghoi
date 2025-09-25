@@ -3,6 +3,7 @@ import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 // Lib
 //import { LogFiles } from '@/lib/rt-logs'
@@ -81,7 +82,7 @@ const RealtimelogContent = () => {
 
   const [prismLeader, setprismLeader] = useState<string>('')
   const [cvmChecked, setcvmChecked] = useState<string>('')
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/cvmlist`
+  const requestUrl = `${getBackendUrl()}/api/cvmlist`
   const requestOptions = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
