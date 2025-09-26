@@ -27,15 +27,17 @@ ssh_log_task = None
 from elasticsearch import Elasticsearch
 
 # 共通ライブラリからインポート
-from gateways import (
+from shared.gateways import (
     RegistGateway, 
     RealtimeLogGateway, 
     SyslogGateway, 
-    CollectLogGateway,
     ElasticGateway
 )
-from common import connect_ssh, get_cvmlist
+from core.common import connect_ssh, get_cvmlist
 from config import Config
+
+# ルーターのインポート
+from routers.collect_log import router as collect_log_router
 
 # ========================================
 # Pydantic Models (Request/Response)
@@ -56,12 +58,6 @@ class SyslogSearchRequest(BaseModel):
     serial: str = None
     cluster: str = None
 
-class LogCollectionRequest(BaseModel):
-    cvm: str
-
-class LogDisplayRequest(BaseModel):
-    log_file: str
-    zip_name: str
 
 class WebSocketLogMessage(BaseModel):
     cvm: str
@@ -120,8 +116,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 静的ファイル配信
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# 静的ファイル配信（FastAPIでは静的ファイルは不要なためコメントアウト）
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ルーターをアプリケーションに統合
+app.include_router(collect_log_router)
 
 # SocketIOをFastAPIに統合
 socket_app = socketio.ASGIApp(sio, app, socketio_path='/socket.io/')
@@ -390,7 +389,6 @@ async def stop_ssh_log_monitoring():
 reg = RegistGateway()
 rt = RealtimeLogGateway()
 sys_gateway = SyslogGateway()
-col = CollectLogGateway()
 
 # Elasticsearch接続
 es = Elasticsearch(Config.ELASTICSEARCH_URL)
@@ -637,67 +635,6 @@ async def search_syslog(request: SyslogSearchRequest) -> Dict[str, Any]:
             "data": []
         }
 
-# ========================================
-# Log Collection API
-# ========================================
-
-@app.post("/api/col/getlogs")
-async def collect_logs(request: LogCollectionRequest) -> Dict[str, Any]:
-    """ログ収集API"""
-    print(f"POST /api/col/getlogs: {request.cvm}")
-    try:
-        data = col.collect_logs(request.cvm)
-        return data
-    except Exception as e:
-        print(f"❌ ログ収集エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/col/ziplist")
-async def get_ziplist() -> Dict[str, Any]:
-    """ZIP一覧取得API"""
-    try:
-        data = col.get_ziplist()
-        # 辞書形式で返す
-        return {"zip_list": data} if isinstance(data, list) else data
-    except Exception as e:
-        print(f"❌ ZIP一覧取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/col/logs_in_zip/{zip_name}")
-async def get_logs_in_zip(zip_name: str) -> Dict[str, Any]:
-    """ZIP内ログ一覧取得API"""
-    try:
-        data = col.get_logs_in_zip(zip_name)
-        return {"logs": data} if isinstance(data, list) else {"logs": []}
-    except Exception as e:
-        print(f"❌ ZIP内ログ一覧取得エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/api/col/logdisplay")
-async def display_log(request: LogDisplayRequest) -> Dict[str, Any]:
-    """ログ表示API"""
-    try:
-        data = col.get_logcontent(request.log_file, request.zip_name)
-        return data
-    except Exception as e:
-        print(f"❌ ログ表示エラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/col/download/{zip_name}")
-async def download_zip(zip_name: str):
-    """ZIPダウンロードAPI"""
-    try:
-        zip_path = col.download_zip(zip_name)
-        if not zip_path:
-            raise HTTPException(status_code=404, detail="File not found")
-        return FileResponse(
-            path=zip_path,
-            filename=zip_name,
-            media_type='application/zip'
-        )
-    except Exception as e:
-        print(f"❌ ZIPダウンロードエラー: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 # ========================================
 # WebSocket Endpoint

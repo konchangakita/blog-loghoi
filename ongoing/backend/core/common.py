@@ -79,7 +79,7 @@ def change_timestamp(timestamp):
 # from _rt:get_session_rt, get_cvmlist
 def connect_ssh(hostname):
     username = "nutanix"
-    key_file = "/usr/src/flaskr/.ssh/ntnx-lockdown"
+    key_file = "/usr/src/config/.ssh/ntnx-lockdown"
     rsa_key = paramiko.RSAKey.from_private_key_file(key_file)
 
     client = paramiko.SSHClient()

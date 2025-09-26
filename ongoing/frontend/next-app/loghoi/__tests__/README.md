@@ -102,3 +102,4 @@ touch __tests__/utils/NewUtility.test.ts
 - テストは `__tests__` フォルダ内に配置してください
 - モックは適切にクリーンアップしてください
 - 非同期処理のテストでは `async/await` を使用してください
+

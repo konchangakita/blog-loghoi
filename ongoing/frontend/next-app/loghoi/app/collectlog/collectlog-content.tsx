@@ -1,268 +1,266 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { getBackendUrl } from '../../lib/getBackendUrl'
 
-// component
+// components
 import Loading from '@/components/loading'
 import Collecting from '@/components/collecting'
-import { Console } from 'console'
+import CvmSelector from './components/CvmSelector'
+import LogCollector from './components/LogCollector'
+import ZipManager from './components/ZipManager'
+import LogFileList from './components/LogFileList'
+import LogViewer from './components/LogViewer'
 
-interface dict {
-  [key: string]: string
-}
+// hooks
+import { useCollectLogApi } from './hooks/useCollectLogApi'
 
-type ResValues = {
-  block_serial_number: string
-  cvms_ip: []
-  hypervisor: string
-  name: string
-  pc_ip: string
-  prism_ip: string
-  prism_leader: string
-  timestamp: string
-  uuid: string
-}
+// types
+import { CollectLogState, ClusterData } from './types'
 
 const CollectlogContnet = () => {
   const searchParams = useSearchParams()
-  //const pcip = searchParams.get('pcip')
   const ClusterName = searchParams.get('cluster')
   const PrismIp = searchParams.get('prism')
 
-  // loading
-  const [loading, setLoading] = useState(true)
-  const [collecting, setCollecting] = useState(false)
-  const [loadingDisp, setLoadingDsip] = useState(false)
+  // API フック
+  const {
+    error,
+    clearError,
+    getCvmList,
+    collectLogs,
+    getZipList,
+    getLogsInZip,
+    getLogFileSize,
+    getLogContent,
+    downloadZip,
+  } = useCollectLogApi()
 
-  // CVM list, and connect to paramiko with checked cvm
-  const [data, setData] = useState<ResValues>()
-  const [prismLeader, setprismLeader] = useState<string>('')
-  const [cvmChecked, setcvmChecked] = useState<string>('')
+  // 状態管理
+  const [state, setState] = useState<CollectLogState>({
+    loading: true,
+    collecting: false,
+    loadingZip: false,
+    loadingDisplay: false,
+    prismLeader: '',
+    cvmChecked: '',
+    zipList: [],
+    selectedZip: null,
+    logsInZip: [],
+    displayLog: undefined,
+    selectedLogFile: undefined,
+  })
 
-  // Zip list
-  const [zipList, setZipList] = useState<string[]>([])
-  const [selectedZip, setSelectedZip] = useState<string | null>(null)
-  const [loadingZip, setLoadingZip] = useState(false)
-  const [logInZip, setLogInZip] = useState<string[]>([])
 
-  // 真ん中の表示用
-  const [displayLog, setDisplayLog] = useState<string>()
-
-  const requestUrl = `${getBackendUrl()}/api/cvmlist`
-  const requestOptions = {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(ClusterName),
-  }
+  // 初期化
   useEffect(() => {
-    fetch(requestUrl, requestOptions)
-      .then((res) => res.json())
-      .then((data) => {
-        setData(data)
-        setLoading(false)
-        console.log('data get from cvm')
-        if (data !== undefined && data['prism_leader'] !== undefined) {
-          setprismLeader(data['prism_leader'])
-          setcvmChecked(data['prism_leader'])
-        } else {
-          // Prism Leaderが取得できていなかったら、CVMへsshできていないので、ssh Key設定のアラートをだす
-          if (data['prism_leader'] === undefined) {
-            alert('ssh key を cluster [' + PrismIp + '] の Prism Element で設定してください')
-          }
+    const initializeData = async () => {
+      if (!ClusterName) return
+
+      console.log('Initializing data for cluster:', ClusterName)
+      setState(prev => ({ ...prev, loading: true }))
+      const data = await getCvmList(ClusterName)
+      
+      console.log('CVM data received:', data)
+      
+      if (data) {
+        setState(prev => ({
+          ...prev,
+          clusterData: data,
+          prismLeader: data.prism_leader || '',
+          cvmChecked: data.prism_leader || '',
+          loading: false,
+        }))
+
+        if (!data.prism_leader) {
+          alert(`ssh key を cluster [${PrismIp}] の Prism Element で設定してください`)
         }
-      })
-
-    console.log('cluster data get', prismLeader, cvmChecked)
-  }, [])
-
-  function CvmList(res: any) {
-    if (loading) return <p>Loading...</p>
-
-    const cvmsIp = res.cvmsIp
-    const prismLeader = res.prismLeader
-    const cvmChecked = res.cvmChecked
-    const handleOptionChange = (val: string) => {
-      setcvmChecked(val)
-      console.log('change cvm', val)
+      } else {
+        console.log('No data received, setting loading to false')
+        setState(prev => ({ ...prev, loading: false }))
+      }
     }
 
-    const dispCvm = cvmsIp.map((val: string, idx: number) => {
-      const isLeader = val === prismLeader ? '*' : null
-      return (
-        <div key={idx}>
-          <label className='label justify-normal cursor-pointer p-0'>
-            <input
-              type='radio'
-              name='cvm'
-              value={val}
-              className='radio radio-primary radio-xs'
-              onChange={() => handleOptionChange(val)}
-              checked={val === cvmChecked}
-            />
-            <div className='inline pl-1 text-left select-text'>
-              <span className='select-text'>{val}</span>
-              <p className='inline text-xl text-red-700'>{isLeader}</p>
-            </div>
-          </label>
-        </div>
-      )
-    })
-    return <form>{dispCvm}</form>
+    initializeData()
+  }, [ClusterName, PrismIp, getCvmList])
+
+  // イベントハンドラー
+  const handleCvmChange = (cvm: string) => {
+    setState(prev => ({ ...prev, cvmChecked: cvm }))
   }
 
-  // get log
-  const handleGetLogs = async () => {
-    setCollecting(true)
+  const handleCollectLogs = async () => {
+    if (!state.cvmChecked) return
 
-    const requestUrl = `${getBackendUrl()}/api/col/getlogs`
-    const requestOptions = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cvm: cvmChecked }),
+    setState(prev => ({ ...prev, collecting: true }))
+    const result = await collectLogs(state.cvmChecked)
+    
+    if (result) {
+      // ZIP一覧を更新
+      const zipList = await getZipList()
+      setState(prev => ({ ...prev, zipList }))
     }
-
-    const response = await fetch(requestUrl, requestOptions)
-    if (response.status === 200) {
-      const resJson = await response.json()
-      console.log(resJson)
-      //location.reload()
-      setCollecting(false)
-    } else {
-      alert('Failed to connect to backend')
-      setCollecting(false)
-    }
-
-    // ziplistの更新
-    const listRes = await fetch(`${getBackendUrl()}/api/col/ziplist`)
-    const listJson = await listRes.json()
-    setZipList(listJson)
+    
+    setState(prev => ({ ...prev, collecting: false }))
   }
 
-  // Ziplistの取得
-  useEffect(() => {
-    fetch(`${getBackendUrl()}/api/col/ziplist`)
-      .then((res) => res.json())
-      .then((data) => setZipList(data))
-  }, [])
-
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const zipName = e.target.value
-    setSelectedZip(zipName)
+  const handleZipSelect = async (zipName: string) => {
+    setState(prev => ({ 
+      ...prev, 
+      selectedZip: zipName, 
+      loadingZip: true,
+      // ビュワー画面を初期状態にリセット
+      displayLog: undefined,
+      selectedLogFile: undefined,
+      loadingDisplay: false
+    }))
+    
     if (zipName) {
-      setLoadingZip(true)
-      fetch(`${getBackendUrl()}/api/col/logs_in_zip/${zipName}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data)) {
-            data.sort()
-            console.log(data)
-            setLogInZip(data)
-          } else {
-            setLogInZip([])
-          }
-          setLoadingZip(false)
-        })
+      const logsInZip = await getLogsInZip(zipName)
+      setState(prev => ({ 
+        ...prev, 
+        logsInZip: logsInZip.sort(), 
+        loadingZip: false 
+      }))
     } else {
-      // 空選択時
-      setLogInZip([])
+      setState(prev => ({ 
+        ...prev, 
+        logsInZip: [], 
+        loadingZip: false 
+      }))
     }
   }
 
-  // 真ん中表示用
-  const handleDisplayLog = (logFile: string) => {
-    setLoadingDsip(true)
-    const requestOptions = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ log_file: logFile, zip_name: selectedZip }),
+  const handleLogSelect = async (logFile: string) => {
+    if (!state.selectedZip) return
+
+    console.log('Log selected:', { logFile, selectedZip: state.selectedZip })
+    console.log('Current state before log select:', state)
+    
+    setState(prev => ({ ...prev, loadingDisplay: true, selectedLogFile: logFile }))
+    console.log('State updated to loadingDisplay: true and selectedLogFile:', logFile)
+    
+    try {
+      // まずファイルサイズをチェック
+      const fileSizeInfo = await getLogFileSize(logFile, state.selectedZip)
+      console.log('File size info:', fileSizeInfo)
+      
+      if (fileSizeInfo) {
+        const { file_size_mb } = fileSizeInfo
+        
+        // 1MB以上の場合は表示をブロック
+        if (file_size_mb > 1) {
+          setState(prev => ({ 
+            ...prev, 
+            loadingDisplay: false,
+            displayLog: `FILE_SIZE_TOO_LARGE:${file_size_mb}` // 特別な値でファイルサイズを渡す
+          }))
+          return
+        }
+      }
+      
+      // ファイルサイズが小さいか、サイズ取得に失敗した場合は直接表示
+      await loadLogContent(logFile)
+    } catch (error) {
+      console.error('Error in handleLogSelect:', error)
+      setState(prev => ({ 
+        ...prev, 
+        loadingDisplay: false 
+      }))
     }
-    fetch(`${getBackendUrl()}/api/col/logdisplay`, requestOptions)
-      .then((res) => res.json())
-      .then((data) => {
-        setDisplayLog(data)
-        setLoadingDsip(false)
-      })
   }
+
+  const loadLogContent = async (logFile: string) => {
+    if (!state.selectedZip) return
+    
+    try {
+      const content = await getLogContent(logFile, state.selectedZip)
+      console.log('Log content received:', content)
+      console.log('Content type:', typeof content)
+      console.log('Content length:', content?.length)
+      
+      setState(prev => ({ 
+        ...prev, 
+        displayLog: content || undefined, 
+        loadingDisplay: false 
+      }))
+      console.log('State updated with content and loadingDisplay: false')
+    } catch (error) {
+      console.error('Error in loadLogContent:', error)
+      setState(prev => ({ 
+        ...prev, 
+        loadingDisplay: false 
+      }))
+    }
+  }
+
+
+  const handleDownload = (zipName: string) => {
+    downloadZip(zipName)
+  }
+
+  // ZIP一覧の初期化
+  useEffect(() => {
+    const loadZipList = async () => {
+      const zipList = await getZipList()
+      setState(prev => ({ ...prev, zipList }))
+    }
+    loadZipList()
+  }, [getZipList])
 
   return (
     <>
-      {collecting && <Collecting />}
-      {loading && <Loading />}
-      <div className='flex flex-row h-full'>
-        <div className='flex flex-col items-center'>
-          <button className='btn btn-primary w-48' onClick={handleGetLogs}>
-            Start Collect Log
-          </button>
-          <div className='w-49 text-center'>
-            <div className='text-primary py-1'>
-              <div className='flex justify-center py-1'>
-                <select className='select select-primary w-48 max-w-xs text-sm' onChange={handleSelectChange} value={selectedZip ?? ''}>
-                  <option value='' className='text-center'>
-                    -- Please select --
-                  </option>
-                  {zipList.length
-                    ? zipList.map((zip) => (
-                        <option value={zip} key={zip}>
-                          {zip}
-                        </option>
-                      ))
-                    : null}
-                </select>
-              </div>
-            </div>
-          </div>
-          <div>
-            <div>
-              <button className='btn btn-secondary w-48'>
-                <a href={`${getBackendUrl()}/api/col/download/${selectedZip}`}>ZIP File Download</a>
-              </button>
-            </div>
-          </div>
-          <div className='w-49 text-center'>
-            <div className='text-primary'>File / Log List</div>
-            <div className='h-96 overflow-auto'>
-              {loadingZip ? (
-                <p>ログ一覧取得中...</p>
-              ) : (
-                <ul className='menu break-all bg-base-100 w-44 text-left text-xs py-0'>
-                  {logInZip.map((log) => (
-                    <li key={log}>
-                      <div className='py-0.5' onClick={() => handleDisplayLog(log)}>
-                        {log}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-
-          <div className='p-1'>
-            <div>
-              <div className='pt-2'>
-                <p className='border border-black p-1'>CVM list</p>
-              </div>
-              <div className=''>
-                <CvmList cvmsIp={data ? data.cvms_ip : ''} prismLeader={prismLeader} cvmChecked={cvmChecked} />
-              </div>
-              <div>
-                <p className='inline text-xl text-red-700'>*</p>
-                <p className='inline text-xs text-red-700 align-top'>Prism Leader</p>
-              </div>
-            </div>
-          </div>
+      {state.collecting && <Collecting />}
+      {state.loading && <Loading />}
+      
+      {error && (
+        <div className="alert alert-error mb-4">
+          <span>{error}</span>
+          <button className="btn btn-sm" onClick={clearError}>×</button>
         </div>
-        <div className='flex basis-11/12 '>
-          <div className='mockup-code w-full h-[650px] overflow-auto text-left mx-5'>
-            <div className='w-[640px]'>
-              <pre className='px-2'>
-                <code>
-                  <p className='text-xs m-0 p-0'>{loadingDisp ? <p>Loading...</p> : displayLog}</p>
-                </code>
-              </pre>
-            </div>
-          </div>
+      )}
+
+      
+      <div className='flex flex-row h-full min-h-0'>
+        <div className='flex flex-col items-center flex-shrink-0'>
+          <LogCollector
+            onCollectLogs={handleCollectLogs}
+            collecting={state.collecting}
+            cvmChecked={state.cvmChecked}
+          />
+          
+          <ZipManager
+            zipList={state.zipList}
+            selectedZip={state.selectedZip}
+            onZipSelect={handleZipSelect}
+            loadingZip={state.loadingZip}
+            onDownload={handleDownload}
+          />
+
+          <LogFileList
+            logsInZip={state.logsInZip}
+            selectedLogFile={state.selectedLogFile}
+            onLogSelect={handleLogSelect}
+            selectedZip={state.selectedZip}
+          />
+
+          <CvmSelector
+            cvmsIp={state.clusterData?.cvms_ip || []}
+            prismLeader={state.prismLeader}
+            cvmChecked={state.cvmChecked}
+            onCvmChange={handleCvmChange}
+            loading={state.loading}
+          />
+        </div>
+        
+        <div className="flex-1 min-w-0 max-w-full overflow-hidden">
+          <LogViewer
+            logsInZip={state.logsInZip}
+            displayLog={state.displayLog}
+            onLogSelect={handleLogSelect}
+            loadingDisplay={state.loadingDisplay}
+            selectedZip={state.selectedZip}
+            selectedLogFile={state.selectedLogFile}
+          />
         </div>
       </div>
     </>

@@ -14,7 +14,10 @@ COPY requirements_fastapi.txt /usr/src/
 RUN pip install --no-cache-dir -r requirements_fastapi.txt
 
 # アプリケーションファイルをコピー
-COPY flaskr/ /usr/src/flaskr/
+COPY fastapi_app/ /usr/src/fastapi_app/
+COPY core/ /usr/src/core/
+COPY config/ /usr/src/config/
+COPY output/ /usr/src/output/
 
 # 共通ライブラリ用ディレクトリ作成
 RUN mkdir -p /usr/src/shared
@@ -27,4 +30,4 @@ USER loghoi
 EXPOSE 7776
 
 # デフォルトコマンド
-CMD ["python", "/usr/src/flaskr/app_fastapi.py"]
+CMD ["python", "/usr/src/fastapi_app/app_fastapi.py"]

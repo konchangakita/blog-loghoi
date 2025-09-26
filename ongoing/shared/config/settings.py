@@ -15,8 +15,8 @@ class Config:
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*')
     
     # Log Collection Settings
-    OUTPUT_LOGDIR = os.getenv('OUTPUT_LOGDIR', '/usr/src/flaskr/output/log')
-    OUTPUT_ZIPDIR = os.getenv('OUTPUT_ZIPDIR', '/usr/src/flaskr/output/zip')
+    OUTPUT_LOGDIR = os.getenv('OUTPUT_LOGDIR', '/usr/src/output/log')
+    OUTPUT_ZIPDIR = os.getenv('OUTPUT_ZIPDIR', '/usr/src/output/zip')
     
     # Configuration Files
     JSON_LOGFILE = os.getenv('JSON_LOGFILE', 'col_logfile.json')

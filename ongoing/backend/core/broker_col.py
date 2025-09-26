@@ -10,10 +10,10 @@ import glob
 import common
 
 
-JSON_LOGFILE = "col_logfile.json"
-JSON_COMMAND = "col_command.json"
-OUTPUT_LOGDIR = "/usr/src/flaskr/output/log"
-OUTPUT_ZIPDIR = "/usr/src/flaskr/output/zip"
+JSON_LOGFILE = "/usr/src/config/col_logfile.json"
+JSON_COMMAND = "/usr/src/config/col_command.json"
+OUTPUT_LOGDIR = "/usr/src/output/log"
+OUTPUT_ZIPDIR = "/usr/src/output/zip"
 
 os.makedirs(OUTPUT_LOGDIR, exist_ok=True)
 os.makedirs(OUTPUT_ZIPDIR, exist_ok=True)
@@ -49,7 +49,7 @@ class CollectLogGateway():
         print(">>>>>>>> Download logfiles <<<<<<<<<")
         remote_host = cvm
         remote_user = "nutanix"
-        key_file = "/usr/src/flaskr/.ssh/ntnx-lockdown"
+        key_file = "/usr/src/config/.ssh/ntnx-lockdown"
 
         for item in logfile_list:
             remote_path = item["src_path"]
@@ -132,7 +132,32 @@ class CollectLogGateway():
         try:
             with open(log_path, 'r') as file:
                 content = file.read()
+            
+            # 空のファイルかチェック
+            if not content.strip():
+                return {'empty': True, 'message': 'ファイル内ログ無し'}
+            
             return content
+        except Exception as e:
+            return {'error': str(e)}
+
+    def get_logfile_size(self, log_file, zip_name):
+        """ログファイルのサイズを取得"""
+        print(">>>>>>>> Get Log File Size <<<<<<<<<")
+        filename_without_ext, _ = os.path.splitext(zip_name)
+        log_path = os.path.join(OUTPUT_LOGDIR, filename_without_ext, log_file)
+        print(f"Checking file size: {log_path}")
+
+        try:
+            if not os.path.exists(log_path):
+                return {'error': 'File not found'}
+            
+            file_size = os.path.getsize(log_path)
+            return {
+                'file_size': file_size,
+                'file_size_mb': round(file_size / (1024 * 1024), 2),
+                'file_path': log_path
+            }
         except Exception as e:
             return {'error': str(e)}
         

@@ -103,3 +103,4 @@ npm run test:coverage -- --testPathPattern="backend-url"
 - 統合テスト: コンポーネント・API・SocketIOでの使用
 - エラーハンドリング: 異常系の処理
 - 環境対応: クライアント・サーバー両環境
+

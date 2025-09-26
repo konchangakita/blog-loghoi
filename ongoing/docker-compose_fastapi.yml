@@ -37,16 +37,18 @@ services:
     ports:
       - 7776:7776
     volumes:
-      - ./backend/flaskr:/usr/src/flaskr:z
+      - ./backend/fastapi_app:/usr/src/fastapi_app:z
+      - ./backend/core:/usr/src/core:z
+      - ./backend/config:/usr/src/config:z
+      - ./backend/output:/usr/src/output:z
       - ./shared:/usr/src/shared:z  # 共通ライブラリをマウント
-    working_dir: /usr/src/flaskr
+    working_dir: /usr/src/fastapi_app
     environment:
       - PYTHONPATH=/usr/src:/usr/src/shared  # Python パス設定
       - ELASTICSEARCH_URL=http://elasticsearch:9200
       - FLASK_HOST=0.0.0.0
       - FLASK_PORT=7776
       - FLASK_DEBUG=true
-    command: bash -c "cd /usr/src/flaskr && python app_fastapi.py"
     depends_on:
       - elasticsearch
     networks:

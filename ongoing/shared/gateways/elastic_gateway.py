@@ -9,6 +9,11 @@ from datetime import datetime
 from datetime import timezone, timedelta
 import json
 
+import sys
+import os
+# Dockerコンテナ内でのパスを追加
+sys.path.append('/usr/src/core')
+sys.path.append(os.path.join(os.path.dirname(__file__), '../../backend/core'))
 import common
 
 # 外部にElasticsearchを立てた時用
