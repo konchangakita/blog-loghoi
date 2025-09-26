@@ -1,6 +1,6 @@
 'use client'
 import { LogViewerProps } from '../types'
-import { useEffect, useRef } from 'react'
+import React from 'react'
 
 const LogViewer = ({ 
   logsInZip, 
@@ -10,24 +10,12 @@ const LogViewer = ({
   selectedZip,
   selectedLogFile 
 }: LogViewerProps) => {
-  const selectedLogRef = useRef<HTMLDivElement>(null)
-  
   console.log('LogViewer render:', { 
     logsInZip: logsInZip?.length, 
     displayLog: displayLog?.length, 
     loadingDisplay, 
     selectedZip 
   })
-
-  // 選択されたログファイルにスクロール
-  useEffect(() => {
-    if (selectedLogFile && selectedLogRef.current) {
-      selectedLogRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      })
-    }
-  }, [selectedLogFile])
   if (!selectedZip) {
     return (
       <div className="w-49 text-center">
@@ -41,11 +29,18 @@ const LogViewer = ({
 
   // ファイルサイズが大きい場合のチェック
   const isFileTooLarge = displayLog?.startsWith('FILE_SIZE_TOO_LARGE:')
-  const fileSizeMB = isFileTooLarge ? parseFloat(displayLog.split(':')[1]) : 0
+  const fileSizeMB = isFileTooLarge ? 
+    (() => {
+      try {
+        // displayLogがundefinedの場合に備えて安全にアクセス
+        return parseFloat(displayLog?.split(':')[1] ?? '') || 0
+      } catch {
+        return 0
+      }
+    })() : 0
 
   // 空のファイルかチェック
   const isEmptyFile = displayLog?.startsWith('EMPTY_FILE:')
-  const emptyMessage = isEmptyFile ? displayLog.split(':')[1] : ''
 
   return (
     <div className="flex-1 min-w-0 max-w-full h-[650px]">
