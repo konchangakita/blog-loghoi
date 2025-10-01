@@ -282,3 +282,5 @@ spec:
 **参考**: [Tidy First: A Personal Practice of Sustainable Software Development](https://www.oreilly.com/library/view/tidy-first/9781098150948/)
 
 この計画に基づいて、段階的かつ安全なリファクタリングを実施し、Kubernetes化への準備を進めます。
+
+

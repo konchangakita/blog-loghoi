@@ -12,6 +12,8 @@ interface dict {
 type ResValues = {
   pc_list: dict
   cluster_list: dict
+  error?: string | null
+  errorType?: string | null
 }
 
 const DisplayCluster = ({ clusterList }: any) => {
@@ -42,21 +44,72 @@ const DisplayCluster = ({ clusterList }: any) => {
 export default function PcList2() {
   const requestUrl = `${getBackendUrl()}/api/pclist`
   const [data, setData] = useState<ResValues>()
+  const [showAlert, setShowAlert] = useState(false)
 
   useEffect(() => {
     const fetchData = async () => {
-      const response = await fetch(requestUrl, { method: 'GET' })
-      const data = await response.json()
-      setData(data)
+      try {
+        const response = await fetch(requestUrl, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(10000) // 10秒のタイムアウト
+        })
+        
+        if (!response.ok) {
+          console.error(`API Error: ${response.status} ${response.statusText}`)
+          setData({
+            pc_list: null,
+            cluster_list: null,
+            error: `バックエンド接続エラー (${response.status}): ${response.statusText}`,
+            errorType: 'CONNECTION_ERROR'
+          })
+          setShowAlert(true)
+          return
+        }
+        
+        const data = await response.json()
+        setData(data)
+        
+        // エラーがある場合はアラートを表示
+        if (data.error && data.errorType !== 'NO_DATA') {
+          setShowAlert(true)
+        }
+      } catch (error) {
+        console.error('Network Error:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        setData({
+          pc_list: null,
+          cluster_list: null,
+          error: `ネットワークエラー: ${errorMessage}`,
+          errorType: 'NETWORK_ERROR'
+        })
+        setShowAlert(true)
+      }
     }
     fetchData()
   }, [])
+  
   console.log('PC List:', data)
 
   const pcList: any = data ? data.pc_list : ''
   const clusterList: any = data ? data.cluster_list : ''
 
-  const displayPc = pcList.length ? (
+  // エラー表示
+  const displayError = data?.error && data?.errorType !== 'NO_DATA' ? (
+    <div className="alert alert-error mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{data.error}</span>
+      <button 
+        className="btn btn-sm btn-ghost" 
+        onClick={() => setShowAlert(false)}
+      >
+        ✕
+      </button>
+    </div>
+  ) : null
+
+  const displayPc = pcList && pcList.length ? (
     pcList.map((val: dict, idx: number) => {
       const clusterListSub = clusterList[val.prism_ip]
       return (
@@ -98,7 +151,9 @@ export default function PcList2() {
   return (
     <>
       <div className='text-2xl font-bold m-5'>PC LIST</div>
-
+      
+      {showAlert && displayError}
+      
       <div className='flex flex-col justify-center items-center'>{displayPc}</div>
     </>
   )

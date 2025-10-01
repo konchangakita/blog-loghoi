@@ -1,6 +1,6 @@
 'use client'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getBackendUrl } from '../../lib/getBackendUrl'
@@ -10,7 +10,7 @@ import { getBackendUrl } from '../../lib/getBackendUrl'
 import { LogFiles } from '@/lib/rt-logs'
 
 //components
-import LogViewer from './realtimelog-logview'
+import RealtimeLogViewer from './realtimelog-logview'
 import Loading from '@/components/loading'
 
 //fontawesome
@@ -23,7 +23,7 @@ interface dict {
 
 type ResValues = {
   block_serial_number: string
-  cvms_ip: []
+  cvms_ip: string[]
   hypervisor: string
   name: string
   pc_ip: string
@@ -31,6 +31,10 @@ type ResValues = {
   prism_leader: string
   timestamp: string
   uuid: string
+  cvm_list?: {
+    cvms_ip: string[]
+    prism_leader: string
+  }
 }
 
 const RealtimelogContent = () => {
@@ -46,18 +50,24 @@ const RealtimelogContent = () => {
 
   const [tailPath, setTailPath] = useState<string>('/home/nutanix/data/logs/genesis.out')
   const [tailCecked, setTailChecked] = useState<string>('genesis')
-  const handleTailLog = (name: string, path: string) => {
+  const logListRef = useRef<HTMLDivElement>(null)
+  
+  const handleTailLog = useCallback((name: string, path: string) => {
     setTailChecked(name)
     setTailPath(path)
-  }
+    // スクロール位置を保持するため、何もしない
+  }, [])
 
   // Tailするファイル一覧 from setting_realtimelog.json
-  const TailList = () => {
+  const TailList = useMemo(() => {
     return (
       <>
         <p className='border border-black p-1'>Log list</p>
         <p className='font-extrabold bg-purple-100 rounded-full'>{tailCecked}</p>
-        <div className='h-[460px] overflow-auto overflow-x-hidden scroll-py-1 scroll-padding antiscrollbar-vertical antiscrollbar-w-7'>
+        <div 
+          ref={logListRef}
+          className='h-[460px] overflow-auto overflow-x-hidden scroll-py-1 scroll-padding antiscrollbar-vertical antiscrollbar-w-7'
+        >
           <form>
             {LogFiles.map((val, idx: number) => {
               return (
@@ -73,7 +83,7 @@ const RealtimelogContent = () => {
         </div>
       </>
     )
-  }
+  }, [tailCecked, handleTailLog])
 
   // CVM list, and connect to paramiko with checked cvm
   const ClusterName = searchParams.get('cluster')
@@ -87,6 +97,7 @@ const RealtimelogContent = () => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cluster_name: ClusterName }),
+    signal: AbortSignal.timeout(20000), // 20秒のタイムアウト
   }
 
   useEffect(() => {
@@ -211,7 +222,7 @@ const RealtimelogContent = () => {
         <div className='p-1 flex flex-nowrap justify-center items-start'>
           <div className='form-control flex basis-1/12 p-1 border '>
             <div className=''>
-              <TailList />
+              {TailList}
             </div>
             <div className='p-1'>
               <div>
@@ -233,7 +244,7 @@ const RealtimelogContent = () => {
             </div>
           </div>
           <div className='p-1 flex basis-11/12 flex-col'>
-            <LogViewer cvmChecked={cvmChecked} tailName={tailCecked} tailPath={tailPath} filter={filter} />
+            <RealtimeLogViewer cvmChecked={cvmChecked} tailName={tailCecked} tailPath={tailPath} filter={filter} />
           </div>
         </div>
       </div>

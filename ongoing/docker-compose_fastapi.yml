@@ -67,6 +67,8 @@ services:
       && yarn
       && yarn dev"
     working_dir: /usr/src/next-app/loghoi
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://10.38.113.49:7776
     networks:
       - local
 

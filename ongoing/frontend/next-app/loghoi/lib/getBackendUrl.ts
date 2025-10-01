@@ -6,6 +6,7 @@
 export function getBackendUrl(): string {
   // 1. 完全なURLが環境変数で指定されている場合
   if (process.env.NEXT_PUBLIC_BACKEND_URL) {
+    console.log('Using NEXT_PUBLIC_BACKEND_URL:', process.env.NEXT_PUBLIC_BACKEND_URL)
     return process.env.NEXT_PUBLIC_BACKEND_URL
   }
   
@@ -13,7 +14,7 @@ export function getBackendUrl(): string {
   const host = process.env.NEXT_PUBLIC_BACKEND_HOST || 
                process.env.BACKEND_SERVICE_HOST || 
                process.env.BACKEND_HOST ||
-               'localhost'
+               '10.38.113.49'  // デフォルトを変更
   const port = process.env.NEXT_PUBLIC_BACKEND_PORT || 
                process.env.BACKEND_SERVICE_PORT || 
                process.env.BACKEND_PORT ||
@@ -26,7 +27,9 @@ export function getBackendUrl(): string {
   if (typeof window !== 'undefined') {
     const currentProtocol = window.location.protocol
     const currentHostname = window.location.hostname
-    return `${currentProtocol}//${currentHostname}:${port}`
+    const url = `${currentProtocol}//${currentHostname}:${port}`
+    console.log('Client-side URL:', url)
+    return url
   }
   
   // 4. サーバーサイドでは環境変数を使用
@@ -37,6 +40,7 @@ export function getBackendUrl(): string {
   if (port !== defaultPort) {
     url += `:${port}`
   }
+  console.log('Server-side URL:', url)
   return url
 }
 

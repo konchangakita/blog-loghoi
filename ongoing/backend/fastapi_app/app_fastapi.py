@@ -559,6 +559,46 @@ async def get_pclist() -> Dict[str, Any]:
         print(f"❌ PC一覧取得エラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/pclist")
+async def get_pclist() -> Dict[str, Any]:
+    """PC一覧取得API（フロントエンド用）"""
+    print("GET /api/pclist request")
+    try:
+        # デフォルトのPC IPを使用してクラスター一覧を取得
+        default_pcip = "10.38.112.7"
+        cluster_data = reg.get_pccluster({"pcip": default_pcip})
+        
+        # フロントエンドが期待する形式に変換
+        if isinstance(cluster_data, list):
+            return {
+                "pc_list": {
+                    "pc_ip": default_pcip,
+                    "clusters": cluster_data,
+                    "count": len(cluster_data)
+                },
+                "cluster_list": cluster_data
+            }
+        else:
+            return {
+                "pc_list": {
+                    "pc_ip": default_pcip,
+                    "clusters": cluster_data.get("clusters", []),
+                    "count": cluster_data.get("count", 0)
+                },
+                "cluster_list": cluster_data.get("clusters", [])
+            }
+    except Exception as e:
+        print(f"Error in get_pclist: {e}")
+        # エラーの場合は空のリストを返す
+        return {
+            "pc_list": {
+                "pc_ip": "10.38.112.7",
+                "clusters": [],
+                "count": 0
+            },
+            "cluster_list": []
+        }
+
 @app.post("/api/pccluster")
 async def get_pccluster(request: PCClusterRequest) -> Dict[str, Any]:
     """PC関連クラスター取得API"""

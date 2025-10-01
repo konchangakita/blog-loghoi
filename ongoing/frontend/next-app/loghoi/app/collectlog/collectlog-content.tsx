@@ -9,7 +9,7 @@ import CvmSelector from './components/CvmSelector'
 import LogCollector from './components/LogCollector'
 import ZipManager from './components/ZipManager'
 import LogFileList from './components/LogFileList'
-import LogViewer from './components/LogViewer'
+import CollectLogViewer from './components/LogViewer'
 
 // hooks
 import { useCollectLogApi } from './hooks/useCollectLogApi'
@@ -253,7 +253,7 @@ const CollectlogContnet = () => {
         </div>
         
         <div className="flex-1 min-w-0 max-w-full overflow-hidden">
-          <LogViewer
+          <CollectLogViewer
             logsInZip={state.logsInZip}
             displayLog={state.displayLog}
             onLogSelect={handleLogSelect}
