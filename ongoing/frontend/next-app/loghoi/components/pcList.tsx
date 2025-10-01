@@ -10,8 +10,8 @@ interface dict {
 }
 
 type ResValues = {
-  pc_list: dict
-  cluster_list: dict
+  pc_list: dict | null
+  cluster_list: dict | null
   error?: string | null
   errorType?: string | null
 }
