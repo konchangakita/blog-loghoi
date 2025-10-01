@@ -31,3 +31,4 @@ EXPOSE 7776
 
 # デフォルトコマンド
 CMD ["python", "/usr/src/fastapi_app/app_fastapi.py"]
+

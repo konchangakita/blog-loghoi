@@ -1,23 +1,58 @@
 import os
 
 class Config:
-    """LogHoi Application Configuration"""
+    """LogHoi Application Configuration - 環境変数ベースの統一設定"""
     
-    # Elasticsearch Settings
+    # ========================================
+    # データベース設定
+    # ========================================
     ELASTICSEARCH_URL = os.getenv('ELASTICSEARCH_URL', 'http://elasticsearch:9200')
     
-    # Flask Settings  
-    FLASK_HOST = os.getenv('FLASK_HOST', '0.0.0.0')
-    FLASK_PORT = int(os.getenv('FLASK_PORT', '7776'))
-    FLASK_DEBUG = os.getenv('FLASK_DEBUG', 'True').lower() == 'true'
+    # ========================================
+    # サーバー設定
+    # ========================================
+    BACKEND_HOST = os.getenv('BACKEND_HOST', '0.0.0.0')
+    BACKEND_PORT = int(os.getenv('BACKEND_PORT', '7776'))
+    FRONTEND_PORT = int(os.getenv('FRONTEND_PORT', '7777'))
+    DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
     
-    # CORS Settings
-    CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*')
+    # ========================================
+    # CORS設定
+    # ========================================
+    CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*').split(',')
     
-    # Log Collection Settings
+    # ========================================
+    # SSH設定
+    # ========================================
+    SSH_TIMEOUT = int(os.getenv('SSH_TIMEOUT', '30'))
+    SSH_MAX_RETRIES = int(os.getenv('SSH_MAX_RETRIES', '5'))
+    SSH_KEY_PATH = os.getenv('SSH_KEY_PATH', '/usr/src/config/.ssh/ntnx-lockdown')
+    
+    # ========================================
+    # ログ収集設定
+    # ========================================
     OUTPUT_LOGDIR = os.getenv('OUTPUT_LOGDIR', '/usr/src/output/log')
     OUTPUT_ZIPDIR = os.getenv('OUTPUT_ZIPDIR', '/usr/src/output/zip')
     
-    # Configuration Files
+    # ========================================
+    # 設定ファイル
+    # ========================================
     JSON_LOGFILE = os.getenv('JSON_LOGFILE', 'col_logfile.json')
     JSON_COMMAND = os.getenv('JSON_COMMAND', 'col_command.json')
+    
+    # ========================================
+    # WebSocket設定
+    # ========================================
+    WEBSOCKET_TIMEOUT = int(os.getenv('WEBSOCKET_TIMEOUT', '20000'))
+    
+    # ========================================
+    # ファイルサイズ制限
+    # ========================================
+    MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', '1'))
+    
+    # ========================================
+    # Flask互換性設定（後方互換性）
+    # ========================================
+    FLASK_HOST = BACKEND_HOST
+    FLASK_PORT = BACKEND_PORT
+    FLASK_DEBUG = DEBUG

@@ -141,7 +141,9 @@ const LogViewer: React.FC<LogViewerProps> = ({
       upgrade: true,
       rememberUpgrade: false,
       timeout: 20000,
-      forceNew: true
+      forceNew: true,
+      pingTimeout: 60000,  // pingタイムアウト（ミリ秒）
+      pingInterval: 25000  // ping間隔（ミリ秒）
     })
     
     setSocket(newsocket)
@@ -206,9 +208,42 @@ const LogViewer: React.FC<LogViewerProps> = ({
       upgrade: true,
       rememberUpgrade: false,
       timeout: 20000,
-      forceNew: true
+      forceNew: true,
+      pingTimeout: 60000,  // pingタイムアウト（ミリ秒）
+      pingInterval: 25000  // ping間隔（ミリ秒）
     })
     
+    // 接続確立後にtail -fを開始する（クリック駆動で接続→SSH開始）
+    newsocket.once('connect', () => {
+      try {
+        console.log('Socket connected. Emitting start_tail_f...')
+        newsocket.emit('start_tail_f', {
+          cvm_ip: cvmChecked,
+          log_path: tailPath,
+          log_name: tailName
+        })
+      } catch (e) {
+        console.error('start_tail_f emit failed:', e)
+      } finally {
+        setIsConnecting(false)
+      }
+    })
+
+    // 既に接続済みの場合のフォールバック
+    if (newsocket.connected) {
+      try {
+        newsocket.emit('start_tail_f', {
+          cvm_ip: cvmChecked,
+          log_path: tailPath,
+          log_name: tailName
+        })
+      } catch (e) {
+        console.error('start_tail_f emit failed (already connected):', e)
+      } finally {
+        setIsConnecting(false)
+      }
+    }
+
     setSocket(newsocket)
   }
 
@@ -271,15 +306,8 @@ const LogViewer: React.FC<LogViewerProps> = ({
       setIsActive(false)
       setIsConnecting(false)
       
-      if (tailName) {
-        setTimeout(() => {
-          socket.emit('start_tail_f', {
-            cvm_ip: cvmChecked,
-            log_path: tailPath,
-            log_name: tailName
-          })
-        }, 1000)
-      }
+      // 接続時は自動開始しない（手動で開始ボタンを押すまで待機）
+      console.log('SocketIO接続完了。tail -f開始')
     })
 
     socket.on('disconnect', () => {
@@ -303,26 +331,50 @@ const LogViewer: React.FC<LogViewerProps> = ({
         socket.off('connect_error')
       }
     }
-  }, [socket, variant, cvmChecked, tailName, tailPath])
+  }, [socket, variant])
 
-  // ページ遷移時の切断（realtimelog用）
+  // ページ遷移/離脱時の切断（realtimelog用）
   useEffect(() => {
     if (variant !== 'realtime') return
 
-    const handleRouteChange = () => {
-      handleStopAll()
+    const stopImmediately = () => {
+      try {
+        // 可能ならstopを先に通知
+        if (socket && socket.connected) {
+          try {
+            socket.emit('stop_tail_f', {})
+          } catch {}
+        }
+      } finally {
+        // 常に切断実行
+        if (socket) {
+          try {
+            socket.disconnect()
+          } catch {}
+        }
+        setIsActive(false)
+        setIsConnecting(false)
+      }
     }
-    
+
     const handleBeforeUnload = () => {
-      handleStopAll()
+      stopImmediately()
     }
-    
+
+    const handlePageHide = () => {
+      stopImmediately()
+    }
+
     window.addEventListener('beforeunload', handleBeforeUnload)
-    
+    window.addEventListener('pagehide', handlePageHide)
+
+    // アンマウント時も確実に停止
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
+      window.removeEventListener('pagehide', handlePageHide)
+      stopImmediately()
     }
-  }, [pathname, searchParams, variant])
+  }, [variant, socket])
 
   // collectlog用のレンダリング
   if (variant === 'collect') {

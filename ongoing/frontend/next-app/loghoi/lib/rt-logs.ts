@@ -110,10 +110,6 @@ export const LogFiles: FileList[] = [
     path: '/home/nutanix/data/logs/fluent_bit.out',
   },
   {
-    name: 'genesis',
-    path: '/home/nutanix/data/logs/genesis.out',
-  },
-  {
     name: 'gflags_collector',
     path: '/home/nutanix/data/logs/gflags_collector.out',
   },
@@ -180,10 +176,6 @@ export const LogFiles: FileList[] = [
   {
     name: 'logbay_service_monitor',
     path: '/home/nutanix/data/logs/logbay_service_monitor.out',
-  },
-  {
-    name: 'log_collector',
-    path: '/home/nutanix/data/logs/log_collector.out',
   },
   {
     name: 'log_collector',

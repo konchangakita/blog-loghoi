@@ -46,9 +46,9 @@ services:
     environment:
       - PYTHONPATH=/usr/src:/usr/src/shared  # Python パス設定
       - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - FLASK_HOST=0.0.0.0
-      - FLASK_PORT=7776
-      - FLASK_DEBUG=true
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=7776
+      - DEBUG=false
     depends_on:
       - elasticsearch
     networks:

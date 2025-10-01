@@ -122,6 +122,7 @@ def get_cvmlist(cluster_name):
     cvm = data[0]["cvms_ip"][0]
     print(f"Attempting SSH connection to CVM: {cvm}")
     
+    ssh = None
     try:
         ssh = connect_ssh(cvm)
         
@@ -145,5 +146,13 @@ def get_cvmlist(cluster_name):
         # SSH接続に失敗した場合、デフォルトで最初のCVMをPrism Leaderとして設定
         cluster_data["prism_leader"] = cvm
         print(f"Setting default prism leader to first CVM: {cvm}")
+    finally:
+        # SSH接続を必ず閉じる
+        if ssh:
+            try:
+                ssh.close()
+                print(f">>>>>>>> parmiko close  <<<<<<<<<")
+            except Exception as e:
+                print(f"Error closing SSH connection: {e}")
 
     return cluster_data

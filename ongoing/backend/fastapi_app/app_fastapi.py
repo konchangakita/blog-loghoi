@@ -19,9 +19,8 @@ import uvicorn
 # SocketIO関連インポート
 import socketio
 
-# SSH接続管理用のグローバル変数
-ssh_connection = None
-ssh_log_task = None
+# 接続管理システムのインポート
+from connection_manager import connection_manager
 
 # Elasticsearch
 from elasticsearch import Elasticsearch
@@ -80,9 +79,11 @@ app = FastAPI(
 sio = socketio.AsyncServer(
     cors_allowed_origins="*",
     async_mode='asgi',
-    logger=True,
-    engineio_logger=True,
-    socketio_path='/socket.io/'
+    logger=False,  # SocketIOのログ（"emitting event"等）を抑制
+    engineio_logger=False,  # Engine.IOの汎用ログ（"connection closed"等）を抑制
+    socketio_path='/socket.io/',
+    ping_timeout=60,  # pingタイムアウト（秒）
+    ping_interval=25  # ping間隔（秒）
 )
 
 # SSH接続とログ取得の管理関数
@@ -283,6 +284,9 @@ async def connect(sid, environ, auth=None):
     """SocketIO接続時の処理"""
     print(f"SocketIO クライアント {sid} が接続しました")
     
+    # 接続管理システムに追加
+    await connection_manager.add_socket_connection(sid)
+    
     # 接続確認メッセージを送信
     await sio.emit('message', {'data': f'LogHoiサーバーに接続しました (ID: {sid})'}, to=sid)
 
@@ -291,10 +295,10 @@ async def disconnect(sid):
     """SocketIO切断時の処理"""
     print(f"SocketIO クライアント {sid} が切断しました")
     
-    # SSH接続とログ監視を停止
-    print(f"SSH接続とログ監視を停止開始 (切断: {sid})")
-    await stop_ssh_log_monitoring()
-    print(f"SSH接続とログ監視を停止完了 (切断: {sid})")
+    # 接続管理システムから削除（SSH接続とログ監視も即座に停止）
+    print(f"接続を即座にクリーンアップ開始 (切断: {sid})")
+    await connection_manager.remove_socket_connection(sid)
+    print(f"接続を即座にクリーンアップ完了 (切断: {sid})")
 
 @sio.event
 async def start_tail_f(sid, data):
@@ -312,21 +316,28 @@ async def start_tail_f(sid, data):
             }, to=sid)
             return
         
-        # SSH接続とログ監視を開始
-        success = await start_ssh_log_monitoring(cvm_ip, log_path, log_name)
-        
-        if success:
-            await sio.emit('tail_f_status', {
-                'status': 'started',
-                'message': f'tail -f開始: {cvm_ip}'
-            }, to=sid)
-            print(f"tail -f開始成功: {sid}")
-        else:
+        # 接続管理システムを使用してSSH接続とログ監視を開始
+        ssh_success = await connection_manager.add_ssh_connection(sid, cvm_ip)
+        if not ssh_success:
             await sio.emit('tail_f_status', {
                 'status': 'error',
                 'message': f'SSH接続失敗: {cvm_ip}'
             }, to=sid)
-            print(f"tail -f開始失敗: {sid}")
+            return
+        
+        monitoring_success = await connection_manager.start_log_monitoring(sid, log_path, log_name, sio)
+        if not monitoring_success:
+            await sio.emit('tail_f_status', {
+                'status': 'error',
+                'message': f'ログ監視開始失敗: {log_path}'
+            }, to=sid)
+            return
+        
+        await sio.emit('tail_f_status', {
+            'status': 'started',
+            'message': f'tail -f開始: {cvm_ip}'
+        }, to=sid)
+        print(f"tail -f開始成功: {sid}")
             
     except Exception as e:
         print(f"tail -f開始エラー: {e}")
@@ -341,8 +352,8 @@ async def stop_tail_f(sid, data):
     print(f"tail -f停止要求: {data} (SID: {sid})")
     
     try:
-        # SSH接続とログ監視を停止
-        await stop_ssh_log_monitoring()
+        # ログ監視を停止（SSH接続は維持）
+        await connection_manager.stop_log_monitoring(sid)
         
         await sio.emit('tail_f_status', {
             'status': 'stopped',
@@ -737,6 +748,16 @@ async def health_check():
         "version": "2.0.0",
         "elasticsearch": Config.ELASTICSEARCH_URL
     }
+
+@app.get("/api/connections")
+async def get_connections():
+    """接続状態確認API"""
+    return connection_manager.get_all_connections()
+
+@app.get("/api/connections/{sid}")
+async def get_connection_status(sid: str):
+    """特定の接続状態確認API"""
+    return connection_manager.get_connection_status(sid)
 
 @app.get("/info")
 async def app_info():
