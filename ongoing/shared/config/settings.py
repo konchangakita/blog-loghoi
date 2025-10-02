@@ -39,20 +39,3 @@ class Config:
     # ========================================
     JSON_LOGFILE = os.getenv('JSON_LOGFILE', 'col_logfile.json')
     JSON_COMMAND = os.getenv('JSON_COMMAND', 'col_command.json')
-    
-    # ========================================
-    # WebSocket設定
-    # ========================================
-    WEBSOCKET_TIMEOUT = int(os.getenv('WEBSOCKET_TIMEOUT', '20000'))
-    
-    # ========================================
-    # ファイルサイズ制限
-    # ========================================
-    MAX_FILE_SIZE_MB = int(os.getenv('MAX_FILE_SIZE_MB', '1'))
-    
-    # ========================================
-    # Flask互換性設定（後方互換性）
-    # ========================================
-    FLASK_HOST = BACKEND_HOST
-    FLASK_PORT = BACKEND_PORT
-    FLASK_DEBUG = DEBUG

@@ -294,32 +294,32 @@ const SyslogContent = () => {
                   <pre className='px-2'>
                     <code className=''>
                       {filteredLogs.map((logEntry: any, idx: number) => (
-                        <div key={idx} className='text-xs m-0 mb-1 p-1 border-l-2 border-gray-200'>
+                        <div key={idx} className='text-xs m-0 mb-0.5 p-0.5 border-l-2 border-gray-200'>
                           {typeof logEntry === 'string' ? (
                             // 古い形式（文字列）の場合
                             <p className='m-0 text-white'>{logEntry}</p>
                           ) : (
                             // 新しい形式（オブジェクト）の場合
                             <div className='m-0'>
-                              <div className='flex flex-nowrap gap-2 mb-1 overflow-x-auto'>
+                              <div className='text-gray-400 mb-0 leading-4' style={{fontSize: '0.6rem', lineHeight: '1rem'}}>
                                 {logEntry.timestamp && (
-                                  <span className='px-2 py-1 text-xs text-white bg-transparent border border-gray-400 rounded flex-shrink-0'>
+                                  <span className='mr-3'>
                                     {new Date(logEntry.timestamp).toLocaleString('ja-JP')}
                                   </span>
                                 )}
                                 {logEntry.hostname && (
-                                  <span className='px-2 py-1 text-xs text-white bg-transparent border border-gray-400 rounded flex-shrink-0'>
-                                    Host: {logEntry.hostname}
+                                  <span className='mr-3'>
+                                    <span className='text-gray-500'>Host:</span> {logEntry.hostname}
                                   </span>
                                 )}
                                 {logEntry.facility_label && (
-                                  <span className='px-2 py-1 text-xs text-white bg-transparent border border-gray-400 rounded flex-shrink-0'>
-                                    Facility: {logEntry.facility_label}
+                                  <span className='mr-3'>
+                                    <span className='text-gray-500'>Facility:</span> {logEntry.facility_label}
                                   </span>
                                 )}
                                 {logEntry.severity_label && (
-                                  <span className='px-2 py-1 text-xs text-white bg-transparent border border-gray-400 rounded flex-shrink-0'>
-                                    Severity: {logEntry.severity_label}
+                                  <span className='mr-3'>
+                                    <span className='text-gray-500'>Severity:</span> {logEntry.severity_label}
                                   </span>
                                 )}
                               </div>

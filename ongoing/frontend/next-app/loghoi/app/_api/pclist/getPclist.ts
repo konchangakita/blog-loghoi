@@ -63,3 +63,12 @@ export async function getPclist() {
     }
   }
 }
+
+  const resJson = (await res.json()) as PcLists
+  if (!resJson['pc_list']) {
+    // Render the closest `not-found.js` Error Boundary
+    notFound()
+  }
+
+  return resJson
+}

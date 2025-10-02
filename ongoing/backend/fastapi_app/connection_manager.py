@@ -263,3 +263,5 @@ class ConnectionManager:
 
 # グローバル接続管理インスタンス
 connection_manager = ConnectionManager()
+
+

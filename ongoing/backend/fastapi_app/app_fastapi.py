@@ -785,20 +785,20 @@ async def startup_event():
     """アプリケーション起動時の処理"""
     print("🚀 Starting LogHoi FastAPI Backend")
     print(f"📊 Elasticsearch: {Config.ELASTICSEARCH_URL}")
-    print(f"🌐 Server: {Config.FLASK_HOST}:{Config.FLASK_PORT}")
-    print(f"📖 API Documentation: http://{Config.FLASK_HOST}:{Config.FLASK_PORT}/docs")
+    print(f"🌐 Server: {Config.BACKEND_HOST}:{Config.BACKEND_PORT}")
+    print(f"📖 API Documentation: http://{Config.BACKEND_HOST}:{Config.BACKEND_PORT}/docs")
 
 # アプリケーション起動時のメッセージ
 print("🚀 Starting LogHoi FastAPI Backend")
 print(f"📊 Elasticsearch: {Config.ELASTICSEARCH_URL}")
-print(f"🌐 Server: {Config.FLASK_HOST}:{Config.FLASK_PORT}")
-print(f"📖 API Documentation: http://{Config.FLASK_HOST}:{Config.FLASK_PORT}/docs")
+print(f"🌐 Server: {Config.BACKEND_HOST}:{Config.BACKEND_PORT}")
+print(f"📖 API Documentation: http://{Config.BACKEND_HOST}:{Config.BACKEND_PORT}/docs")
 
 if __name__ == "__main__":
     uvicorn.run(
         "app_fastapi:socket_app",
-        host=Config.FLASK_HOST,
-        port=Config.FLASK_PORT,
-        reload=Config.FLASK_DEBUG,
+        host=Config.BACKEND_HOST,
+        port=Config.BACKEND_PORT,
+        reload=Config.DEBUG,
         log_level="info"
     )

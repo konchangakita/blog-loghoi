@@ -1,34 +1,32 @@
-FROM python:3.12-slim
+FROM python:3.11.4-slim
 
-# 作業ディレクトリ設定
-WORKDIR /usr/src
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-# システム依存関係インストール
-RUN apt-get update && apt-get install -y \
-    openssh-client \
-    curl \
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends \
+       curl \
+       ssh-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Python依存関係インストール  
-COPY requirements_fastapi.txt /usr/src/
-RUN pip install --no-cache-dir -r requirements_fastapi.txt
+WORKDIR /usr/src
 
-# アプリケーションファイルをコピー
-COPY fastapi_app/ /usr/src/fastapi_app/
-COPY core/ /usr/src/core/
-COPY config/ /usr/src/config/
-COPY output/ /usr/src/output/
+# Install deps first (use fastapi-specific requirements)
+COPY ./requirements_fastapi.txt /usr/src/requirements_fastapi.txt
+RUN pip install --upgrade pip \
+    && pip install -r /usr/src/requirements_fastapi.txt
 
-# 共通ライブラリ用ディレクトリ作成
-RUN mkdir -p /usr/src/shared
+# Copy application code
+COPY ./fastapi_app /usr/src/fastapi_app
+COPY ./core /usr/src/core
+COPY ./config /usr/src/config
+ENV PYTHONPATH=/usr/src:/usr/src/shared
+WORKDIR /usr/src/fastapi_app
 
-# 実行ユーザー作成（セキュリティ向上）
-RUN useradd -m -s /bin/bash loghoi
-USER loghoi
-
-# ポート公開
 EXPOSE 7776
 
-# デフォルトコマンド
-CMD ["python", "/usr/src/fastapi_app/app_fastapi.py"]
+CMD ["python", "-m", "uvicorn", "app_fastapi:socket_app", "--host", "0.0.0.0", "--port", "7776"]
+
+
+
 
