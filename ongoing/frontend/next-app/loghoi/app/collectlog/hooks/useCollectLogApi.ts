@@ -22,24 +22,20 @@ export const useCollectLogApi = () => {
   const getCvmList = useCallback(async (clusterName: string): Promise<ClusterData | null> => {
     try {
       clearError()
-      console.log('Fetching CVM list for cluster:', clusterName)
       const response = await fetch(`${getBackendUrl()}/api/cvmlist`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ cluster_name: clusterName }),
       })
-
-      console.log('Response status:', response.status)
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         const errorMessage = errorData.detail || `HTTP error! status: ${response.status}`
-        console.error('API Error:', errorMessage)
+        console.error('CVM一覧取得エラー:', errorMessage)
         throw new Error(errorMessage)
       }
 
       const data = await response.json()
-      console.log('CVM data from API:', data)
       return data
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'CVM一覧の取得に失敗しました'
@@ -113,25 +109,21 @@ export const useCollectLogApi = () => {
   const getLogFileSize = useCallback(async (logFile: string, zipName: string): Promise<{ file_size: number; file_size_mb: number } | null> => {
     try {
       clearError()
-      console.log('Fetching log file size:', { logFile, zipName })
       
       const response = await fetch(`${getBackendUrl()}/api/col/logsize`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ log_file: logFile, zip_name: zipName }),
       })
-
-      console.log('Log size response status:', response.status)
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
         const errorMessage = errorData.detail || `HTTP error! status: ${response.status}`
-        console.error('API Error:', errorMessage)
+        console.error('ファイルサイズ取得エラー:', errorMessage)
         throw new Error(errorMessage)
       }
 
       const data: LogSizeResponse = await response.json()
-      console.log('Log size data received:', data)
       
       if (data.status === 'error' || !data.data) {
         throw new Error(data.error || 'ファイルサイズの取得に失敗しました')
@@ -149,7 +141,6 @@ export const useCollectLogApi = () => {
   const getLogContent = useCallback(async (logFile: string, zipName: string): Promise<string | null> => {
     try {
       clearError()
-      console.log('Fetching log content:', { logFile, zipName })
       
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), 30000) // 30秒のタイムアウト
@@ -162,42 +153,27 @@ export const useCollectLogApi = () => {
       })
       
       clearTimeout(timeoutId)
-
-      console.log('Log content response status:', response.status)
-      console.log('Response headers:', response.headers)
       
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Response error text:', errorText)
+        console.error('ログ内容取得エラー:', errorText)
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 
-      console.log('About to parse JSON response...')
-      
       let responseText: string
       try {
         responseText = await response.text()
-        console.log('Raw response text length:', responseText.length)
-        console.log('Raw response text (first 200 chars):', responseText.substring(0, 200) + '...')
       } catch (textError) {
-        console.error('Error reading response text:', textError)
+        console.error('レスポンス読み取りエラー:', textError)
         throw new Error('Failed to read response text')
       }
       
       let data: LogDisplayResponse
       try {
         data = JSON.parse(responseText)
-        console.log('Log content data received:', data)
-        if (typeof data.data === 'string') {
-          console.log('Extracted content length:', data.data.length)
-          console.log('Extracted content (first 100 chars):', data.data.substring(0, 100) + '...')
-        } else {
-          console.log('Data is object:', data.data)
-        }
         
         // 空のファイルかチェック
         if (typeof data.data === 'object' && data.data && 'empty' in data.data && data.data.empty) {
-          console.log('Empty file detected:', data.data.message)
           return `EMPTY_FILE:${data.data.message}`
         }
         
@@ -205,14 +181,12 @@ export const useCollectLogApi = () => {
         const content = typeof data.data === 'string' ? data.data : ''
         const maxLength = 10000
         if (content.length > maxLength) {
-          console.log(`Log content is large (${content.length} chars), truncating to first ${maxLength} chars`)
           return content.substring(0, maxLength) + '\n\n... (ログが長すぎるため、最初の10000文字のみを表示しています)'
         }
         
         return content
       } catch (parseError) {
-        console.error('JSON parse error:', parseError)
-        console.error('Response text that failed to parse (first 500 chars):', responseText.substring(0, 500))
+        console.error('JSON解析エラー:', parseError)
         throw new Error('Failed to parse JSON response')
       }
     } catch (err) {

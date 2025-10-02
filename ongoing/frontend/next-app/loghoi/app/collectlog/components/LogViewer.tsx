@@ -11,12 +11,6 @@ const CollectLogViewer = ({
   selectedZip,
   selectedLogFile 
 }: LogViewerProps) => {
-  console.log('CollectLogViewer render:', { 
-    logsInZip: logsInZip?.length, 
-    displayLog: displayLog?.length, 
-    loadingDisplay, 
-    selectedZip 
-  })
 
   return (
     <LogViewer

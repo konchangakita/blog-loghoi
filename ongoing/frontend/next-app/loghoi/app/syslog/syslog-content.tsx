@@ -61,7 +61,6 @@ const SyslogContent = () => {
 
   // フィルター用初期設定
   const [filter, setFilter] = useState<string>('')
-  console.log('filter word:', filter)
   const clearFilter = () => {
     setFilter('')
   }
@@ -100,12 +99,10 @@ const SyslogContent = () => {
     const minutesData = ('0' + nowData.getMinutes()).slice(-2)
     const secondsData = ('0' + nowData.getSeconds()).slice(-2)
     const outputDateName = `syslog_${yearData}${monthData}${dayData}-${hoursData}${minutesData}${secondsData}.txt`
-    console.log(outputDateName)
     saveAs(outputData, outputDateName)
   }
 
   const searchSyslog: SubmitHandler<FormValues> = async (data) => {
-    console.log('********** debug **************: ', data)
     
     setIsLoading(true)
     setError('')

@@ -128,11 +128,8 @@ const LogViewer: React.FC<LogViewerProps> = ({
     if (variant !== 'realtime') return
     
     if (isConnecting || (socket && socket.connected)) {
-      console.log('Already connecting or connected')
       return
     }
-
-    console.log('Starting SocketIO connection...')
     setIsConnecting(true)
     
     const backendUrl = getBackendUrl()
@@ -152,7 +149,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const handleDisconnect = () => {
     if (variant !== 'realtime' || !socket) return
     
-    console.log('Disconnecting SocketIO...')
     socket.disconnect()
     setSocket(null)
     setIsActive(false)
@@ -168,7 +164,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
       return
     }
     
-    console.log('Starting tail -f...')
     socket.emit('start_tail_f', {
       cvm_ip: cvmChecked,
       log_path: tailPath,
@@ -180,7 +175,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const handleStopTailF = () => {
     if (variant !== 'realtime' || !socket || !socket.connected) return
     
-    console.log('Emitting stop_tail_f event...')
     socket.emit('stop_tail_f', {})
     
     const modal = document.getElementById('my-modal') as HTMLInputElement
@@ -199,7 +193,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
       return
     }
 
-    console.log('Starting SocketIO connection and tail -f...')
     setIsConnecting(true)
     
     const backendUrl = getBackendUrl()
@@ -216,7 +209,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
     // 接続確立後にtail -fを開始する（クリック駆動で接続→SSH開始）
     newsocket.once('connect', () => {
       try {
-        console.log('Socket connected. Emitting start_tail_f...')
         newsocket.emit('start_tail_f', {
           cvm_ip: cvmChecked,
           log_path: tailPath,
@@ -251,7 +243,6 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const handleStopAll = () => {
     if (variant !== 'realtime') return
     
-    console.log('Stopping tail -f and disconnecting SocketIO...')
     
     if (socket && socket.connected) {
       socket.emit('stop_tail_f', {})
@@ -275,14 +266,11 @@ const LogViewer: React.FC<LogViewerProps> = ({
   useEffect(() => {
     if (variant !== 'realtime' || !socket) return
 
-    console.log('Setting up SocketIO event listeners')
     
     socket.on('message', (data: any) => {
-      console.log('SocketIO message:', data)
     })
     
     socket.on('log', (msg: any) => {
-      console.log('receive log:', msg)
       setRealtimeLogs((logs) => {
         const newLogs = [...logs, { name: msg.name || tailName, line: msg.line }]
         return newLogs
@@ -290,28 +278,23 @@ const LogViewer: React.FC<LogViewerProps> = ({
     })
 
     socket.on('tail_f_status', (data: any) => {
-      console.log('tail -f status received:', data)
       if (data.status === 'started') {
         setIsActive(true)
       } else if (data.status === 'stopped') {
         setIsActive(false)
       } else if (data.status === 'error') {
-        console.log('tail -f error:', data.message)
         setIsActive(false)
       }
     })
 
     socket.on('connect', () => {
-      console.log('Connected to SocketIO server')
       setIsActive(false)
       setIsConnecting(false)
       
       // 接続時は自動開始しない（手動で開始ボタンを押すまで待機）
-      console.log('SocketIO接続完了。tail -f開始')
     })
 
     socket.on('disconnect', () => {
-      console.log('Disconnected from SocketIO server')
       setIsActive(false)
       setIsConnecting(false)
     })

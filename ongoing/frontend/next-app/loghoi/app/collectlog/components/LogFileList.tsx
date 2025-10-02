@@ -41,12 +41,12 @@ const LogFileList = ({
     <div className="w-52 text-center">
       <div className="text-primary font-semibold mb-2">File / Log List</div>
       <div className="h-96 overflow-auto border border-base-300 rounded-lg">
-        <ul className="menu break-all bg-base-100 w-48 text-left text-xs py-1">
+        <ul className="menu break-all bg-base-100 w-48 text-left text-xs py-0.5">
           {logsInZip.map((log) => (
-            <li key={log} className="mb-0.5">
+            <li key={log} className="mb-0">
               <div 
                 ref={selectedLogFile === log ? selectedLogRef : null}
-                className={`py-1.5 px-2 cursor-pointer rounded-md transition-all duration-200 ${
+                className={`py-1 px-2 cursor-pointer rounded-md transition-all duration-200 ${
                   selectedLogFile === log 
                     ? 'bg-primary text-primary-content font-semibold shadow-md transform scale-105' 
                     : 'hover:bg-base-200 hover:shadow-sm'

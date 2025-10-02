@@ -56,11 +56,8 @@ const CollectlogContnet = () => {
     const initializeData = async () => {
       if (!ClusterName) return
 
-      console.log('Initializing data for cluster:', ClusterName)
       setState(prev => ({ ...prev, loading: true }))
       const data = await getCvmList(ClusterName)
-      
-      console.log('CVM data received:', data)
       
       if (data) {
         setState(prev => ({
@@ -75,7 +72,6 @@ const CollectlogContnet = () => {
           alert(`ssh key を cluster [${PrismIp}] の Prism Element で設定してください`)
         }
       } else {
-        console.log('No data received, setting loading to false')
         setState(prev => ({ ...prev, loading: false }))
       }
     }
@@ -133,16 +129,11 @@ const CollectlogContnet = () => {
   const handleLogSelect = async (logFile: string) => {
     if (!state.selectedZip) return
 
-    console.log('Log selected:', { logFile, selectedZip: state.selectedZip })
-    console.log('Current state before log select:', state)
-    
     setState(prev => ({ ...prev, loadingDisplay: true, selectedLogFile: logFile }))
-    console.log('State updated to loadingDisplay: true and selectedLogFile:', logFile)
     
     try {
       // まずファイルサイズをチェック
       const fileSizeInfo = await getLogFileSize(logFile, state.selectedZip)
-      console.log('File size info:', fileSizeInfo)
       
       if (fileSizeInfo) {
         const { file_size_mb } = fileSizeInfo
@@ -161,7 +152,7 @@ const CollectlogContnet = () => {
       // ファイルサイズが小さいか、サイズ取得に失敗した場合は直接表示
       await loadLogContent(logFile)
     } catch (error) {
-      console.error('Error in handleLogSelect:', error)
+      console.error('ログ選択エラー:', error)
       setState(prev => ({ 
         ...prev, 
         loadingDisplay: false 
@@ -174,18 +165,14 @@ const CollectlogContnet = () => {
     
     try {
       const content = await getLogContent(logFile, state.selectedZip)
-      console.log('Log content received:', content)
-      console.log('Content type:', typeof content)
-      console.log('Content length:', content?.length)
       
       setState(prev => ({ 
         ...prev, 
         displayLog: content || undefined, 
         loadingDisplay: false 
       }))
-      console.log('State updated with content and loadingDisplay: false')
     } catch (error) {
-      console.error('Error in loadLogContent:', error)
+      console.error('ログ内容読み込みエラー:', error)
       setState(prev => ({ 
         ...prev, 
         loadingDisplay: false 

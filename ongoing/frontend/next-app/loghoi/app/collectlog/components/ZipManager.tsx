@@ -22,8 +22,8 @@ const ZipManager = ({
 
   return (
     <div className="w-49 text-center">
-      <div className="text-primary py-1">
-        <div className="flex justify-center py-1">
+      <div className="text-primary py-0.5">
+        <div className="flex justify-center py-0.5">
           <select 
             className="select select-primary w-48 max-w-xs text-sm" 
             onChange={handleSelectChange} 
@@ -43,7 +43,7 @@ const ZipManager = ({
           </select>
         </div>
       </div>
-      <div>
+      <div className="py-0.5">
         <button 
           className="btn btn-secondary w-48"
           onClick={handleDownload}
