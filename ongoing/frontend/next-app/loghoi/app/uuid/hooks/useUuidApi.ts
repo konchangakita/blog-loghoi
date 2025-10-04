@@ -29,7 +29,8 @@ export const useUuidApi = () => {
     setError(null)
 
     try {
-      const response = await fetch('/api/uuid/latestdataset', {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const response = await fetch(`${backendUrl}/api/uuid/latestdataset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,7 +59,8 @@ export const useUuidApi = () => {
     setError(null)
 
     try {
-      const response = await fetch('/api/uuid/searchdataset', {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const response = await fetch(`${backendUrl}/api/uuid/searchdataset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -87,7 +89,8 @@ export const useUuidApi = () => {
     setError(null)
 
     try {
-      const response = await fetch('/api/uuid/contentdataset', {
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const response = await fetch(`${backendUrl}/api/uuid/contentdataset`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

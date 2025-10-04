@@ -88,6 +88,38 @@ export default function UuidPage() {
     router.push(`/uuid/search?${new URLSearchParams(searchQuery).toString()}`)
   }
 
+  const handleDataFetch = async () => {
+    try {
+      const requestOptions = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cluster_name: searchParams.get('cluster') || '',
+          prism_ip: searchParams.get('prism') || '',
+          prism_user: 'admin',
+          prism_pass: 'nx2Tech958!',
+        }),
+      }
+
+      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const response = await fetch(`${backendUrl}/api/uuid/connect`, requestOptions)
+      if (response.status === 200) {
+        const res_json = await response.json()
+        console.log(res_json)
+        alert('UUID data fetched successfully!')
+        // データ取得後にページをリロード
+        window.location.reload()
+      } else {
+        alert('Failed to fetch UUID data')
+      }
+    } catch (error) {
+      console.error('Error fetching UUID data:', error)
+      alert('Error fetching UUID data')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -117,6 +149,14 @@ export default function UuidPage() {
         <div className="flex flex-col">
           <div className="flex flex-col">
             <div className="text-center my-1">データ取得時間：{uuidData.timestamp_list.local_time}</div>
+            <div className="text-center my-2">
+              <button 
+                onClick={handleDataFetch}
+                className="btn btn-primary btn-sm"
+              >
+                データ取得
+              </button>
+            </div>
             <div className="">
               <form className="flex flex-row justify-center" onSubmit={handleSubmit(handleSearch)}>
                 <div className="inline-block flex h-6">
