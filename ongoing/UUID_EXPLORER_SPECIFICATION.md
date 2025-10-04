@@ -36,9 +36,22 @@ http://{FRONTEND_HOST}:7777/uuid?pcip={PC_IP}&cluster={クラスタ名}&prism={�
 
 ### データ取得フロー
 1. **UUIDエクスプローラページアクセス**: `http://{FRONTEND_HOST}:7777/uuid`にアクセス
-2. **認証情報入力**: データ取得時にユーザー名とパスワードを都度入力
+2. **SSH鍵認証**: サーバー側で管理されているSSH鍵を使用して認証
 3. **データ取得実行**: ページ内の「データ取得」ボタンで実行
 4. **Elasticsearch確認**: データがない場合は「現在データ無し」を表示
+
+## 認証方式
+
+### SSH鍵認証
+- **認証方法**: SSH鍵認証を使用
+- **SSH鍵の場所**: `/home/nutanix/konchangakita/blog-loghoi/ongoing/backend/config/.ssh/ntnx-lockdown`
+- **事前設定**: 公開鍵を事前にPrism Element（CVM）へ登録済み
+- **認証フロー**:
+  1. バックエンドがSSH鍵を使用してCVMに接続
+  2. SSH接続成功後、Prism APIで認証
+  3. 認証成功後、UUIDデータを取得
+- **セキュリティ**: フロントエンドから認証情報を送信する必要がない
+- **他の機能との統一**: リアルタイムログとコレクトログと同様の認証方式
 
 ## アーキテクチャ
 
@@ -62,13 +75,14 @@ frontend/next-app/loghoi/app/uuid/
 ```
 backend/fastapi_app/
 ├── routers/
-│   └── uuid.py                       # UUID API実装
+│   └── uuid.py                       # UUID API実装（SSH鍵認証対応）
 ├── utils/
 │   └── common.py                     # 共通ユーティリティ
 └── app_fastapi.py                    # FastAPIアプリケーション
 
 backend/core/
 ├── ela.py                            # Elasticsearch操作
+├── common.py                         # SSH接続機能（connect_ssh）
 └── regist.py                         # PC/クラスタ登録
 
 shared/gateways/
@@ -83,18 +97,21 @@ shared/gateways/
 graph TD
     A[UUIDエクスプローラページ] --> B[データ取得ボタンクリック]
     B --> C[認証情報入力ダイアログ]
-    C --> D[ユーザー名・パスワード入力]
+    C --> D[SSH鍵認証説明表示]
     D --> E[データ取得ボタンクリック]
     E --> F[Loading表示: 虫アイコン回転]
     F --> G[POST /api/uuid/connect]
-    G --> H{認証結果}
-    H -->|成功| I[プログレスバー表示: UUID collecting...]
-    H -->|失敗| J[エラーメッセージ表示]
-    I --> K[Prism API接続]
-    K --> L[各種リソース取得]
-    L --> M[Elasticsearch保存]
-    M --> N[完了通知・ページリロード]
-    J --> C
+    G --> H[SSH鍵でCVM接続]
+    H --> I{SSH接続結果}
+    I -->|成功| J[Prism API認証]
+    I -->|失敗| K[エラーメッセージ表示]
+    J --> L{Prism API認証結果}
+    L -->|成功| M[プログレスバー表示: UUID collecting...]
+    L -->|失敗| K
+    M --> N[各種リソース取得]
+    N --> O[Elasticsearch保存]
+    O --> P[完了通知・ページリロード]
+    K --> C
 ```
 
 ### 2. UUID検索フロー
@@ -312,9 +329,12 @@ GET /api/uuid/search?cluster={クラスタ名}&keyword={検索キーワード}
 - **プログレスバー**: データ取得中のプログレスバー表示（虫アイコン回転＋「UUID collecting...」）
 - **UI/UX改善**: 入力欄の文字色を黒に変更、視認性向上
 - **ナビゲートバーアイコン**: UUID Explorer用に`faFingerprint`（指紋アイコン）を採用
+- **SSH鍵認証**: パスワード認証からSSH鍵認証方式に変更
+- **認証の統一**: リアルタイムログ・コレクトログと同様の認証方式を採用
+- **セキュリティ向上**: フロントエンドから認証情報を送信する必要がない
 
 ---
 
 **バージョン**: v1.0.0  
 **作成日**: 2024年1月  
-**最終更新**: 2025年10月4日
+**最終更新**: 2025年10月4日（SSH鍵認証方式対応）

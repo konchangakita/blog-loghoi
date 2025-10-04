@@ -41,7 +41,7 @@ export default function UuidPage() {
   const [isActive, setActive] = useState('vmlist')
   const [uuidData, setUuidData] = useState<UuidResponse | null>(null)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
-  const [authData, setAuthData] = useState({ username: '', password: '' })
+  const [authData, setAuthData] = useState({})
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [isCollecting, setIsCollecting] = useState(false)
   const [authError, setAuthError] = useState('')
@@ -104,10 +104,8 @@ export default function UuidPage() {
   }
 
   const handleAuthSubmit = async () => {
-    if (!authData.username || !authData.password) {
-      setAuthError('ユーザー名とパスワードを入力してください')
-      return
-    }
+    // SSH鍵認証の場合は、サーバー側で管理されている鍵を使用するため、
+    // フロントエンドからの入力は不要
 
     setIsAuthenticating(true)
     setAuthError('')
@@ -121,8 +119,6 @@ export default function UuidPage() {
         body: JSON.stringify({
           cluster_name: searchParams.get('cluster') || '',
           prism_ip: searchParams.get('prism') || '',
-          prism_user: authData.username,
-          prism_pass: authData.password,
         }),
       }
 
@@ -138,15 +134,23 @@ export default function UuidPage() {
         // 30秒後にプログレスバーを完了
         setTimeout(() => {
           setIsCollecting(false)
-          setAuthData({ username: '', password: '' })
+          setAuthData({})
           // データ取得後にページをリロード
           window.location.reload()
         }, 30000)
       } else {
         // 認証失敗
         setIsAuthenticating(false)
-        const errorData = await response.json()
-        setAuthError(`認証に失敗しました: ${errorData.detail || 'Unknown error'}`)
+        try {
+          const errorData = await response.json()
+          console.log('Error response:', errorData)
+          setAuthError('認証に失敗しました: SSH接続を確認してください')
+        } catch (jsonError) {
+          console.log('Failed to parse error response:', jsonError)
+          console.log('Response status:', response.status)
+          console.log('Response text:', await response.text())
+          setAuthError('認証に失敗しました: SSH接続を確認してください')
+        }
       }
     } catch (error) {
       console.error('Error fetching UUID data:', error)
@@ -188,7 +192,7 @@ export default function UuidPage() {
           <div className="text-center my-4">
             <button 
               onClick={handleDataFetch}
-              className="btn btn-primary btn-lg px-8"
+              className="btn btn-primary px-8 py-2"
             >
               データ取得
             </button>
@@ -219,12 +223,12 @@ export default function UuidPage() {
             <div className="text-center my-4">
               <button 
                 onClick={handleDataFetch}
-                className="btn btn-primary btn-lg px-8"
+                className="btn btn-primary px-8 py-2"
               >
                 データ取得
               </button>
             </div>
-            <div className="text-center my-2 text-sm text-gray-600">データ取得時間：{uuidData.timestamp_list.local_time}</div>
+            <div className="text-center -mt-2 mb-3 text-sm text-gray-600">データ取得時間：{uuidData.timestamp_list.local_time}</div>
             <div className="">
               <form className="flex flex-row justify-center" onSubmit={handleSubmit(handleSearch)}>
                 <div className="inline-block flex h-6">
@@ -314,7 +318,7 @@ export default function UuidPage() {
                 >
                   Storage Container
                 </a>
-                <div className="h-[480px] overflow-auto border-2 shadow">
+                <div className="min-h-[480px] h-[60vh] max-h-[800px] overflow-auto border-2 shadow">
                   <div className="">
                     <UuidListTable entity={entity} />
                   </div>
@@ -344,31 +348,8 @@ export default function UuidPage() {
             )}
             
             <div className="space-y-4">
-              <div>
-                <label className="label">
-                  <span className="label-text">ユーザー名</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered w-full text-black"
-                  value={authData.username}
-                  onChange={(e) => setAuthData({ ...authData, username: e.target.value })}
-                  placeholder="admin"
-                  disabled={isAuthenticating}
-                />
-              </div>
-              <div>
-                <label className="label">
-                  <span className="label-text">パスワード</span>
-                </label>
-                <input
-                  type="password"
-                  className="input input-bordered w-full text-black"
-                  value={authData.password}
-                  onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
-                  placeholder="パスワードを入力"
-                  disabled={isAuthenticating}
-                />
+              <div className="alert alert-info">
+                <span>SSH鍵認証を使用してデータを取得します。サーバー側で管理されているSSH鍵を使用します。</span>
               </div>
             </div>
             <div className="modal-action">
@@ -383,7 +364,7 @@ export default function UuidPage() {
                 className="btn"
                 onClick={() => {
                   setShowAuthDialog(false)
-                  setAuthData({ username: '', password: '' })
+                  setAuthData({})
                   setAuthError('')
                 }}
                 disabled={isAuthenticating}
