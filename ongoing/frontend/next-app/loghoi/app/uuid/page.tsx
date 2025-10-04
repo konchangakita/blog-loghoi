@@ -228,7 +228,7 @@ export default function UuidPage() {
                 データ取得
               </button>
             </div>
-            <div className="text-center -mt-2 mb-3 text-sm text-gray-600">データ取得時間：{uuidData.timestamp_list.local_time}</div>
+            <div className="text-center -mt-2 mb-3 text-sm text-gray-600">データ取得日時：{uuidData.timestamp_list.local_time}</div>
             <div className="">
               <form className="flex flex-row justify-center" onSubmit={handleSubmit(handleSearch)}>
                 <div className="inline-block flex h-6">
