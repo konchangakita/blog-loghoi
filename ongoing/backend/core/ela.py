@@ -436,3 +436,23 @@ class ElasticGateway(ElasticAPI):
         }
         res = es.search(index=index_name, query=query, size=512)
         return [s for s in res["hits"]["hits"]]
+
+    def search_document_additional(self, alias, timestamp, cluster_name, multi_keyword):
+        """Search additional documents using multi-keyword queries"""
+        es = self.es
+        
+        query = {
+            "function_score": {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {"match": {"cluster_name": cluster_name}},
+                            {"match": {"timestamp": timestamp}},
+                            {"bool": {"should": multi_keyword}},
+                        ]
+                    }
+                }
+            }
+        }
+        res = es.search(index=alias, query=query, size=512)
+        return [s for s in res["hits"]["hits"]]

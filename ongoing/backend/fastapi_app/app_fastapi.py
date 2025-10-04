@@ -37,6 +37,7 @@ from config import Config
 
 # ルーターのインポート
 from routers.collect_log import router as collect_log_router
+from routers.uuid import router as uuid_router
 
 # ========================================
 # Pydantic Models (Request/Response)
@@ -122,6 +123,7 @@ app.add_middleware(
 
 # ルーターをアプリケーションに統合
 app.include_router(collect_log_router)
+app.include_router(uuid_router)
 
 # SocketIOをFastAPIに統合
 socket_app = socketio.ASGIApp(sio, app, socketio_path='/socket.io/')
