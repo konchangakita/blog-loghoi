@@ -3,24 +3,15 @@ import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { getBackendUrl } from '../../lib/getBackendUrl'
 
 //api
 import getClusterList from '@/app/_api/getClusterList'
 
-// React-hook-form
-import { SubmitHandler, useForm } from 'react-hook-form'
 
 interface dict {
   [key: string]: any
 }
 
-// Input value
-type FormValues = {
-  prism_ip: string
-  prism_user: string
-  prism_pass: string
-}
 
 const ClusterTab = (res: any) => {
   const searchParams = useSearchParams()
@@ -39,34 +30,6 @@ const ClusterTab = (res: any) => {
     }
   }, [cluster])
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<FormValues>()
-
-  const handleConnectUuid: SubmitHandler<FormValues> = async (data) => {
-    console.log('Form input item: ', data)
-    const requestOptions = {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        cluster_name: cluster,
-        prism_ip: data['prism_ip'],
-        prism_user: data['prism_user'],
-        prism_pass: data['prism_pass'],
-      }),
-    }
-
-    const response = await fetch(`${getBackendUrl()}/api/uuid/connect`, requestOptions)
-    if (response.status === 200) {
-      const res_json = await response.json()
-      console.log(res_json)
-      alert('UUID data fetched successfully!')
-    } else {
-      alert('Failed to connect to backend')
-    }
-  }
 
   const clusters = clusterList.length
     ? clusterList.map((val: dict, idx: number) => {
@@ -158,12 +121,12 @@ const ClusterTab = (res: any) => {
             </div>
           </div>
           <div className='flex justify-center'>
-            <div className='card w-64 glass m-8 p-4 pb-0'>
+            <div className='card w-64 glass m-8 p-4 h-80'>
               <figure>
                 <Image src={'/xplorer.png'} width={80} height={80} alt={''} />
               </figure>
-              <div className='card-body flex items-center'>
-                <h2 className='card-title text-gray-50'>UUID</h2>
+              <div className='card-body flex items-center justify-between'>
+                <h2 className='card-title text-gray-50'>UUID Explorer</h2>
                 <div className='card-actions justify-center'>
                   <Link href={{ pathname: 'uuid', query: { pcip: pcip, cluster: cluster, prism: prism } }}>
                     <div className='text-white hover:no-underline'>
@@ -171,48 +134,14 @@ const ClusterTab = (res: any) => {
                     </div>
                   </Link>
                 </div>
-                <div className='card-actions justify-center p-2 px-3 mt-3 bg-purple-800 bg-opacity-30 border border-purple-900 rounded-md'>
-                  <p className='text-center text-gray-300'>cluster</p>
-                  <form onSubmit={handleSubmit(handleConnectUuid)}>
-                    <div className='flex flex-row'>
-                      <div className='flex flex-col justify-center '>
-                        <input {...register('prism_ip')} value={prism || ''} type='hidden' />
-                        <input
-                          {...register('prism_user', { required: true })}
-                          type='text'
-                          placeholder='username'
-                          className='input input-info input-bordered w-36 text-base h-8'
-                        />
-                        {errors.prism_user && <p className='text-red-600'>required.</p>}
-                        <input
-                          {...register('prism_pass', { required: true })}
-                          type='password'
-                          placeholder='Password'
-                          className='input input-info input-bordered w-36 text-base h-8 mt-2'
-                        />
-                        {errors.prism_pass && <p className='text-red-600'>required.</p>}
-                      </div>
-                      <div className='pl-2'>
-                        <div className='text-white flex justify-center py-2'>
-                          <button type='submit' className='btn btn-primary w-12 h-[60px] text-xs py-3'>
-                            <p>data</p>
-                            <p>fetch</p>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </form>
-                </div>
               </div>
             </div>
-            <div className='card w-64 glass m-8 p-4'>
+            <div className='card w-64 glass m-8 p-4 h-80'>
               <figure className='pt-3'>
                 <Image src={'/Nutanix-Logo-White-Digital.png'} width={200} height={59} alt={''} />
               </figure>
-              <div className='card-body flex items-center'>
+              <div className='card-body flex items-center justify-between'>
                 <h2 className='card-title text-gray-50'>Support & Insights Portal</h2>
-                <div className='text-white text-xs pb-5'>Open/View Cases, KB, SW downloads, Docs, Installed Base & Licenses</div>
-
                 <div className='card-actions justify-center'>
                   <Link
                     href={{
