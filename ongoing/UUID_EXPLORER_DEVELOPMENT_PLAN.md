@@ -23,9 +23,9 @@
 
 ## 実装手順
 
-### Phase 1: フロントエンド基盤構築
+### Phase 1: フロントエンド基盤構築 ✅ **完了**
 
-#### 1.1 ディレクトリ構造作成
+#### 1.1 ディレクトリ構造作成 ✅ **完了**
 ```
 /home/nutanix/konchangakita/blog-loghoi/ongoing/frontend/next-app/loghoi/app/uuid/
 ├── page.tsx                    # UUID一覧ページ
@@ -485,7 +485,7 @@ export default function UuidRelationView({ relatedUuids }: UuidRelationViewProps
 }
 ```
 
-### Phase 2: バックエンドAPI実装
+### Phase 2: バックエンドAPI実装 ✅ **完了**
 
 #### 2.1 既存ファイルの拡張
 
@@ -727,7 +727,7 @@ class UuidBroker:
         return [uuid[:8], uuid[-8:], uuid]
 ```
 
-### Phase 3: 統合・テスト
+### Phase 3: 統合・テスト ✅ **完了**
 
 #### 3.1 既存コンポーネントの調整
 
@@ -811,8 +811,104 @@ class UuidBroker:
    - API アクセス制御
    - 機密情報の適切な処理
 
+### Phase 4: UUID Detailページの拡張 🚧 **進行中**
+
+#### 4.1 現在の実装状況確認
+
+**既存ファイル**: `/frontend/next-app/loghoi/app/uuid/[uuid]/page.tsx`
+- 基本的なUUID詳細表示機能は実装済み
+- 選択したUUIDの基本情報表示
+- 関連するリソース情報の表示
+
+#### 4.2 UUID Detailページの機能拡張アイデア
+
+##### 4.2.1 関連性の可視化
+- **関係図表示**: 選択したUUIDと関連するUUIDの関係をグラフで表示
+- **階層表示**: 親子関係や依存関係をツリー形式で表示
+- **ネットワーク図**: 複数のUUID間の関係をネットワーク図で可視化
+
+##### 4.2.2 詳細情報の充実
+- **メタデータ表示**: UUIDの作成日時、更新日時、作成者情報
+- **設定情報**: リソースの詳細設定やパラメータ
+- **ステータス情報**: 現在の状態、ヘルスチェック結果
+- **パフォーマンス情報**: CPU使用率、メモリ使用量、ディスク使用量
+
+##### 4.2.3 インタラクティブな機能
+- **フィルタリング**: 関連UUIDをタイプ別、ステータス別でフィルタ
+- **検索機能**: 関連UUID内での検索
+- **ソート機能**: 関連UUIDを名前、日時、ステータスでソート
+- **エクスポート機能**: 関連情報をCSVやJSONでエクスポート
+
+##### 4.2.4 UI/UXの改善
+- **タブ表示**: 基本情報、関連性、履歴、設定をタブで分離
+- **カードレイアウト**: 情報をカード形式で整理
+- **レスポンシブデザイン**: モバイル対応
+- **ダークモード**: テーマ切り替え機能
+
+##### 4.2.5 データの時系列表示
+- **履歴表示**: UUIDの変更履歴を時系列で表示
+- **イベントログ**: 関連するイベントやアラートの表示
+- **トレンド表示**: パフォーマンスや使用量の推移
+
+#### 4.3 実装優先順位
+
+**高優先度**:
+1. 関連性の可視化（関係図表示）
+2. 詳細情報の充実（メタデータ、設定情報）
+3. タブ表示による情報の整理
+
+**中優先度**:
+4. インタラクティブな機能（フィルタリング、検索）
+5. データの時系列表示（履歴表示）
+
+**低優先度**:
+6. エクスポート機能
+7. ダークモード対応
+
+#### 4.4 技術的な実装方針
+
+##### 4.4.1 フロントエンド
+- **React Hooks**: 状態管理とデータ取得
+- **D3.js**: 関係図やネットワーク図の描画
+- **Chart.js**: パフォーマンス情報のグラフ表示
+- **Tailwind CSS**: レスポンシブデザイン
+
+##### 4.4.2 バックエンド
+- **関連性検索API**: UUID間の関係を取得するAPI
+- **履歴取得API**: UUIDの変更履歴を取得するAPI
+- **メタデータ取得API**: 詳細情報を取得するAPI
+
+##### 4.4.3 データ構造
+```typescript
+interface UuidDetailData {
+  uuid: string;
+  type: string;
+  name: string;
+  metadata: {
+    createdAt: string;
+    updatedAt: string;
+    createdBy: string;
+    status: string;
+  };
+  relationships: {
+    parents: UuidReference[];
+    children: UuidReference[];
+    dependencies: UuidReference[];
+    dependents: UuidReference[];
+  };
+  performance: {
+    cpu: number;
+    memory: number;
+    disk: number;
+    network: number;
+  };
+  history: UuidHistoryEntry[];
+  configuration: Record<string, any>;
+}
+```
+
 ---
 
 **作成日**: 2024年1月  
-**バージョン**: v1.0.0  
-**ステータス**: 実装準備完了
+**バージョン**: v1.1.0  
+**ステータス**: Phase 4実装中
