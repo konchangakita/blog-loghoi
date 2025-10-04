@@ -188,7 +188,7 @@ export default function UuidPage() {
           <div className="text-center my-4">
             <button 
               onClick={handleDataFetch}
-              className="btn btn-primary"
+              className="btn btn-primary btn-lg px-8"
             >
               データ取得
             </button>
@@ -216,15 +216,15 @@ export default function UuidPage() {
         <p className="text-3xl text-primary p-2">UUID Xplorer - "{uuidData.cluster_name}"</p>
         <div className="flex flex-col">
           <div className="flex flex-col">
-            <div className="text-center my-1">データ取得時間：{uuidData.timestamp_list.local_time}</div>
-            <div className="text-center my-2">
+            <div className="text-center my-4">
               <button 
                 onClick={handleDataFetch}
-                className="btn btn-primary btn-sm"
+                className="btn btn-primary btn-lg px-8"
               >
                 データ取得
               </button>
             </div>
+            <div className="text-center my-2 text-sm text-gray-600">データ取得時間：{uuidData.timestamp_list.local_time}</div>
             <div className="">
               <form className="flex flex-row justify-center" onSubmit={handleSubmit(handleSearch)}>
                 <div className="inline-block flex h-6">
