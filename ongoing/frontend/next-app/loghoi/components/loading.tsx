@@ -12,8 +12,8 @@ export default function Loading() {
             {/*}
             <div className='animate-spin h-8 w-8 rounded-full border-green-400 border-opacity-25 border-b-2 mr-2 inline-block'></div>
              */}
-            <FontAwesomeIcon icon={faBug} spin style={{ fontSize: '21px' }} />
-            <span className='ml-1 text-lg'>Loading...</span>
+            <FontAwesomeIcon icon={faBug} spin style={{ fontSize: '21px', color: 'black' }} />
+            <span className='ml-1 text-lg text-black'>Loading...</span>
           </div>
         </div>
       </div>

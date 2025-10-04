@@ -39,6 +39,10 @@ export const useUuidApi = () => {
       })
 
       if (!response.ok) {
+        if (response.status === 404) {
+          // データがない場合はnullを返す（エラーではない）
+          return null
+        }
         throw new Error(`HTTP error! status: ${response.status}`)
       }
 

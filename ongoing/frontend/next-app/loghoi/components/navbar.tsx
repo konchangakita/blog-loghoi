@@ -9,6 +9,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBug } from '@fortawesome/free-solid-svg-icons'
 import { faFileLines } from '@fortawesome/free-solid-svg-icons'
 import { faGear } from '@fortawesome/free-solid-svg-icons'
+import { faFingerprint } from '@fortawesome/free-solid-svg-icons'
+import { faBarsStaggered } from '@fortawesome/free-solid-svg-icons'
 
 const Navbar = () => {
   const searchParams = useSearchParams()
@@ -87,7 +89,7 @@ const Navbar = () => {
                 </li>
                 <li>
                   <Link href={{ pathname: 'syslog', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
-                    <FontAwesomeIcon icon={faFileLines} style={{ fontSize: '21px' }} />
+                    <FontAwesomeIcon icon={faBarsStaggered} style={{ fontSize: '21px' }} />
                     Syslog
                   </Link>
                 </li>
@@ -95,6 +97,12 @@ const Navbar = () => {
                   <Link href={{ pathname: 'collectlog', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
                     <FontAwesomeIcon icon={faBug} shake style={{ fontSize: '21px' }} />
                     collect Log
+                  </Link>
+                </li>
+                <li>
+                  <Link href={{ pathname: 'uuid', query: { pcip: pcip, cluster: cluster, prism: prism } }} className='hover:no-underline'>
+                    <FontAwesomeIcon icon={faFingerprint} style={{ fontSize: '21px' }} />
+                    UUID Explorer
                   </Link>
                 </li>
                 <li>

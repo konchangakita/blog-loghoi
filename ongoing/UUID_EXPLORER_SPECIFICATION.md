@@ -20,7 +20,7 @@ UUID Explorerは、Nutanixクラスタ内の各種リソース（VM、ストレ�
 ## アクセスURL
 
 ```
-http://{FRONTEND_HOST}:{FRONTEND_PORT}/uuid?pcip={PC_IP}&cluster={クラスタ名}&prism={クラスタIP}
+http://{FRONTEND_HOST}:7777/uuid?pcip={PC_IP}&cluster={クラスタ名}&prism={クラスタIP}
 ```
 
 ### URLパラメータ
@@ -28,31 +28,52 @@ http://{FRONTEND_HOST}:{FRONTEND_PORT}/uuid?pcip={PC_IP}&cluster={クラスタ�
 - `cluster`: クラスタ名
 - `prism`: クラスタIPアドレス
 
+### 環境変数
+- `FRONTEND_HOST`: フロントエンドサーバーのIPアドレス（例: 10.38.113.49）
+- `FRONTEND_PORT`: フロントエンドサーバーのポート番号（固定: 7777）
+- `BACKEND_HOST`: バックエンドサーバーのIPアドレス（例: 10.38.113.49）
+- `BACKEND_PORT`: バックエンドサーバーのポート番号（固定: 7776）
+
+### データ取得フロー
+1. **UUIDエクスプローラページアクセス**: `http://{FRONTEND_HOST}:7777/uuid`にアクセス
+2. **認証情報入力**: データ取得時にユーザー名とパスワードを都度入力
+3. **データ取得実行**: ページ内の「データ取得」ボタンで実行
+4. **Elasticsearch確認**: データがない場合は「現在データ無し」を表示
+
 ## アーキテクチャ
 
 ### フロントエンド構成
 ```
-frontend/next-app/loghoi/
-├── app/
-│   ├── gatekeeper/
-│   │   └── gatekeeper-contents.tsx    # データ収集トリガー
-│   └── uuid/                          # UUID Explorerページ（未実装）
+frontend/next-app/loghoi/app/uuid/
+├── page.tsx                          # UUID Explorerメインページ
+├── layout.tsx                        # UUID Explorerレイアウト
+├── [uuid]/page.tsx                   # UUID詳細ページ
+├── search/page.tsx                   # UUID検索結果ページ
 ├── components/
-│   ├── uuidhistory.tsx               # UUID検索履歴表示
-│   └── uuidlisttable.tsx             # UUID一覧テーブル表示
-└── lib/
-    └── setcookie.ts                  # Cookie管理
+│   ├── UuidHistory.tsx              # UUID検索履歴表示
+│   └── UuidListTable.tsx            # UUID一覧テーブル表示
+├── hooks/
+│   └── useUuidApi.ts                # UUID API呼び出しフック
+└── types/
+    └── index.ts                      # TypeScript型定義
 ```
 
 ### バックエンド構成
 ```
-backend/
-├── core/
-│   ├── ela.py                        # Elasticsearch操作
-│   └── regist.py                     # PC/クラスタ登録
-└── shared/gateways/
-    ├── elastic_gateway.py            # Elasticsearchゲートウェイ（重複）
-    └── regist_gateway.py             # 登録ゲートウェイ（重複）
+backend/fastapi_app/
+├── routers/
+│   └── uuid.py                       # UUID API実装
+├── utils/
+│   └── common.py                     # 共通ユーティリティ
+└── app_fastapi.py                    # FastAPIアプリケーション
+
+backend/core/
+├── ela.py                            # Elasticsearch操作
+└── regist.py                         # PC/クラスタ登録
+
+shared/gateways/
+├── elastic_gateway.py                # Elasticsearchゲートウェイ
+└── regist_gateway.py                 # 登録ゲートウェイ
 ```
 
 ## データフロー
@@ -60,13 +81,20 @@ backend/
 ### 1. データ収集フロー
 ```mermaid
 graph TD
-    A[Gatekeeperページ] --> B[データ収集ボタンクリック]
-    B --> C[Prism認証情報入力]
-    C --> D[POST /api/uuid/connect]
-    D --> E[Prism API接続]
-    E --> F[各種リソース取得]
-    F --> G[Elasticsearch保存]
-    G --> H[完了通知]
+    A[UUIDエクスプローラページ] --> B[データ取得ボタンクリック]
+    B --> C[認証情報入力ダイアログ]
+    C --> D[ユーザー名・パスワード入力]
+    D --> E[データ取得ボタンクリック]
+    E --> F[Loading表示: 虫アイコン回転]
+    F --> G[POST /api/uuid/connect]
+    G --> H{認証結果}
+    H -->|成功| I[プログレスバー表示: UUID collecting...]
+    H -->|失敗| J[エラーメッセージ表示]
+    I --> K[Prism API接続]
+    K --> L[各種リソース取得]
+    L --> M[Elasticsearch保存]
+    M --> N[完了通知・ページリロード]
+    J --> C
 ```
 
 ### 2. UUID検索フロー
@@ -226,6 +254,33 @@ GET /api/uuid/search?cluster={クラスタ名}&keyword={検索キーワード}
 3. **ページネーション**: 大量データの効率的な表示
 4. **非同期処理**: データ収集の非同期化
 
+## データ表示仕様
+
+### データがない場合の表示
+- **Elasticsearchにデータがない場合**: 「現在データ無し」メッセージを表示
+- **データ取得前**: 初期状態でデータなしメッセージを表示
+- **データ取得後**: 取得したデータを表示
+
+### 認証情報入力
+- **データ取得時**: ユーザー名とパスワードを都度入力
+- **入力方法**: モーダルダイアログで入力
+- **認証情報保存**: セッション中のみ保持、永続化しない
+- **入力欄**: 文字色を黒に設定、視認性向上
+- **エラー表示**: 認証失敗時にダイアログ内にエラーメッセージ表示
+
+### Loading・プログレス表示
+- **認証中**: Loading画面（虫アイコン回転＋「Loading...」）
+- **データ取得中**: プログレスバー（虫アイコン回転＋「UUID collecting...」）
+- **プログレス時間**: 30秒間のアニメーション
+- **完了後**: 自動的にページリロード
+
+### ナビゲートバー
+- **UUID Explorer**: `faFingerprint`（指紋アイコン）- UUIDの一意性を表現
+- **Syslog**: `faBarsStaggered`（段階的バーアイコン）- ログの階層構造を表現
+- **Realtime log**: `faFileLines`（ファイル行アイコン）+ bounce
+- **collect Log**: `faBug`（虫アイコン）+ shake
+- **Registration**: `faGear`（歯車アイコン）
+
 ## 運用考慮事項
 
 1. **ログ**: 適切なログ出力とモニタリング
@@ -241,8 +296,25 @@ GET /api/uuid/search?cluster={クラスタ名}&keyword={検索キーワード}
 4. **フィルタリング**: 高度なフィルタリング機能
 5. **API拡張**: RESTful APIの完全実装
 
+## 実装状況
+
+### ✅ 完了項目（v1.0.0）
+- **フロントエンド基盤**: UUIDエクスプローラページ構成完了
+- **バックエンドAPI**: FastAPI実装完了
+- **データ取得機能**: 実際のクラスターからのデータ取得成功
+- **Elasticsearch統合**: データ投入・取得機能完了
+- **検索機能**: UUID検索・詳細表示機能完了
+- **バックエンドURL設定**: `http://{BACKEND_HOST}:7776`でアクセス
+- **認証情報入力ダイアログ**: データ取得時のユーザー名・パスワード入力機能
+- **データなし表示**: Elasticsearchにデータがない場合の「現在データ無し」表示
+- **エラーハンドリング**: 認証失敗・接続エラーの適切な処理と警告表示
+- **Loading表示**: 認証処理中のLoading画面（虫アイコン回転＋「Loading...」）
+- **プログレスバー**: データ取得中のプログレスバー表示（虫アイコン回転＋「UUID collecting...」）
+- **UI/UX改善**: 入力欄の文字色を黒に変更、視認性向上
+- **ナビゲートバーアイコン**: UUID Explorer用に`faFingerprint`（指紋アイコン）を採用
+
 ---
 
 **バージョン**: v1.0.0  
 **作成日**: 2024年1月  
-**最終更新**: 2024年1月
+**最終更新**: 2025年10月4日

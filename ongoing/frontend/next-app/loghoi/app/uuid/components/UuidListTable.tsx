@@ -54,3 +54,4 @@ export default function UuidListTable({ entity }: UuidListTableProps) {
     </div>
   )
 }
+

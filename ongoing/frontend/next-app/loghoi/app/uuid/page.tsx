@@ -8,6 +8,9 @@ import { faSearch } from '@fortawesome/free-solid-svg-icons'
 
 import UuidListTable from './components/UuidListTable'
 import { useUuidApi } from './hooks/useUuidApi'
+import Navbar from '../../components/navbar'
+import Loading from '../../components/loading'
+import UuidCollecting from './components/UuidCollecting'
 
 type FormValues = {
   searchUuid: string
@@ -37,6 +40,12 @@ export default function UuidPage() {
   const [entity, setEntity] = useState<Record<string, any>>({})
   const [isActive, setActive] = useState('vmlist')
   const [uuidData, setUuidData] = useState<UuidResponse | null>(null)
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [authData, setAuthData] = useState({ username: '', password: '' })
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const [isCollecting, setIsCollecting] = useState(false)
+  const [authError, setAuthError] = useState('')
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
 
   const {
     register,
@@ -64,6 +73,8 @@ export default function UuidPage() {
         }
       } catch (err) {
         console.error('Failed to fetch UUID data:', err)
+      } finally {
+        setIsInitialLoading(false)
       }
     }
 
@@ -88,7 +99,19 @@ export default function UuidPage() {
     router.push(`/uuid/search?${new URLSearchParams(searchQuery).toString()}`)
   }
 
-  const handleDataFetch = async () => {
+  const handleDataFetch = () => {
+    setShowAuthDialog(true)
+  }
+
+  const handleAuthSubmit = async () => {
+    if (!authData.username || !authData.password) {
+      setAuthError('ユーザー名とパスワードを入力してください')
+      return
+    }
+
+    setIsAuthenticating(true)
+    setAuthError('')
+
     try {
       const requestOptions = {
         method: 'POST',
@@ -98,53 +121,98 @@ export default function UuidPage() {
         body: JSON.stringify({
           cluster_name: searchParams.get('cluster') || '',
           prism_ip: searchParams.get('prism') || '',
-          prism_user: 'admin',
-          prism_pass: 'nx2Tech958!',
+          prism_user: authData.username,
+          prism_pass: authData.password,
         }),
       }
 
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
       const response = await fetch(`${backendUrl}/api/uuid/connect`, requestOptions)
+      
       if (response.status === 200) {
-        const res_json = await response.json()
-        console.log(res_json)
-        alert('UUID data fetched successfully!')
-        // データ取得後にページをリロード
-        window.location.reload()
+        // 認証成功 - プログレスバーを開始
+        setIsAuthenticating(false)
+        setIsCollecting(true)
+        setShowAuthDialog(false)
+        
+        // 30秒後にプログレスバーを完了
+        setTimeout(() => {
+          setIsCollecting(false)
+          setAuthData({ username: '', password: '' })
+          // データ取得後にページをリロード
+          window.location.reload()
+        }, 30000)
       } else {
-        alert('Failed to fetch UUID data')
+        // 認証失敗
+        setIsAuthenticating(false)
+        const errorData = await response.json()
+        setAuthError(`認証に失敗しました: ${errorData.detail || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Error fetching UUID data:', error)
-      alert('Error fetching UUID data')
+      setIsAuthenticating(false)
+      setAuthError('接続エラーが発生しました')
     }
   }
 
-  if (loading) {
+  if (error) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="loading loading-spinner loading-lg"></div>
+      <div>
+        <Navbar />
+        <div className="alert alert-error">
+          <span>データの取得に失敗しました: {error}</span>
+        </div>
       </div>
     )
   }
 
-  if (error || !uuidData) {
+  // 初期読み込み中またはAPI読み込み中はLoadingコンポーネントを表示
+  if (isInitialLoading || loading) {
     return (
-      <div className="alert alert-error">
-        <span>データの取得に失敗しました: {error}</span>
+      <div>
+        <Navbar />
+        <Loading />
       </div>
     )
   }
 
-  const vmlistLength = uuidData.list.vmlist ? Object.keys(uuidData.list.vmlist).length : 0
-  const vglistLength = uuidData.list.vglist ? Object.keys(uuidData.list.vglist).length : 0
-  const vflistLength = uuidData.list.vflist ? Object.keys(uuidData.list.vflist).length : 0
-  const sharelistLength = uuidData.list.sharelist ? Object.keys(uuidData.list.sharelist).length : 0
-  const sclistLength = uuidData.list.sclist ? Object.keys(uuidData.list.sclist).length : 0
+  // データがない場合のみ「現在データ無し」を表示
+  if (!uuidData) {
+    return (
+      <div>
+        <Navbar />
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="alert alert-info">
+            <span>現在データ無し</span>
+          </div>
+          <div className="text-center my-4">
+            <button 
+              onClick={handleDataFetch}
+              className="btn btn-primary"
+            >
+              データ取得
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <main data-theme="white" className="text-center items-center">
-      <div className="p-1">
+    <div>
+      <Navbar />
+      {uuidData ? (
+        <main data-theme="white" className="text-center items-center">
+          <div className="p-1">
+            {(() => {
+              const vmlistLength = uuidData.list.vmlist ? Object.keys(uuidData.list.vmlist).length : 0
+              const vglistLength = uuidData.list.vglist ? Object.keys(uuidData.list.vglist).length : 0
+              const vflistLength = uuidData.list.vflist ? Object.keys(uuidData.list.vflist).length : 0
+              const sharelistLength = uuidData.list.sharelist ? Object.keys(uuidData.list.sharelist).length : 0
+              const sclistLength = uuidData.list.sclist ? Object.keys(uuidData.list.sclist).length : 0
+              
+              return (
+                <>
         <p className="text-3xl text-primary p-2">UUID Xplorer - "{uuidData.cluster_name}"</p>
         <div className="flex flex-col">
           <div className="flex flex-col">
@@ -253,10 +321,85 @@ export default function UuidPage() {
                 </div>
               </div>
             </div>
-            <div className="w-32">migi</div>
+          </div>
+          </div>
+                </>
+              )
+            })()}
+          </div>
+        </main>
+      ) : null}
+
+      {/* 認証ダイアログ */}
+      {showAuthDialog && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">認証情報入力</h3>
+            
+            {/* エラー表示 */}
+            {authError && (
+              <div className="alert alert-error mb-4">
+                <span>{authError}</span>
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div>
+                <label className="label">
+                  <span className="label-text">ユーザー名</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full text-black"
+                  value={authData.username}
+                  onChange={(e) => setAuthData({ ...authData, username: e.target.value })}
+                  placeholder="admin"
+                  disabled={isAuthenticating}
+                />
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">パスワード</span>
+                </label>
+                <input
+                  type="password"
+                  className="input input-bordered w-full text-black"
+                  value={authData.password}
+                  onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
+                  placeholder="パスワードを入力"
+                  disabled={isAuthenticating}
+                />
+              </div>
+            </div>
+            <div className="modal-action">
+              <button
+                className="btn btn-primary"
+                onClick={handleAuthSubmit}
+                disabled={isAuthenticating}
+              >
+                {isAuthenticating ? '認証中...' : 'データ取得'}
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  setShowAuthDialog(false)
+                  setAuthData({ username: '', password: '' })
+                  setAuthError('')
+                }}
+                disabled={isAuthenticating}
+              >
+                キャンセル
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    </main>
+      )}
+
+      {/* Loading表示（認証中） */}
+      {isAuthenticating && <Loading />}
+      
+      {/* プログレスバー表示（データ収集中） */}
+      {isCollecting && <UuidCollecting />}
+    </div>
   )
 }

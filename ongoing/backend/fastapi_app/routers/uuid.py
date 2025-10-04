@@ -392,7 +392,11 @@ async def get_latest_dataset(request: UuidQueryRequest):
     """Get latest UUID dataset"""
     try:
         result = uuid_api.get_latestdataset(request.cluster)
+        if not result or not result.get('list'):
+            raise HTTPException(status_code=404, detail="No data found")
         return result
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
