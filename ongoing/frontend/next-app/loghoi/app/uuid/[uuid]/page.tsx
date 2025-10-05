@@ -63,11 +63,11 @@ export default function UuidContentPage() {
   }
   
   const iconList: Record<string, string> = { 
-    vmlist: '/vms.png', 
-    vglist: '/vg.png', 
-    vflist: '/vfiler.png', 
-    sharelist: '/share.png', 
-    sclist: '/storage.png' 
+    vmlist: '/VirtualApplications.svg', 
+    vglist: '/InvisibleInfrastructure1.svg', 
+    vflist: '/AcropolisFileServices.svg', 
+    sharelist: '/EnterpriseStorage.svg', 
+    sclist: '/GenericStorage.svg' 
   }
 
   if (loading) {
@@ -92,7 +92,7 @@ export default function UuidContentPage() {
 
   const name = !mainFlag ? 'no hit' : mainList?.name || 'N/A'
   const uuidValue = !mainFlag ? 'no hit' : mainList?.uuid || 'N/A'
-  const icon = !mainFlag ? '/robo.png' : iconList[mainFlag] || '/robo.png'
+  const icon = !mainFlag ? '/AI-PoweredAutomation.svg' : iconList[mainFlag] || '/AI-PoweredAutomation.svg'
 
   const allListKey = list ? Object.keys(list) : []
   const subListKey = allListKey.filter((val) => val !== mainFlag)
