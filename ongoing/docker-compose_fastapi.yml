@@ -34,6 +34,7 @@ services:
       context: ./backend
       dockerfile: dockerfile_fastapi
     container_name: loghoi-backend-fastapi
+    user: "1000:1000"  # nutanixユーザーのUID:GIDを設定
     ports:
       - 7776:7776
     volumes:
