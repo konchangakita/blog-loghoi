@@ -53,6 +53,9 @@ const CollectlogContnet = () => {
     loadedBytes: 0,
   })
   const [appendTick, setAppendTick] = useState(0)
+  const [fileSizeBytes, setFileSizeBytes] = useState<number | null>(null)
+  const [hasMore, setHasMore] = useState<boolean>(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false)
 
 
   // 初期化
@@ -121,6 +124,9 @@ const CollectlogContnet = () => {
       selectedLogFile: undefined,
       loadingDisplay: false
     }))
+    setFileSizeBytes(null)
+    setHasMore(false)
+    setHasLoadedOnce(false)
     
     if (zipName) {
       const logsInZip = await getLogsInZip(zipName)
@@ -159,7 +165,8 @@ const CollectlogContnet = () => {
       const fileSizeInfo = await getLogFileSize(logFile, state.selectedZip)
       
       if (fileSizeInfo) {
-        const { file_size_mb } = fileSizeInfo
+        const { file_size_mb, file_size } = fileSizeInfo as any
+        setFileSizeBytes(typeof file_size === 'number' ? file_size : null)
         
         // 1MB以上の場合は表示をブロック
         if (file_size_mb > 1) {
@@ -168,6 +175,8 @@ const CollectlogContnet = () => {
             loadingDisplay: false,
             displayLog: `FILE_SIZE_TOO_LARGE:${file_size_mb}` // 特別な値でファイルサイズを渡す
           }))
+          setHasMore(false)
+          setHasLoadedOnce(false)
           return
         }
       }
@@ -195,6 +204,13 @@ const CollectlogContnet = () => {
         loadingDisplay: false,
         loadedBytes: content ? new TextEncoder().encode(content).length : 0
       }))
+      const loaded = content ? new TextEncoder().encode(content).length : 0
+      if (fileSizeBytes && loaded >= 0) {
+        setHasMore(loaded < fileSizeBytes)
+      } else {
+        setHasMore(false)
+      }
+      setHasLoadedOnce(true)
     } catch (error) {
       console.error('ログ内容読み込みエラー:', error)
       setState(prev => ({ 
@@ -220,6 +236,11 @@ const CollectlogContnet = () => {
         loadingDisplay: false,
         loadedBytes: (prev.loadedBytes || 0) + (result?.range.length || 0)
       }))
+      const newlyLoaded = (result?.range.length || 0)
+      if (fileSizeBytes && (state.loadedBytes + newlyLoaded) >= 0) {
+        setHasMore((state.loadedBytes + newlyLoaded) < fileSizeBytes)
+      }
+      setHasLoadedOnce(true)
     } catch (e) {
       console.error('追加読み込みエラー:', e)
       setState(prev => ({ ...prev, loadingDisplay: false }))
@@ -303,8 +324,13 @@ const CollectlogContnet = () => {
             appendTick={appendTick}
           />
           {state.selectedZip && state.selectedLogFile && (
-            <div className="mt-2 flex justify-start">
-              <button className="btn btn-sm" onClick={handleLoadMore} disabled={state.loadingDisplay}>続きを読む</button>
+            <div className="mt-2">
+              <div className="flex justify-start items-center gap-3">
+                <button className="btn btn-sm" onClick={handleLoadMore} disabled={state.loadingDisplay}>続きを読む</button>
+                {hasLoadedOnce && hasMore && (
+                  <span className="text-xs text-gray-500">まだ続きがあります...</span>
+                )}
+              </div>
             </div>
           )}
         </div>
