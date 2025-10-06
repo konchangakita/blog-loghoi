@@ -68,6 +68,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   filter = '',
   onClear,
   onDownload,
+  appendTick,
   // collectlog用
   logsInZip,
   displayLog,
