@@ -81,6 +81,8 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const logViewRef = useRef<HTMLDivElement>(null)
+  const collectViewRef = useRef<HTMLDivElement>(null)
+  const lastScrollTopRef = useRef<number>(0)
   
   // realtimelog用の状態
   const [isActive, setIsActive] = useState(false)
@@ -100,6 +102,14 @@ const LogViewer: React.FC<LogViewerProps> = ({
       logViewRef.current.scrollTop = logViewRef.current.scrollHeight
     }
   }, [displayLogs])
+
+  // collect の表示更新時に、直前のスクロール位置を復元（追記で位置が飛ばないように）
+  useEffect(() => {
+    if (variant !== 'collect') return
+    if (!collectViewRef.current) return
+    if (typeof displayLog === 'undefined') return
+    collectViewRef.current.scrollTop = lastScrollTopRef.current
+  }, [variant, displayLog])
 
   // ダウンロード機能
   const handleDownload = () => {
@@ -434,7 +444,13 @@ const LogViewer: React.FC<LogViewerProps> = ({
             </div>
           </div>
         ) : (
-          <div className="mockup-code w-full h-[600px] overflow-auto text-left">
+          <div
+            className="mockup-code w-full h-[600px] overflow-auto text-left"
+            ref={collectViewRef}
+            onScroll={(e) => {
+              lastScrollTopRef.current = e.currentTarget.scrollTop
+            }}
+          >
             <div className="w-full">
               <pre className="px-2 whitespace-pre leading-tight" style={{ lineHeight: '1.2' }}>
                 <code className="text-xs" style={{ lineHeight: '1.2' }}>
