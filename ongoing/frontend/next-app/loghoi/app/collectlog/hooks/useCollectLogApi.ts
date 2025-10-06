@@ -162,6 +162,54 @@ export const useCollectLogApi = () => {
     }
   }, [executeApiCall])
 
+  const getLogContentRange = useCallback(async (logFile: string, zipName: string, start: number, length: number): Promise<{ content: string; range: { start: number; length: number } } | null> => {
+    try {
+      validateRequiredFields({ logFile, zipName }, ['logFile', 'zipName'])
+      const payload: any = { log_file: logFile, zip_name: zipName, start, length }
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+      const result = await executeApiCall(
+        () => fetch(`${getBackendUrl()}/api/col/logdisplay`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        }),
+        'getLogContentRange',
+        { logFile, zipName, start, length }
+      )
+
+      clearTimeout(timeoutId)
+      if (!result) return null
+
+      // 後方互換考慮: 新形式は { range, content } もしくは { empty: true }
+      if (typeof result === 'object' && result) {
+        const r: any = result
+        if ('empty' in r && r.empty) {
+          return { content: '', range: { start, length: 0 } }
+        }
+        if ('range' in r && 'content' in r) {
+          return { content: String(r.content ?? ''), range: { start: Number(r.range?.start ?? 0), length: Number(r.range?.length ?? 0) } }
+        }
+        // 旧形式フォールバック
+        const content = typeof r.data === 'string' ? r.data : (typeof r === 'string' ? r : '')
+        return { content, range: { start, length: content.length } }
+      }
+
+      if (typeof result === 'string') {
+        return { content: result, range: { start, length: result.length } }
+      }
+
+      return null
+    } catch (error) {
+      if (error instanceof APIError) {
+        return null
+      }
+      throw error
+    }
+  }, [executeApiCall])
+
   const downloadZip = useCallback((zipName: string) => {
     try {
       validateRequiredFields({ zipName }, ['zipName'])
@@ -192,6 +240,7 @@ export const useCollectLogApi = () => {
     getLogsInZip,
     getLogFileSize,
     getLogContent,
+    getLogContentRange,
     downloadZip,
   }
 }

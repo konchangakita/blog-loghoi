@@ -204,20 +204,41 @@ class CollectLogGateway():
         logs_list = os.listdir(logs_path)
         return logs_list
 
-    def get_logcontent(self, log_file, zip_name):
+    def get_logcontent(self, log_file, zip_name, start: int | None = None, length: int | None = None):
         filename_without_ext, _ = os.path.splitext(zip_name)
         log_path = os.path.join(OUTPUT_LOGDIR, filename_without_ext, log_file)
         # debug path
 
         try:
-            with open(log_path, 'r') as file:
-                content = file.read()
-            
-            # 空のファイルかチェック
-            if not content.strip():
-                return {'empty': True, 'message': 'ファイル内ログ無し'}
-            
-            return content
+            # 範囲指定なし: 既存互換（全文）
+            if start is None and length is None:
+                with open(log_path, 'r') as file:
+                    content = file.read()
+                # 空のファイルかチェック
+                if not content.strip():
+                    return {'empty': True, 'message': 'ファイル内ログ無し'}
+                return content
+
+            # 範囲指定あり: バイトオフセットで読み取り
+            safe_start = max(0, int(start or 0))
+            safe_length = int(length) if length is not None else 10000  # デフォルト上限
+            if safe_length < 0:
+                safe_length = 0
+
+            with open(log_path, 'rb') as bf:
+                bf.seek(safe_start)
+                chunk = bf.read(safe_length)
+            # デコード（不正バイトは置換）
+            text = chunk.decode('utf-8', errors='replace')
+            if text == '':
+                return {'empty': True, 'message': '指定範囲にデータ無し'}
+            return {
+                'range': {
+                    'start': safe_start,
+                    'length': len(chunk)
+                },
+                'content': text
+            }
         except Exception as e:
             return {'error': str(e)}
 

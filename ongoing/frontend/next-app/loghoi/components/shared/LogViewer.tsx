@@ -20,6 +20,12 @@ export interface LogViewerProps {
   filter?: string
   onClear?: () => void
   onDownload?: () => void
+  // 追記前スナップショット用（親からトリガーを受け取る）
+  appendTick?: number
+  // ビュワー最終行に表示するヒント文
+  footerHint?: string
+  // フッターヒントをクリックしたときのアクション（続きを読むなど）
+  footerAction?: () => void
   
   // collectlog用プロパティ
   logsInZip?: string[]
@@ -66,6 +72,9 @@ const LogViewer: React.FC<LogViewerProps> = ({
   filter = '',
   onClear,
   onDownload,
+  appendTick,
+  footerHint,
+  footerAction,
   // collectlog用
   logsInZip,
   displayLog,
@@ -81,6 +90,9 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const pathname = usePathname()
   const searchParams = useSearchParams()
   const logViewRef = useRef<HTMLDivElement>(null)
+  const collectViewRef = useRef<HTMLDivElement>(null)
+  const lastScrollTopRef = useRef<number>(0)
+  const lastOffsetFromBottomRef = useRef<number>(0)
   
   // realtimelog用の状態
   const [isActive, setIsActive] = useState(false)
@@ -100,6 +112,34 @@ const LogViewer: React.FC<LogViewerProps> = ({
       logViewRef.current.scrollTop = logViewRef.current.scrollHeight
     }
   }, [displayLogs])
+
+  // collect の表示更新時に、直前の距離（下端からのオフセット）で復元
+  useEffect(() => {
+    if (variant !== 'collect') return
+    if (!collectViewRef.current) return
+    if (typeof displayLog === 'undefined') return
+    const el = collectViewRef.current
+    const restore = () => {
+      const target = Math.max(0, el.scrollHeight - lastOffsetFromBottomRef.current)
+      el.scrollTop = target
+    }
+    // レンダリング反映後に復元
+    if (typeof window !== 'undefined') {
+      setTimeout(restore, 0)
+    } else {
+      restore()
+    }
+  }, [variant, displayLog])
+
+  // 親からのトリガーで、追記前に現在位置をスナップショット
+  useEffect(() => {
+    if (variant !== 'collect') return
+    if (!collectViewRef.current) return
+    if (typeof appendTick === 'undefined') return
+    const el = collectViewRef.current
+    lastScrollTopRef.current = el.scrollTop
+    lastOffsetFromBottomRef.current = el.scrollHeight - el.scrollTop
+  }, [variant, appendTick])
 
   // ダウンロード機能
   const handleDownload = () => {
@@ -139,8 +179,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
       rememberUpgrade: false,
       timeout: 20000,
       forceNew: true,
-      pingTimeout: 60000,  // pingタイムアウト（ミリ秒）
-      pingInterval: 25000  // ping間隔（ミリ秒）
+      // engine.ioのping設定は型未定義のため未設定
     })
     
     setSocket(newsocket)
@@ -202,8 +241,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
       rememberUpgrade: false,
       timeout: 20000,
       forceNew: true,
-      pingTimeout: 60000,  // pingタイムアウト（ミリ秒）
-      pingInterval: 25000  // ping間隔（ミリ秒）
+      // engine.ioのping設定は型未定義のため未設定
     })
     
     // 接続確立後にtail -fを開始する（クリック駆動で接続→SSH開始）
@@ -434,20 +472,43 @@ const LogViewer: React.FC<LogViewerProps> = ({
             </div>
           </div>
         ) : (
-          <div className="mockup-code w-full h-[600px] overflow-auto text-left">
+          <div
+            className="mockup-code w-full h-[600px] overflow-auto text-left relative"
+            ref={collectViewRef}
+            onScroll={(e) => {
+              lastScrollTopRef.current = e.currentTarget.scrollTop
+            }}
+          >
             <div className="w-full">
               <pre className="px-2 whitespace-pre leading-tight" style={{ lineHeight: '1.2' }}>
                 <code className="text-xs" style={{ lineHeight: '1.2' }}>
                   {loadingDisplay ? (
                     <span className="text-gray-500">Loading...</span>
                   ) : typeof displayLog !== 'undefined' ? (
-                    displayLog
+                    <>
+                      {displayLog}
+                      {footerHint && (
+                        <> {'\n'}{footerHint} </>
+                      )}
+                    </>
                   ) : (
                     <span className="text-gray-500">ログファイルを選択してください</span>
                   )}
                 </code>
               </pre>
             </div>
+            {footerHint && footerAction && (
+              <div className="sticky bottom-0 z-10 w-full">
+                <div className="flex justify-start pl-2 pb-2">
+                  <button
+                    className="btn btn-primary btn-sm shadow px-6 min-w-[160px] opacity-80 hover:opacity-100"
+                    onClick={footerAction}
+                  >
+                    続きを表示
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

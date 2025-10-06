@@ -32,6 +32,7 @@ const CollectlogContnet = () => {
     getLogsInZip,
     getLogFileSize,
     getLogContent,
+    getLogContentRange,
     downloadZip,
   } = useCollectLogApi()
 
@@ -48,7 +49,13 @@ const CollectlogContnet = () => {
     logsInZip: [],
     displayLog: undefined,
     selectedLogFile: undefined,
+    // 追加読み込み用の現在までの読み込みバイト数
+    loadedBytes: 0,
   })
+  const [appendTick, setAppendTick] = useState(0)
+  const [fileSizeBytes, setFileSizeBytes] = useState<number | null>(null)
+  const [hasMore, setHasMore] = useState<boolean>(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false)
 
 
   // 初期化
@@ -117,6 +124,9 @@ const CollectlogContnet = () => {
       selectedLogFile: undefined,
       loadingDisplay: false
     }))
+    setFileSizeBytes(null)
+    setHasMore(false)
+    setHasLoadedOnce(false)
     
     if (zipName) {
       const logsInZip = await getLogsInZip(zipName)
@@ -149,13 +159,15 @@ const CollectlogContnet = () => {
     if (!state.selectedZip) return
 
     setState(prev => ({ ...prev, loadingDisplay: true, selectedLogFile: logFile }))
+    setHasLoadedOnce(false)
     
     try {
       // まずファイルサイズをチェック
       const fileSizeInfo = await getLogFileSize(logFile, state.selectedZip)
       
       if (fileSizeInfo) {
-        const { file_size_mb } = fileSizeInfo
+        const { file_size_mb, file_size } = fileSizeInfo as any
+        setFileSizeBytes(typeof file_size === 'number' ? file_size : null)
         
         // 1MB以上の場合は表示をブロック
         if (file_size_mb > 1) {
@@ -164,6 +176,8 @@ const CollectlogContnet = () => {
             loadingDisplay: false,
             displayLog: `FILE_SIZE_TOO_LARGE:${file_size_mb}` // 特別な値でファイルサイズを渡す
           }))
+          setHasMore(false)
+          setHasLoadedOnce(false)
           return
         }
       }
@@ -188,14 +202,54 @@ const CollectlogContnet = () => {
       setState(prev => ({ 
         ...prev, 
         displayLog: content || undefined, 
-        loadingDisplay: false 
+        loadingDisplay: false,
+        loadedBytes: content ? new TextEncoder().encode(content).length : 0
       }))
+      const loaded = content ? new TextEncoder().encode(content).length : 0
+      if (fileSizeBytes && loaded >= 0) {
+        setHasMore(loaded < fileSizeBytes)
+      } else {
+        setHasMore(false)
+      }
+      // 初回全文読みでは「続きを読む」未押下のためフラグは立てない
     } catch (error) {
       console.error('ログ内容読み込みエラー:', error)
       setState(prev => ({ 
         ...prev, 
         loadingDisplay: false 
       }))
+    }
+  }
+
+  // 追加読み込み（段階読み）
+  const handleLoadMore = async () => {
+    if (!state.selectedZip || !state.selectedLogFile) return
+    try {
+      // 追記前にスクロール位置スナップショットをトリガー
+      setAppendTick((t) => t + 1)
+      setState(prev => ({ ...prev, loadingDisplay: true }))
+      const chunkSize = 5000
+      const result = await getLogContentRange(state.selectedLogFile, state.selectedZip, state.loadedBytes || 0, chunkSize)
+      const nextText = result?.content || ''
+      const appendedLength = result?.range.length || 0
+      setState(prev => {
+        const newLoaded = (prev.loadedBytes || 0) + appendedLength
+        // hasMoreは別stateで管理
+        if (fileSizeBytes && fileSizeBytes > 0) {
+          setHasMore(newLoaded < fileSizeBytes)
+        }
+        // 「続きを読む」を押したのでフラグON
+        setHasLoadedOnce(true)
+        return {
+          ...prev,
+          displayLog: (prev.displayLog || '') + nextText,
+          loadingDisplay: false,
+          loadedBytes: newLoaded,
+        }
+      })
+    } catch (e) {
+      console.error('追加読み込みエラー:', e)
+      setState(prev => ({ ...prev, loadingDisplay: false }))
     }
   }
 
@@ -225,9 +279,9 @@ const CollectlogContnet = () => {
       {state.collecting && <Collecting />}
       {state.loading && <Loading />}
       
-      {error && (
+      {!!error && (
         <div className="alert alert-error mb-4">
-          <span>{error}</span>
+          <span>{String(error)}</span>
           <button className="btn btn-sm" onClick={clearError}>×</button>
         </div>
       )}
@@ -273,7 +327,11 @@ const CollectlogContnet = () => {
             loadingDisplay={state.loadingDisplay}
             selectedZip={state.selectedZip}
             selectedLogFile={state.selectedLogFile}
+            appendTick={appendTick}
+            footerHint={(hasMore || (state.displayLog?.includes('最初の10000文字のみ') ?? false)) ? '続きがあります' : ''}
+            footerAction={(hasMore || (state.displayLog?.includes('最初の10000文字のみ') ?? false)) ? handleLoadMore : undefined}
           />
+          {/* 下部のグレーボタンは廃止（ビュワー内のオレンジボタンに統合） */}
         </div>
       </div>
     </>

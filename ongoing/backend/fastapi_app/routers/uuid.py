@@ -14,8 +14,10 @@ from utils.error_handler import (
     create_success_response, create_error_response, log_error,
     validate_required_fields, validate_http_status
 )
+from utils.cache import SimpleTTLCache
 
 router = APIRouter(prefix="/api/uuid", tags=["uuid"])
+cache = SimpleTTLCache()
 
 # Pydantic models
 class UuidConnectRequest(BaseModel):
@@ -444,7 +446,10 @@ async def get_latest_dataset(request: UuidQueryRequest):
         # 必須フィールドのバリデーション
         validate_required_fields(request.dict(), ["cluster"])
         
-        result = uuid_api.get_latestdataset(request.cluster)
+        cache_key = f"uuid:latestdataset:{request.cluster}"
+        def _factory():
+            return uuid_api.get_latestdataset(request.cluster)
+        result = cache.get_or_set(cache_key, ttl_seconds=15, factory=_factory)
         if not result or not result.get('list'):
             raise NotFoundError(
                 message="UUIDデータが見つかりません",
