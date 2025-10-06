@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useApiCall } from '../../../hooks/useApiError'
+import { APIError, validateRequiredFields } from '../../../lib/errorHandler'
 
 interface UuidApiResponse {
   list: {
@@ -21,100 +23,84 @@ interface QueryParams {
 }
 
 export const useUuidApi = () => {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { loading, errorState, executeApiCall, clearError } = useApiCall<UuidApiResponse>()
 
   const fetchUuidData = async (params: QueryParams): Promise<UuidApiResponse | null> => {
-    setLoading(true)
-    setError(null)
-
     try {
+      // 必須フィールドのバリデーション
+      validateRequiredFields(params, ['cluster'])
+      
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
-      const response = await fetch(`${backendUrl}/api/uuid/latestdataset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      })
-
-      if (!response.ok) {
-        if (response.status === 404) {
-          // データがない場合はnullを返す（エラーではない）
-          return null
-        }
-        throw new Error(`HTTP error! status: ${response.status}`)
+      
+      return await executeApiCall(
+        () => fetch(`${backendUrl}/api/uuid/latestdataset`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(params),
+        }),
+        'fetchUuidData',
+        { cluster: params.cluster }
+      )
+    } catch (error) {
+      if (error instanceof APIError) {
+        // APIErrorの場合は既にhandleErrorで処理済み
+        return null
       }
-
-      const data = await response.json()
-      return data
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-      setError(errorMessage)
-      console.error('Failed to fetch UUID data:', err)
-      return null
-    } finally {
-      setLoading(false)
+      throw error
     }
   }
 
   const searchUuid = async (params: QueryParams & { search: string }): Promise<UuidApiResponse | null> => {
-    setLoading(true)
-    setError(null)
-
     try {
+      // 必須フィールドのバリデーション
+      validateRequiredFields(params, ['cluster', 'search'])
+      
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
-      const response = await fetch(`${backendUrl}/api/uuid/searchdataset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      
+      return await executeApiCall(
+        () => fetch(`${backendUrl}/api/uuid/searchdataset`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(params),
+        }),
+        'searchUuid',
+        { cluster: params.cluster, search: params.search }
+      )
+    } catch (error) {
+      if (error instanceof APIError) {
+        return null
       }
-
-      const data = await response.json()
-      return data
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-      setError(errorMessage)
-      console.error('Failed to search UUID:', err)
-      return null
-    } finally {
-      setLoading(false)
+      throw error
     }
   }
 
   const getUuidContent = async (params: QueryParams & { content: string }): Promise<UuidApiResponse | null> => {
-    setLoading(true)
-    setError(null)
-
     try {
+      // 必須フィールドのバリデーション
+      validateRequiredFields(params, ['cluster', 'content'])
+      
       const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
-      const response = await fetch(`${backendUrl}/api/uuid/contentdataset`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(params),
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+      
+      return await executeApiCall(
+        () => fetch(`${backendUrl}/api/uuid/contentdataset`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(params),
+        }),
+        'getUuidContent',
+        { cluster: params.cluster, content: params.content }
+      )
+    } catch (error) {
+      if (error instanceof APIError) {
+        return null
       }
-
-      const data = await response.json()
-      return data
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred'
-      setError(errorMessage)
-      console.error('Failed to get UUID content:', err)
-      return null
-    } finally {
-      setLoading(false)
+      throw error
     }
   }
 
@@ -123,6 +109,9 @@ export const useUuidApi = () => {
     searchUuid,
     getUuidContent,
     loading,
-    error,
+    error: errorState.error,
+    errorMessage: errorState.userMessage,
+    errorAlert: errorState.alert,
+    clearError,
   }
 }

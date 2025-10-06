@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loghoi-backend
+  namespace: loghoi
+  labels:
+    app: loghoi
+    component: backend
+    version: v1.0.0
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: loghoi
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: loghoi
+        component: backend
+        version: v1.0.0
+    spec:
+      containers:
+      - name: backend
+        image: loghoi/backend:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7776
+          name: http
+          protocol: TCP
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        envFrom:
+        - configMapRef:
+            name: loghoi-config
+        - secretRef:
+            name: loghoi-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 7776
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 7776
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        volumeMounts:
+        - name: ssh-keys
+          mountPath: /app/config/.ssh
+          readOnly: true
+        - name: uploads
+          mountPath: /app/uploads
+        - name: logs
+          mountPath: /app/logs
+      volumes:
+      - name: ssh-keys
+        secret:
+          secretName: loghoi-secrets
+          items:
+          - key: SSH_PRIVATE_KEY
+            path: ntnx-lockdown
+            mode: 0400
+      - name: uploads
+        emptyDir: {}
+      - name: logs
+        emptyDir: {}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

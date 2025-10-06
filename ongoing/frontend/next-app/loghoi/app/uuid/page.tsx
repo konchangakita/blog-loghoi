@@ -11,6 +11,7 @@ import { useUuidApi } from './hooks/useUuidApi'
 import Navbar from '../../components/navbar'
 import Loading from '../../components/loading'
 import UuidCollecting from './components/UuidCollecting'
+import { ErrorDisplay, SearchInput, Button } from '../../components/common'
 
 type FormValues = {
   searchUuid: string
@@ -35,7 +36,7 @@ interface UuidResponse {
 export default function UuidPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { fetchUuidData, loading, error } = useUuidApi()
+  const { fetchUuidData, loading, error, errorMessage, errorAlert, clearError } = useUuidApi()
   
   const [entity, setEntity] = useState<Record<string, any>>({})
   const [isActive, setActive] = useState('vmlist')
@@ -163,8 +164,12 @@ export default function UuidPage() {
     return (
       <div>
         <Navbar />
-        <div className="alert alert-error">
-          <span>データの取得に失敗しました: {error}</span>
+        <div className="p-4">
+          <ErrorDisplay 
+            error={errorAlert} 
+            onClose={clearError}
+            className="max-w-2xl mx-auto"
+          />
         </div>
       </div>
     )
@@ -190,12 +195,14 @@ export default function UuidPage() {
             <span>現在データ無し</span>
           </div>
           <div className="text-center my-4">
-            <button 
+            <Button 
               onClick={handleDataFetch}
-              className="btn btn-primary px-8 py-2"
+              variant="primary"
+              size="lg"
+              className="px-8"
             >
               データ取得
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -205,6 +212,15 @@ export default function UuidPage() {
   return (
     <div>
       <Navbar />
+      {errorAlert && (
+        <div className="p-4">
+          <ErrorDisplay 
+            error={errorAlert} 
+            onClose={clearError}
+            className="max-w-2xl mx-auto"
+          />
+        </div>
+      )}
       {uuidData ? (
         <main data-theme="white" className="text-center items-center">
           <div className="p-1">
@@ -221,34 +237,29 @@ export default function UuidPage() {
         <div className="flex flex-col">
           <div className="flex flex-col">
             <div className="text-center my-4">
-              <button 
+              <Button 
                 onClick={handleDataFetch}
-                className="btn btn-primary px-8 py-2"
+                variant="primary"
+                size="lg"
+                className="px-8"
               >
                 データ取得
-              </button>
+              </Button>
             </div>
             <div className="text-center -mt-2 mb-3 text-sm text-gray-600">データ取得日時：{uuidData.timestamp_list.local_time}</div>
-            <div className="">
-              <form className="flex flex-row justify-center" onSubmit={handleSubmit(handleSearch)}>
-                <div className="inline-block flex h-6">
-                  <input 
-                    {...register('searchUuid', { required: true })} 
-                    type="text" 
-                    placeholder="UUID" 
-                    className="w-64 pl-2 text-gray-800 border text-xs" 
-                  />
-                </div>
-                <div className="inline-block flex items-center">
-                  <button 
-                    type="submit" 
-                    className="bg-primary hover:bg-primary-focus rounded-r h-6 flex items-center px-2"
-                  >
-                    <FontAwesomeIcon icon={faSearch} size="xs" />
-                  </button>
-                </div>
-              </form>
-              {errors.searchUuid ? <p className="text-red-600">required.</p> : <div>&nbsp;</div>}
+            <div className="flex justify-center">
+              <SearchInput
+                placeholder="UUID検索"
+                value={watch('searchUuid')}
+                onChange={(e) => setValue('searchUuid', e.target.value)}
+                onSearch={(value) => {
+                  setValue('searchUuid', value)
+                  handleSearch({ searchUuid: value })
+                }}
+                size="sm"
+                className="w-64"
+                error={errors.searchUuid ? '必須項目です' : undefined}
+              />
             </div>
           </div>
           <div className="mx-auto flex flex-row">

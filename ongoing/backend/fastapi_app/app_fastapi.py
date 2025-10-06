@@ -39,6 +39,9 @@ from config import Config
 from routers.collect_log import router as collect_log_router
 from routers.uuid import router as uuid_router
 
+# エラーハンドリングのインポート
+from utils.error_handler import global_exception_handler, APIError, ValidationError, AuthenticationError, AuthorizationError, NotFoundError, ConflictError, ServiceUnavailableError
+
 # ========================================
 # Pydantic Models (Request/Response)
 # ========================================
@@ -124,6 +127,16 @@ app.add_middleware(
 # ルーターをアプリケーションに統合
 app.include_router(collect_log_router)
 app.include_router(uuid_router)
+
+# グローバルエラーハンドラーの登録
+app.add_exception_handler(APIError, global_exception_handler)
+app.add_exception_handler(ValidationError, global_exception_handler)
+app.add_exception_handler(AuthenticationError, global_exception_handler)
+app.add_exception_handler(AuthorizationError, global_exception_handler)
+app.add_exception_handler(NotFoundError, global_exception_handler)
+app.add_exception_handler(ConflictError, global_exception_handler)
+app.add_exception_handler(ServiceUnavailableError, global_exception_handler)
+app.add_exception_handler(Exception, global_exception_handler)
 
 # SocketIOをFastAPIに統合
 socket_app = socketio.ASGIApp(sio, app, socketio_path='/socket.io/')
