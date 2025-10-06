@@ -151,7 +151,7 @@ class CollectLogGateway():
                 continue
         ssh.close()
 
-        # Archive Zip
+        # Archive Zip（完了後に所有者をホストUID/GIDへ合わせる）
         print(">>>>>>>> Archive zip Log <<<<<<<<<")
         zip_filename = f"{folder_name}.zip"
         zip_path = os.path.join(OUTPUT_ZIPDIR, zip_filename)
@@ -163,6 +163,19 @@ class CollectLogGateway():
                 if os.path.isfile(filepath):
                     # ZIPに追加。arcnameでZIP内のファイル名を指定
                     zf.write(filepath, arcname=filename)
+
+        # 所有者調整（docker-compose環境でroot実行時の権限ズレ回避）
+        try:
+            host_uid = int(os.getenv('HOST_UID', '1000'))
+            host_gid = int(os.getenv('HOST_GID', '1000'))
+            for filename in os.listdir(log_folder):
+                filepath = os.path.join(log_folder, filename)
+                if os.path.isfile(filepath):
+                    os.chown(filepath, host_uid, host_gid)
+            os.chown(log_folder, host_uid, host_gid)
+            os.chown(zip_path, host_uid, host_gid)
+        except Exception as e:
+            print(f"chown skipped: {e}")
 
 
         # Finish Hoi Hoi
