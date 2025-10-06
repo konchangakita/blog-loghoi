@@ -86,6 +86,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const logViewRef = useRef<HTMLDivElement>(null)
   const collectViewRef = useRef<HTMLDivElement>(null)
   const lastScrollTopRef = useRef<number>(0)
+  const lastOffsetFromBottomRef = useRef<number>(0)
   
   // realtimelog用の状態
   const [isActive, setIsActive] = useState(false)
@@ -106,12 +107,22 @@ const LogViewer: React.FC<LogViewerProps> = ({
     }
   }, [displayLogs])
 
-  // collect の表示更新時に、直前のスクロール位置を復元（追記で位置が飛ばないように）
+  // collect の表示更新時に、直前の距離（下端からのオフセット）で復元
   useEffect(() => {
     if (variant !== 'collect') return
     if (!collectViewRef.current) return
     if (typeof displayLog === 'undefined') return
-    collectViewRef.current.scrollTop = lastScrollTopRef.current
+    const el = collectViewRef.current
+    const restore = () => {
+      const target = Math.max(0, el.scrollHeight - lastOffsetFromBottomRef.current)
+      el.scrollTop = target
+    }
+    // レンダリング反映後に復元
+    if (typeof window !== 'undefined') {
+      setTimeout(restore, 0)
+    } else {
+      restore()
+    }
   }, [variant, displayLog])
 
   // 親からのトリガーで、追記前に現在位置をスナップショット
@@ -119,7 +130,9 @@ const LogViewer: React.FC<LogViewerProps> = ({
     if (variant !== 'collect') return
     if (!collectViewRef.current) return
     if (typeof appendTick === 'undefined') return
-    lastScrollTopRef.current = collectViewRef.current.scrollTop
+    const el = collectViewRef.current
+    lastScrollTopRef.current = el.scrollTop
+    lastOffsetFromBottomRef.current = el.scrollHeight - el.scrollTop
   }, [variant, appendTick])
 
   // ダウンロード機能
