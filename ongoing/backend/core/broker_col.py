@@ -176,6 +176,17 @@ class CollectLogGateway():
             pass
 
 
+        # Finish Hoi Hoi (always show)
+        try:
+            print(">>>>>>>> 　　＿＿＿＿＿＿＿ ")
+            print(">>>>>>>> 　／ HoiHoi Done ／＼)ﾉ")
+            print(">>>>>>>> ∠＿∠二Ｚ＿＿＿／|￣|＼")
+            print(">>>>>>>> |E囗ﾖ   E囗ﾖ |  |  | |")
+            print(">>>>>>>> ￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣")
+            print("")
+        except Exception:
+            # ASCII表示に失敗しても処理は継続する
+            pass
         print(f"[collectlog] done cvm={cvm} folder={folder_name} saved={success_files} failed={failed_files} zip={zip_filename}")
         return {"message": "finished collect log"}
     
