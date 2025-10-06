@@ -96,22 +96,18 @@ shared/gateways/
 ```mermaid
 graph TD
     A[UUIDエクスプローラページ] --> B[データ取得ボタンクリック]
-    B --> C[認証情報入力ダイアログ]
-    C --> D[SSH鍵認証説明表示]
-    D --> E[データ取得ボタンクリック]
-    E --> F[Loading表示: 虫アイコン回転]
-    F --> G[POST /api/uuid/connect]
-    G --> H[SSH鍵でCVM接続]
-    H --> I{SSH接続結果}
-    I -->|成功| J[Prism API認証]
-    I -->|失敗| K[エラーメッセージ表示]
-    J --> L{Prism API認証結果}
-    L -->|成功| M[プログレスバー表示: UUID collecting...]
-    L -->|失敗| K
-    M --> N[各種リソース取得]
-    N --> O[Elasticsearch保存]
-    O --> P[完了通知・ページリロード]
-    K --> C
+    B --> C[Loading表示: 虫アイコン回転]
+    C --> D[POST /api/uuid/connect]
+    D --> E[SSH鍵でCVM接続（サーバ側管理）]
+    E --> F{SSH接続結果}
+    F -->|成功| G[Prism API認証]
+    F -->|失敗| K[エラーメッセージ表示]
+    G --> H{Prism API認証結果]
+    H -->|成功| I[プログレスバー表示: UUID collecting...]
+    H -->|失敗| K
+    I --> J[各種リソース取得]
+    J --> L[Elasticsearch保存]
+    L --> M[完了通知・ページリロード]
 ```
 
 ### 2. UUID検索フロー
@@ -162,9 +158,7 @@ POST /api/uuid/connect
 ```json
 {
   "cluster_name": "クラスタ名",
-  "prism_ip": "クラスタIP",
-  "prism_user": "ユーザー名",
-  "prism_pass": "パスワード"
+  "prism_ip": "クラスタIP"
 }
 ```
 
@@ -278,12 +272,11 @@ GET /api/uuid/search?cluster={クラスタ名}&keyword={検索キーワード}
 - **データ取得前**: 初期状態でデータなしメッセージを表示
 - **データ取得後**: 取得したデータを表示
 
-### 認証情報入力
-- **データ取得時**: ユーザー名とパスワードを都度入力
-- **入力方法**: モーダルダイアログで入力
-- **認証情報保存**: セッション中のみ保持、永続化しない
-- **入力欄**: 文字色を黒に設定、視認性向上
-- **エラー表示**: 認証失敗時にダイアログ内にエラーメッセージ表示
+### 認証（フロント入力なし）
+- **方式**: サーバ側で管理されたSSH鍵による認証（フロントからの資格情報入力は不要）
+- **鍵の配置**: `/home/nutanix/konchangakita/blog-loghoi/ongoing/backend/config/.ssh/ntnx-lockdown`
+- **前提**: Prism Element（CVM）側に公開鍵を事前登録
+- **エラー表示**: 失敗時はページ上にユーザーフレンドリーなメッセージを表示
 
 ### Loading・プログレス表示
 - **認証中**: Loading画面（虫アイコン回転＋「Loading...」）

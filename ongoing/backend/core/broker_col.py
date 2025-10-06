@@ -24,8 +24,8 @@ class CollectLogGateway():
         _jst_time = datetime.now().astimezone(timezone(timedelta(hours=+9)))
         folder_name = datetime.strftime(_jst_time, "loghoi_%Y%m%d_%H%M%S")
         log_folder = os.path.join(OUTPUT_LOGDIR, folder_name)
-        #log_folder = datetime.strftime(_jst_time, OUTPUT_DIR+"/loghoi_%Y%m%d_%H%M%S")
         os.makedirs(log_folder, exist_ok=True)
+        print(f"[collectlog] start cvm={cvm} folder={folder_name}")
 
         # load json file
         try:
@@ -39,27 +39,90 @@ class CollectLogGateway():
             command_list = _setting_json["COMMAND_LIST"]
             f.close()
 
-            print(">>>>>>>> open json file Success <<<<<<<<<")
+            # settings loaded
         except:
-            print(">>>>>>>> missing json file dayo <<<<<<<<<")
+            print("[collectlog][error] missing json file (col_logfile.json / col_command.json)")
             return {"message": "missing json file"}
 
 
         # Download LOGFILEs
-        print(">>>>>>>> Download logfiles <<<<<<<<<")
+        print("[collectlog] download logfiles (SFTP -> SCP -> SSH cat)")
         remote_host = cvm
         remote_user = "nutanix"
         key_file = "/usr/src/config/.ssh/ntnx-lockdown"
 
+        success_files = 0
+        failed_files = 0
         for item in logfile_list:
             remote_path = item["src_path"]
             local_path = log_folder
-            command = ["scp", "-O", "-o", "StrictHostKeyChecking=no", "-i", key_file, f"{remote_user}@{remote_host}:{remote_path}", local_path]
-            print("download: ", remote_path)
+            base = os.path.basename(remote_path)
+            local_file = os.path.join(local_path, base)
+
+            # sftp -> scp -> ssh cat
+
+            # 1) SFTPでのダウンロード（推奨）
             try:
-                subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
+                ssh_client = common.connect_ssh(remote_host)
+                if ssh_client:
+                    try:
+                        sftp = ssh_client.open_sftp()
+                        sftp.get(remote_path, local_file)
+                        sftp.close()
+                        ssh_client.close()
+                        success_files += 1
+                        continue
+                    except Exception as se:
+                        pass
+                        try:
+                            ssh_client.close()
+                        except:
+                            pass
+            except Exception as ce:
+                pass
+
+            # 2) scpでのダウンロード（従来）
+            command = [
+                "scp", "-O",
+                "-o", "StrictHostKeyChecking=no",
+                "-i", key_file,
+                f"{remote_user}@{remote_host}:{remote_path}",
+                local_path
+            ]
+            try:
+                result = subprocess.run(
+                    command,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                success_files += 1
+                continue
             except subprocess.CalledProcessError as e:
-                print(f"Error: {e}")
+                pass
+            except subprocess.TimeoutExpired:
+                pass
+
+            # 3) フォールバック: SSHでcatしてローカルへ保存
+            try:
+                ssh_fallback = common.connect_ssh(remote_host)
+                if ssh_fallback:
+                    stdin, stdout, stderr = ssh_fallback.exec_command(f"cat {remote_path}")
+                    content = stdout.read()
+                    err = stderr.read()
+                    if err and err.strip():
+                        failed_files += 1
+                    else:
+                        with open(local_file, 'wb') as lf:
+                            lf.write(content)
+                        success_files += 1
+                    ssh_fallback.close()
+                    continue
+            except Exception as fe:
+                failed_files += 1
+            # 続行（他ファイルは可能な限り収集）
+            continue
 
 
         # Get Command result
@@ -86,8 +149,8 @@ class CollectLogGateway():
                 continue
         ssh.close()
 
-        # Archive Zip
-        print(">>>>>>>> Archive zip Log <<<<<<<<<")
+        # Archive Zip（完了後に所有者をホストUID/GIDへ合わせる）
+        # archive
         zip_filename = f"{folder_name}.zip"
         zip_path = os.path.join(OUTPUT_ZIPDIR, zip_filename)
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -99,14 +162,32 @@ class CollectLogGateway():
                     # ZIPに追加。arcnameでZIP内のファイル名を指定
                     zf.write(filepath, arcname=filename)
 
+        # 所有者調整（docker-compose環境でroot実行時の権限ズレ回避）
+        try:
+            host_uid = int(os.getenv('HOST_UID', '1000'))
+            host_gid = int(os.getenv('HOST_GID', '1000'))
+            for filename in os.listdir(log_folder):
+                filepath = os.path.join(log_folder, filename)
+                if os.path.isfile(filepath):
+                    os.chown(filepath, host_uid, host_gid)
+            os.chown(log_folder, host_uid, host_gid)
+            os.chown(zip_path, host_uid, host_gid)
+        except Exception:
+            pass
 
-        # Finish Hoi Hoi
-        print(">>>>>>>> 　　＿＿＿＿＿＿＿ ")
-        print(">>>>>>>> 　／ HoiHoi Done ／＼)ﾉ")
-        print(">>>>>>>> ∠＿∠二Ｚ＿＿＿／|￣|＼")
-        print(">>>>>>>> |E囗ﾖ   E囗ﾖ |  |  | |")
-        print(">>>>>>>> ￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣")
-        print("")
+
+        # Finish Hoi Hoi (always show)
+        try:
+            print(">>>>>>>> 　　＿＿＿＿＿＿＿ ")
+            print(">>>>>>>> 　／ HoiHoi Done ／＼)ﾉ")
+            print(">>>>>>>> ∠＿∠二Ｚ＿＿＿／|￣|＼")
+            print(">>>>>>>> |E囗ﾖ   E囗ﾖ |  |  | |")
+            print(">>>>>>>> ￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣")
+            print("")
+        except Exception:
+            # ASCII表示に失敗しても処理は継続する
+            pass
+        print(f"[collectlog] done cvm={cvm} folder={folder_name} saved={success_files} failed={failed_files} zip={zip_filename}")
         return {"message": "finished collect log"}
     
     # Zip list 取得
@@ -124,10 +205,9 @@ class CollectLogGateway():
         return logs_list
 
     def get_logcontent(self, log_file, zip_name):
-        print(">>>>>>>> Get Log Content <<<<<<<<<")
         filename_without_ext, _ = os.path.splitext(zip_name)
         log_path = os.path.join(OUTPUT_LOGDIR, filename_without_ext, log_file)
-        print(log_path)
+        # debug path
 
         try:
             with open(log_path, 'r') as file:
@@ -143,10 +223,9 @@ class CollectLogGateway():
 
     def get_logfile_size(self, log_file, zip_name):
         """ログファイルのサイズを取得"""
-        print(">>>>>>>> Get Log File Size <<<<<<<<<")
         filename_without_ext, _ = os.path.splitext(zip_name)
         log_path = os.path.join(OUTPUT_LOGDIR, filename_without_ext, log_file)
-        print(f"Checking file size: {log_path}")
+        # debug path
 
         try:
             if not os.path.exists(log_path):

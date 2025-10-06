@@ -34,7 +34,7 @@ services:
       context: ./backend
       dockerfile: dockerfile_fastapi
     container_name: loghoi-backend-fastapi
-    user: "1000:1000"  # nutanixユーザーのUID:GIDを設定
+    # scp/SFTPの互換性のためrootで実行（出力は後段でchown処理）
     ports:
       - 7776:7776
     volumes:
@@ -50,6 +50,8 @@ services:
       - BACKEND_HOST=0.0.0.0
       - BACKEND_PORT=7776
       - DEBUG=false
+      - HOST_UID=1000
+      - HOST_GID=1000
     depends_on:
       - elasticsearch
     networks:

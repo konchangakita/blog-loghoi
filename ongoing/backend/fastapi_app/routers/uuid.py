@@ -9,6 +9,11 @@ from base64 import b64encode
 
 from core.ela import ElasticGateway
 from utils.common import change_timestamp
+from utils.error_handler import (
+    APIError, ValidationError, AuthenticationError, NotFoundError, 
+    create_success_response, create_error_response, log_error,
+    validate_required_fields, validate_http_status
+)
 
 router = APIRouter(prefix="/api/uuid", tags=["uuid"])
 
@@ -414,42 +419,92 @@ uuid_api = UuidAPI()
 async def connect_cluster(request: UuidConnectRequest):
     """Connect to cluster and store UUID data"""
     try:
+        # 必須フィールドのバリデーション
+        validate_required_fields(request.dict(), ["cluster_name", "prism_ip"])
+        
         result = uuid_api.connect_cluster(request)
-        return result
-    except HTTPException as e:
-        # HTTPExceptionはそのまま再発生
+        return create_success_response(
+            data=result,
+            message="クラスター接続が成功しました",
+            operation="connect_cluster"
+        )
+    except (ValidationError, AuthenticationError, NotFoundError) as e:
         raise e
     except Exception as e:
-        print(f"Unexpected error in connect_cluster: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        log_error(e, "connect_cluster", {"cluster_name": request.cluster_name, "prism_ip": request.prism_ip})
+        raise APIError(
+            message="クラスター接続中にエラーが発生しました",
+            details={"cluster_name": request.cluster_name, "prism_ip": request.prism_ip}
+        )
 
 @router.post("/latestdataset")
 async def get_latest_dataset(request: UuidQueryRequest):
     """Get latest UUID dataset"""
     try:
+        # 必須フィールドのバリデーション
+        validate_required_fields(request.dict(), ["cluster"])
+        
         result = uuid_api.get_latestdataset(request.cluster)
         if not result or not result.get('list'):
-            raise HTTPException(status_code=404, detail="No data found")
-        return result
-    except HTTPException:
-        raise
+            raise NotFoundError(
+                message="UUIDデータが見つかりません",
+                details={"cluster": request.cluster}
+            )
+        
+        return create_success_response(
+            data=result,
+            message="UUIDデータの取得が成功しました",
+            operation="get_latest_dataset"
+        )
+    except (ValidationError, NotFoundError) as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        log_error(e, "get_latest_dataset", {"cluster": request.cluster})
+        raise APIError(
+            message="UUIDデータの取得中にエラーが発生しました",
+            details={"cluster": request.cluster}
+        )
 
 @router.post("/searchdataset")
 async def search_uuid_dataset(request: UuidSearchRequest):
     """Search UUID dataset"""
     try:
+        # 必須フィールドのバリデーション
+        validate_required_fields(request.dict(), ["cluster", "search"])
+        
         result = uuid_api.get_contentdataset(request.cluster, request.search)
-        return result
+        return create_success_response(
+            data=result,
+            message="UUID検索が成功しました",
+            operation="search_uuid_dataset"
+        )
+    except ValidationError as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        log_error(e, "search_uuid_dataset", {"cluster": request.cluster, "search": request.search})
+        raise APIError(
+            message="UUID検索中にエラーが発生しました",
+            details={"cluster": request.cluster, "search": request.search}
+        )
 
 @router.post("/contentdataset")
 async def get_content_dataset(request: UuidContentRequest):
     """Get UUID content dataset"""
     try:
+        # 必須フィールドのバリデーション
+        validate_required_fields(request.dict(), ["cluster", "content"])
+        
         result = uuid_api.get_contentdataset(request.cluster, request.content)
-        return result
+        return create_success_response(
+            data=result,
+            message="UUIDコンテンツの取得が成功しました",
+            operation="get_content_dataset"
+        )
+    except ValidationError as e:
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        log_error(e, "get_content_dataset", {"cluster": request.cluster, "content": request.content})
+        raise APIError(
+            message="UUIDコンテンツの取得中にエラーが発生しました",
+            details={"cluster": request.cluster, "content": request.content}
+        )

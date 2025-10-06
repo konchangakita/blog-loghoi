@@ -392,7 +392,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
           <div className="text-sm font-semibold text-primary">
             {loadingDisplay ? (
               <span className="text-gray-500">Loading...</span>
-            ) : displayLog ? (
+            ) : selectedLogFile ? (
               <div>
                 <span className="text-success">✓ ログ表示中: </span>
                 <span className="text-info font-mono">{selectedLogFile}</span>
@@ -440,7 +440,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
                 <code className="text-xs" style={{ lineHeight: '1.2' }}>
                   {loadingDisplay ? (
                     <span className="text-gray-500">Loading...</span>
-                  ) : displayLog ? (
+                  ) : typeof displayLog !== 'undefined' ? (
                     displayLog
                   ) : (
                     <span className="text-gray-500">ログファイルを選択してください</span>

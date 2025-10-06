@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loghoi-config
+  namespace: loghoi
+  labels:
+    app: loghoi
+    component: config
+data:
+  # アプリケーション設定
+  APP_NAME: "LogHoi"
+  APP_VERSION: "v1.0.0"
+  DEBUG: "false"
+  
+  # バックエンド設定
+  BACKEND_HOST: "0.0.0.0"
+  BACKEND_PORT: "7776"
+  
+  # フロントエンド設定
+  FRONTEND_PORT: "3000"
+  
+  # Elasticsearch設定
+  ELASTICSEARCH_URL: "http://elasticsearch:9200"
+  ELASTICSEARCH_INDEX_PREFIX: "loghoi"
+  
+  # ログ設定
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  
+  # セキュリティ設定
+  CORS_ORIGINS: "*"
+  CORS_CREDENTIALS: "true"
+  
+  # パフォーマンス設定
+  MAX_CONNECTIONS: "100"
+  TIMEOUT: "30"
+  
+  # ファイル設定
+  MAX_FILE_SIZE: "100MB"
+  UPLOAD_DIR: "/app/uploads"
+  LOG_DIR: "/app/logs"
