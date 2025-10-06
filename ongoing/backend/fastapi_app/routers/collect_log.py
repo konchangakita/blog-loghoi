@@ -9,12 +9,14 @@ from pydantic import BaseModel
 from core.broker_col import CollectLogGateway
 from core.common import connect_ssh
 from utils.error_handler import handle_api_error, create_success_response, create_error_response
+from utils.cache import SimpleTTLCache
 
 # ルーターの作成
 router = APIRouter(prefix="/api/col", tags=["collect-log"])
 
 # Gateway インスタンス
 col = CollectLogGateway()
+cache = SimpleTTLCache()
 
 # ========================================
 # Pydantic Models
@@ -46,7 +48,9 @@ async def collect_logs(request: LogCollectionRequest) -> Dict[str, Any]:
 async def get_ziplist() -> Dict[str, List[str]]:
     """ZIP一覧取得API"""
     try:
-        data = col.get_ziplist()
+        def _factory():
+            return col.get_ziplist()
+        data = cache.get_or_set("col:ziplist", ttl_seconds=10, factory=_factory)
         # 辞書形式で返す
         return {"zip_list": data} if isinstance(data, list) else data
     except Exception as e:
@@ -56,7 +60,10 @@ async def get_ziplist() -> Dict[str, List[str]]:
 async def get_logs_in_zip(zip_name: str) -> Dict[str, List[str]]:
     """ZIP内ログ一覧取得API"""
     try:
-        data = col.get_logs_in_zip(zip_name)
+        cache_key = f"col:logs_in_zip:{zip_name}"
+        def _factory():
+            return col.get_logs_in_zip(zip_name)
+        data = cache.get_or_set(cache_key, ttl_seconds=10, factory=_factory)
         return {"logs": data} if isinstance(data, list) else {"logs": []}
     except Exception as e:
         raise handle_api_error(e, "ZIP内ログ一覧取得")
