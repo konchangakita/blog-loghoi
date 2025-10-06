@@ -22,6 +22,8 @@ export interface LogViewerProps {
   onDownload?: () => void
   // 追記前スナップショット用（親からトリガーを受け取る）
   appendTick?: number
+  // 末尾ヒント表示（まだ続きがある）
+  showMoreHint?: boolean
   
   // collectlog用プロパティ
   logsInZip?: string[]
@@ -69,6 +71,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   onClear,
   onDownload,
   appendTick,
+  showMoreHint,
   // collectlog用
   logsInZip,
   displayLog,
@@ -167,7 +170,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     setIsConnecting(true)
     
     const backendUrl = getBackendUrl()
-    const newsocket = io(`${backendUrl}/`, {
+    const ioOptions: any = {
       transports: ['polling', 'websocket'],
       upgrade: true,
       rememberUpgrade: false,
@@ -175,7 +178,8 @@ const LogViewer: React.FC<LogViewerProps> = ({
       forceNew: true,
       pingTimeout: 60000,  // pingタイムアウト（ミリ秒）
       pingInterval: 25000  // ping間隔（ミリ秒）
-    })
+    }
+    const newsocket = io(`${backendUrl}/`, ioOptions)
     
     setSocket(newsocket)
   }
@@ -230,7 +234,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     setIsConnecting(true)
     
     const backendUrl = getBackendUrl()
-    const newsocket = io(`${backendUrl}/`, {
+    const ioOptions2: any = {
       transports: ['polling', 'websocket'],
       upgrade: true,
       rememberUpgrade: false,
@@ -238,7 +242,8 @@ const LogViewer: React.FC<LogViewerProps> = ({
       forceNew: true,
       pingTimeout: 60000,  // pingタイムアウト（ミリ秒）
       pingInterval: 25000  // ping間隔（ミリ秒）
-    })
+    }
+    const newsocket = io(`${backendUrl}/`, ioOptions2)
     
     // 接続確立後にtail -fを開始する（クリック駆動で接続→SSH開始）
     newsocket.once('connect', () => {
@@ -481,7 +486,15 @@ const LogViewer: React.FC<LogViewerProps> = ({
                   {loadingDisplay ? (
                     <span className="text-gray-500">Loading...</span>
                   ) : typeof displayLog !== 'undefined' ? (
-                    displayLog
+                    <>
+                      {displayLog}
+                      {showMoreHint && (
+                        <>
+                          {'\n'}
+                          <span className="text-xs text-warning">まだ続きがあります…</span>
+                        </>
+                      )}
+                    </>
                   ) : (
                     <span className="text-gray-500">ログファイルを選択してください</span>
                   )}

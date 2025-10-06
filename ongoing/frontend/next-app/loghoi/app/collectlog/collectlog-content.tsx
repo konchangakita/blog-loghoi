@@ -322,6 +322,7 @@ const CollectlogContnet = () => {
             selectedZip={state.selectedZip}
             selectedLogFile={state.selectedLogFile}
             appendTick={appendTick}
+            showMoreHint={hasLoadedOnce && hasMore}
           />
           {state.selectedZip && state.selectedLogFile && (
             <div className="mt-2">
