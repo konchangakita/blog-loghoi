@@ -230,17 +230,21 @@ const CollectlogContnet = () => {
       const chunkSize = 5000
       const result = await getLogContentRange(state.selectedLogFile, state.selectedZip, state.loadedBytes || 0, chunkSize)
       const nextText = result?.content || ''
-      setState(prev => ({
-        ...prev,
-        displayLog: (prev.displayLog || '') + nextText,
-        loadingDisplay: false,
-        loadedBytes: (prev.loadedBytes || 0) + (result?.range.length || 0)
-      }))
-      const newlyLoaded = (result?.range.length || 0)
-      if (fileSizeBytes && (state.loadedBytes + newlyLoaded) >= 0) {
-        setHasMore((state.loadedBytes + newlyLoaded) < fileSizeBytes)
-      }
-      setHasLoadedOnce(true)
+      const appendedLength = result?.range.length || 0
+      setState(prev => {
+        const newLoaded = (prev.loadedBytes || 0) + appendedLength
+        // hasMoreは別stateで管理
+        if (fileSizeBytes && fileSizeBytes > 0) {
+          setHasMore(newLoaded < fileSizeBytes)
+        }
+        setHasLoadedOnce(true)
+        return {
+          ...prev,
+          displayLog: (prev.displayLog || '') + nextText,
+          loadingDisplay: false,
+          loadedBytes: newLoaded,
+        }
+      })
     } catch (e) {
       console.error('追加読み込みエラー:', e)
       setState(prev => ({ ...prev, loadingDisplay: false }))
@@ -273,9 +277,9 @@ const CollectlogContnet = () => {
       {state.collecting && <Collecting />}
       {state.loading && <Loading />}
       
-      {error && (
+      {!!error && (
         <div className="alert alert-error mb-4">
-          <span>{error}</span>
+          <span>{String(error)}</span>
           <button className="btn btn-sm" onClick={clearError}>×</button>
         </div>
       )}

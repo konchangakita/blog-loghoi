@@ -68,6 +68,8 @@ export interface CollectLogState {
   logsInZip: string[]
   displayLog?: string
   selectedLogFile?: string
+  // 追加読み込み: 読み込み済みバイト数
+  loadedBytes?: number
   
   // エラー
   error?: string
@@ -102,4 +104,8 @@ export interface LogViewerProps {
   loadingDisplay: boolean
   selectedZip: string | null
   selectedLogFile?: string
+  // 追記前スナップショット（親→子）
+  appendTick?: number
+  // ビュワー最終行のヒント表示
+  footerHint?: string
 }
