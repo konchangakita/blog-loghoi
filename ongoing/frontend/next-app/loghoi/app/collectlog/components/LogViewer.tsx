@@ -11,7 +11,8 @@ const CollectLogViewer = ({
   selectedZip,
   selectedLogFile,
   appendTick,
-  footerHint
+  footerHint,
+  footerAction
 }: LogViewerProps) => {
 
   return (
@@ -25,6 +26,7 @@ const CollectLogViewer = ({
       selectedLogFile={selectedLogFile}
       appendTick={appendTick}
       footerHint={footerHint}
+      footerAction={footerAction}
     />
   )
 }

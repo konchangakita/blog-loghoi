@@ -108,4 +108,6 @@ export interface LogViewerProps {
   appendTick?: number
   // ビュワー最終行のヒント表示
   footerHint?: string
+  // ヒント押下時のアクション（続きを読むなど）
+  footerAction?: () => void
 }
