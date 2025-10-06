@@ -32,6 +32,7 @@ const CollectlogContnet = () => {
     getLogsInZip,
     getLogFileSize,
     getLogContent,
+    getLogContentRange,
     downloadZip,
   } = useCollectLogApi()
 
@@ -48,6 +49,8 @@ const CollectlogContnet = () => {
     logsInZip: [],
     displayLog: undefined,
     selectedLogFile: undefined,
+    // 追加読み込み用の現在までの読み込みバイト数
+    loadedBytes: 0,
   })
 
 
@@ -188,7 +191,8 @@ const CollectlogContnet = () => {
       setState(prev => ({ 
         ...prev, 
         displayLog: content || undefined, 
-        loadingDisplay: false 
+        loadingDisplay: false,
+        loadedBytes: content ? new TextEncoder().encode(content).length : 0
       }))
     } catch (error) {
       console.error('ログ内容読み込みエラー:', error)
@@ -196,6 +200,26 @@ const CollectlogContnet = () => {
         ...prev, 
         loadingDisplay: false 
       }))
+    }
+  }
+
+  // 追加読み込み（段階読み）
+  const handleLoadMore = async () => {
+    if (!state.selectedZip || !state.selectedLogFile) return
+    try {
+      setState(prev => ({ ...prev, loadingDisplay: true }))
+      const chunkSize = 5000
+      const result = await getLogContentRange(state.selectedLogFile, state.selectedZip, state.loadedBytes || 0, chunkSize)
+      const nextText = result?.content || ''
+      setState(prev => ({
+        ...prev,
+        displayLog: (prev.displayLog || '') + nextText,
+        loadingDisplay: false,
+        loadedBytes: (prev.loadedBytes || 0) + (result?.range.length || 0)
+      }))
+    } catch (e) {
+      console.error('追加読み込みエラー:', e)
+      setState(prev => ({ ...prev, loadingDisplay: false }))
     }
   }
 
@@ -274,6 +298,11 @@ const CollectlogContnet = () => {
             selectedZip={state.selectedZip}
             selectedLogFile={state.selectedLogFile}
           />
+          {state.selectedZip && state.selectedLogFile && (
+            <div className="mt-2 flex justify-end">
+              <button className="btn btn-sm" onClick={handleLoadMore} disabled={state.loadingDisplay}>続きを読む</button>
+            </div>
+          )}
         </div>
       </div>
     </>
