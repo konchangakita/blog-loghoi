@@ -322,7 +322,7 @@ const CollectlogContnet = () => {
             selectedZip={state.selectedZip}
             selectedLogFile={state.selectedLogFile}
             appendTick={appendTick}
-            showMoreHint={hasLoadedOnce && hasMore}
+            footerHint={hasLoadedOnce && hasMore ? 'まだ続きがあります…（続きを読む を押してください）' : ''}
           />
           {state.selectedZip && state.selectedLogFile && (
             <div className="mt-2">

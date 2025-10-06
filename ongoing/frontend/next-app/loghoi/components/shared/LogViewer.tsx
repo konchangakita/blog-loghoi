@@ -22,8 +22,8 @@ export interface LogViewerProps {
   onDownload?: () => void
   // 追記前スナップショット用（親からトリガーを受け取る）
   appendTick?: number
-  // 末尾ヒント表示（まだ続きがある）
-  showMoreHint?: boolean
+  // ビュワー最終行に表示するヒント文
+  footerHint?: string
   
   // collectlog用プロパティ
   logsInZip?: string[]
@@ -71,7 +71,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   onClear,
   onDownload,
   appendTick,
-  showMoreHint,
+  footerHint,
   // collectlog用
   logsInZip,
   displayLog,
@@ -170,16 +170,14 @@ const LogViewer: React.FC<LogViewerProps> = ({
     setIsConnecting(true)
     
     const backendUrl = getBackendUrl()
-    const ioOptions: any = {
+    const newsocket = io(`${backendUrl}/`, {
       transports: ['polling', 'websocket'],
       upgrade: true,
       rememberUpgrade: false,
       timeout: 20000,
       forceNew: true,
-      pingTimeout: 60000,  // pingタイムアウト（ミリ秒）
-      pingInterval: 25000  // ping間隔（ミリ秒）
-    }
-    const newsocket = io(`${backendUrl}/`, ioOptions)
+      // engine.ioのping設定は型未定義のため未設定
+    })
     
     setSocket(newsocket)
   }
@@ -234,16 +232,14 @@ const LogViewer: React.FC<LogViewerProps> = ({
     setIsConnecting(true)
     
     const backendUrl = getBackendUrl()
-    const ioOptions2: any = {
+    const newsocket = io(`${backendUrl}/`, {
       transports: ['polling', 'websocket'],
       upgrade: true,
       rememberUpgrade: false,
       timeout: 20000,
       forceNew: true,
-      pingTimeout: 60000,  // pingタイムアウト（ミリ秒）
-      pingInterval: 25000  // ping間隔（ミリ秒）
-    }
-    const newsocket = io(`${backendUrl}/`, ioOptions2)
+      // engine.ioのping設定は型未定義のため未設定
+    })
     
     // 接続確立後にtail -fを開始する（クリック駆動で接続→SSH開始）
     newsocket.once('connect', () => {
@@ -488,10 +484,10 @@ const LogViewer: React.FC<LogViewerProps> = ({
                   ) : typeof displayLog !== 'undefined' ? (
                     <>
                       {displayLog}
-                      {showMoreHint && (
+                      {footerHint && (
                         <>
                           {'\n'}
-                          <span className="text-xs text-warning">まだ続きがあります…</span>
+                          <span className="text-gray-400">{footerHint}</span>
                         </>
                       )}
                     </>
