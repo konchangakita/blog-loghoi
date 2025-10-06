@@ -83,6 +83,25 @@ class CollectLogGateway():
                     print(f"scp stdout: {e.stdout.strip()}")
                 if e.stderr:
                     print(f"scp stderr: {e.stderr.strip()}")
+                # フォールバック: SSHでcatしてローカルへ保存
+                try:
+                    ssh_fallback = common.connect_ssh(remote_host)
+                    if ssh_fallback:
+                        stdin, stdout, stderr = ssh_fallback.exec_command(f"cat {remote_path}")
+                        content = stdout.read()
+                        err = stderr.read()
+                        if err and err.strip():
+                            print(f"ssh cat stderr: {err.decode('utf-8', 'ignore').strip()}")
+                        # ローカルファイル名は元ファイル名を使用
+                        base = os.path.basename(remote_path)
+                        local_file = os.path.join(local_path, base)
+                        with open(local_file, 'wb') as lf:
+                            lf.write(content)
+                        print(f"fallback saved: {local_file} ({len(content)} bytes)")
+                        ssh_fallback.close()
+                        continue
+                except Exception as fe:
+                    print(f"fallback failed for {remote_path}: {fe}")
                 # 続行（他ファイルは可能な限り収集）
                 continue
             except subprocess.TimeoutExpired:
