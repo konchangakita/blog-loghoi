@@ -24,8 +24,8 @@ class CollectLogGateway():
         _jst_time = datetime.now().astimezone(timezone(timedelta(hours=+9)))
         folder_name = datetime.strftime(_jst_time, "loghoi_%Y%m%d_%H%M%S")
         log_folder = os.path.join(OUTPUT_LOGDIR, folder_name)
-        #log_folder = datetime.strftime(_jst_time, OUTPUT_DIR+"/loghoi_%Y%m%d_%H%M%S")
         os.makedirs(log_folder, exist_ok=True)
+        print(f"[collectlog] start cvm={cvm} folder={folder_name}")
 
         # load json file
         try:
@@ -39,25 +39,27 @@ class CollectLogGateway():
             command_list = _setting_json["COMMAND_LIST"]
             f.close()
 
-            print(">>>>>>>> open json file Success <<<<<<<<<")
+            # settings loaded
         except:
-            print(">>>>>>>> missing json file dayo <<<<<<<<<")
+            print("[collectlog][error] missing json file (col_logfile.json / col_command.json)")
             return {"message": "missing json file"}
 
 
         # Download LOGFILEs
-        print(">>>>>>>> Download logfiles <<<<<<<<<")
+        print("[collectlog] download logfiles (SFTP -> SCP -> SSH cat)")
         remote_host = cvm
         remote_user = "nutanix"
         key_file = "/usr/src/config/.ssh/ntnx-lockdown"
 
+        success_files = 0
+        failed_files = 0
         for item in logfile_list:
             remote_path = item["src_path"]
             local_path = log_folder
             base = os.path.basename(remote_path)
             local_file = os.path.join(local_path, base)
 
-            print(f"download: {remote_host}:{remote_path} -> {local_file}")
+            # sftp -> scp -> ssh cat
 
             # 1) SFTPでのダウンロード（推奨）
             try:
@@ -68,16 +70,16 @@ class CollectLogGateway():
                         sftp.get(remote_path, local_file)
                         sftp.close()
                         ssh_client.close()
-                        print(f"sftp saved: {local_file}")
+                        success_files += 1
                         continue
                     except Exception as se:
-                        print(f"sftp failed for {remote_path}: {se}")
+                        pass
                         try:
                             ssh_client.close()
                         except:
                             pass
             except Exception as ce:
-                print(f"ssh connection for sftp failed: {ce}")
+                pass
 
             # 2) scpでのダウンロード（従来）
             command = [
@@ -95,17 +97,12 @@ class CollectLogGateway():
                     text=True,
                     timeout=60,
                 )
-                if result.stdout:
-                    print(f"scp stdout: {result.stdout.strip()}")
+                success_files += 1
                 continue
             except subprocess.CalledProcessError as e:
-                print(f"scp failed (returncode={e.returncode}) for {remote_path}")
-                if e.stdout:
-                    print(f"scp stdout: {e.stdout.strip()}")
-                if e.stderr:
-                    print(f"scp stderr: {e.stderr.strip()}")
+                pass
             except subprocess.TimeoutExpired:
-                print(f"scp timeout for {remote_path}")
+                pass
 
             # 3) フォールバック: SSHでcatしてローカルへ保存
             try:
@@ -115,14 +112,15 @@ class CollectLogGateway():
                     content = stdout.read()
                     err = stderr.read()
                     if err and err.strip():
-                        print(f"ssh cat stderr: {err.decode('utf-8', 'ignore').strip()}")
-                    with open(local_file, 'wb') as lf:
-                        lf.write(content)
-                    print(f"fallback saved: {local_file} ({len(content)} bytes)")
+                        failed_files += 1
+                    else:
+                        with open(local_file, 'wb') as lf:
+                            lf.write(content)
+                        success_files += 1
                     ssh_fallback.close()
                     continue
             except Exception as fe:
-                print(f"fallback failed for {remote_path}: {fe}")
+                failed_files += 1
             # 続行（他ファイルは可能な限り収集）
             continue
 
@@ -152,7 +150,7 @@ class CollectLogGateway():
         ssh.close()
 
         # Archive Zip（完了後に所有者をホストUID/GIDへ合わせる）
-        print(">>>>>>>> Archive zip Log <<<<<<<<<")
+        # archive
         zip_filename = f"{folder_name}.zip"
         zip_path = os.path.join(OUTPUT_ZIPDIR, zip_filename)
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
@@ -174,17 +172,11 @@ class CollectLogGateway():
                     os.chown(filepath, host_uid, host_gid)
             os.chown(log_folder, host_uid, host_gid)
             os.chown(zip_path, host_uid, host_gid)
-        except Exception as e:
-            print(f"chown skipped: {e}")
+        except Exception:
+            pass
 
 
-        # Finish Hoi Hoi
-        print(">>>>>>>> 　　＿＿＿＿＿＿＿ ")
-        print(">>>>>>>> 　／ HoiHoi Done ／＼)ﾉ")
-        print(">>>>>>>> ∠＿∠二Ｚ＿＿＿／|￣|＼")
-        print(">>>>>>>> |E囗ﾖ   E囗ﾖ |  |  | |")
-        print(">>>>>>>> ￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣￣")
-        print("")
+        print(f"[collectlog] done cvm={cvm} folder={folder_name} saved={success_files} failed={failed_files} zip={zip_filename}")
         return {"message": "finished collect log"}
     
     # Zip list 取得
@@ -202,10 +194,9 @@ class CollectLogGateway():
         return logs_list
 
     def get_logcontent(self, log_file, zip_name):
-        print(">>>>>>>> Get Log Content <<<<<<<<<")
         filename_without_ext, _ = os.path.splitext(zip_name)
         log_path = os.path.join(OUTPUT_LOGDIR, filename_without_ext, log_file)
-        print(log_path)
+        # debug path
 
         try:
             with open(log_path, 'r') as file:
@@ -221,10 +212,9 @@ class CollectLogGateway():
 
     def get_logfile_size(self, log_file, zip_name):
         """ログファイルのサイズを取得"""
-        print(">>>>>>>> Get Log File Size <<<<<<<<<")
         filename_without_ext, _ = os.path.splitext(zip_name)
         log_path = os.path.join(OUTPUT_LOGDIR, filename_without_ext, log_file)
-        print(f"Checking file size: {log_path}")
+        # debug path
 
         try:
             if not os.path.exists(log_path):
