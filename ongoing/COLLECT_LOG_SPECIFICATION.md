@@ -241,7 +241,9 @@
 ## 8. セキュリティ仕様
 
 ### 8.1 認証・認可
-- **SSH認証**: 秘密鍵認証（`/usr/src/config/.ssh/ntnx-lockdown`）
+- **SSH認証**: 秘密鍵認証（環境により配置パスが異なる）
+  - Docker Compose環境: `/usr/src/config/.ssh/ntnx-lockdown`
+  - Kubernetes環境: `/app/config/.ssh/ntnx-lockdown`
 - **ホストキー検証**: 無効化（`StrictHostKeyChecking=no`）
 
 ### 8.2 ファイルアクセス
