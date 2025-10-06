@@ -91,9 +91,17 @@ const CollectlogContnet = () => {
     const result = await collectLogs(state.cvmChecked)
     
     if (result) {
-      // ZIP一覧を更新
+      // ZIP一覧を更新（新しい日時が上になるようソート）
       const zipList = await getZipList()
-      setState(prev => ({ ...prev, zipList }))
+      const sorted = [...zipList].sort((a, b) => {
+        const ta = (a.match(/_(\d{8})_(\d{6})/) || [])[0]
+        const tb = (b.match(/_(\d{8})_(\d{6})/) || [])[0]
+        const va = ta ? ta.replace(/\D/g, '') : '0'
+        const vb = tb ? tb.replace(/\D/g, '') : '0'
+        // 降順（新しいものが上）
+        return vb.localeCompare(va)
+      })
+      setState(prev => ({ ...prev, zipList: sorted }))
     }
     
     setState(prev => ({ ...prev, collecting: false }))
@@ -112,9 +120,20 @@ const CollectlogContnet = () => {
     
     if (zipName) {
       const logsInZip = await getLogsInZip(zipName)
+      const sortedLogs = [...logsInZip].sort((a, b) => {
+        // 末尾の _YYYYMMDD_HHMMSS を比較。なければ文字列比較。
+        const ra = a.match(/_(\d{8})_(\d{6})/)
+        const rb = b.match(/_(\d{8})_(\d{6})/)
+        if (ra && rb) {
+          const va = `${ra[1]}${ra[2]}`
+          const vb = `${rb[1]}${rb[2]}`
+          return vb.localeCompare(va) // 降順
+        }
+        return a.localeCompare(b)
+      })
       setState(prev => ({ 
         ...prev, 
-        logsInZip: logsInZip.sort(), 
+        logsInZip: sortedLogs, 
         loadingZip: false 
       }))
     } else {
@@ -189,7 +208,14 @@ const CollectlogContnet = () => {
   useEffect(() => {
     const loadZipList = async () => {
       const zipList = await getZipList()
-      setState(prev => ({ ...prev, zipList }))
+      const sorted = [...zipList].sort((a, b) => {
+        const ta = (a.match(/_(\d{8})_(\d{6})/) || [])[0]
+        const tb = (b.match(/_(\d{8})_(\d{6})/) || [])[0]
+        const va = ta ? ta.replace(/\D/g, '') : '0'
+        const vb = tb ? tb.replace(/\D/g, '') : '0'
+        return vb.localeCompare(va)
+      })
+      setState(prev => ({ ...prev, zipList: sorted }))
     }
     loadZipList()
   }, [getZipList])
