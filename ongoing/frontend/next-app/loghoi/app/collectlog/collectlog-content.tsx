@@ -52,6 +52,7 @@ const CollectlogContnet = () => {
     // 追加読み込み用の現在までの読み込みバイト数
     loadedBytes: 0,
   })
+  const [appendTick, setAppendTick] = useState(0)
 
 
   // 初期化
@@ -207,6 +208,8 @@ const CollectlogContnet = () => {
   const handleLoadMore = async () => {
     if (!state.selectedZip || !state.selectedLogFile) return
     try {
+      // 追記前にスクロール位置スナップショットをトリガー
+      setAppendTick((t) => t + 1)
       setState(prev => ({ ...prev, loadingDisplay: true }))
       const chunkSize = 5000
       const result = await getLogContentRange(state.selectedLogFile, state.selectedZip, state.loadedBytes || 0, chunkSize)
@@ -297,6 +300,7 @@ const CollectlogContnet = () => {
             loadingDisplay={state.loadingDisplay}
             selectedZip={state.selectedZip}
             selectedLogFile={state.selectedLogFile}
+            appendTick={appendTick}
           />
           {state.selectedZip && state.selectedLogFile && (
             <div className="mt-2 flex justify-end">

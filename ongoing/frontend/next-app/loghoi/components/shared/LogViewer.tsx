@@ -20,6 +20,8 @@ export interface LogViewerProps {
   filter?: string
   onClear?: () => void
   onDownload?: () => void
+  // 追記前スナップショット用（親からトリガーを受け取る）
+  appendTick?: number
   
   // collectlog用プロパティ
   logsInZip?: string[]
@@ -110,6 +112,14 @@ const LogViewer: React.FC<LogViewerProps> = ({
     if (typeof displayLog === 'undefined') return
     collectViewRef.current.scrollTop = lastScrollTopRef.current
   }, [variant, displayLog])
+
+  // 親からのトリガーで、追記前に現在位置をスナップショット
+  useEffect(() => {
+    if (variant !== 'collect') return
+    if (!collectViewRef.current) return
+    if (typeof appendTick === 'undefined') return
+    lastScrollTopRef.current = collectViewRef.current.scrollTop
+  }, [variant, appendTick])
 
   // ダウンロード機能
   const handleDownload = () => {
