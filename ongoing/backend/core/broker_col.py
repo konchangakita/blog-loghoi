@@ -54,12 +54,40 @@ class CollectLogGateway():
         for item in logfile_list:
             remote_path = item["src_path"]
             local_path = log_folder
-            command = ["scp", "-O", "-o", "StrictHostKeyChecking=no", "-i", key_file, f"{remote_user}@{remote_host}:{remote_path}", local_path]
-            print("download: ", remote_path)
+            command = [
+                "scp", "-O",
+                "-o", "StrictHostKeyChecking=no",
+                "-i", key_file,
+                f"{remote_user}@{remote_host}:{remote_path}",
+                local_path
+            ]
+            print(f"download: {remote_host}:{remote_path} -> {local_path}")
             try:
-                subprocess.run(command, check=True, stdout=subprocess.DEVNULL)
+                result = subprocess.run(
+                    command,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+                if result.stdout:
+                    print(f"scp stdout: {result.stdout.strip()}")
+                if result.stderr:
+                    # scpは成功時にもstderrに進捗を出すことがあるためverbosityを抑える
+                    msg = result.stderr.strip()
+                    if msg and "100%" not in msg:
+                        print(f"scp stderr (non-critical): {msg}")
             except subprocess.CalledProcessError as e:
-                print(f"Error: {e}")
+                print(f"scp failed (returncode={e.returncode}) for {remote_path}")
+                if e.stdout:
+                    print(f"scp stdout: {e.stdout.strip()}")
+                if e.stderr:
+                    print(f"scp stderr: {e.stderr.strip()}")
+                # 続行（他ファイルは可能な限り収集）
+                continue
+            except subprocess.TimeoutExpired:
+                print(f"scp timeout for {remote_path}")
+                continue
 
 
         # Get Command result
