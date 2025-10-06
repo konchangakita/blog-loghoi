@@ -303,7 +303,7 @@ const CollectlogContnet = () => {
             appendTick={appendTick}
           />
           {state.selectedZip && state.selectedLogFile && (
-            <div className="mt-2 flex justify-end">
+            <div className="mt-2 flex justify-start">
               <button className="btn btn-sm" onClick={handleLoadMore} disabled={state.loadingDisplay}>続きを読む</button>
             </div>
           )}
