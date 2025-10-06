@@ -24,6 +24,8 @@ export interface LogViewerProps {
   appendTick?: number
   // ビュワー最終行に表示するヒント文
   footerHint?: string
+  // フッターヒントをクリックしたときのアクション（続きを読むなど）
+  footerAction?: () => void
   
   // collectlog用プロパティ
   logsInZip?: string[]
@@ -72,6 +74,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   onDownload,
   appendTick,
   footerHint,
+  footerAction,
   // collectlog用
   logsInZip,
   displayLog,
@@ -470,7 +473,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
           </div>
         ) : (
           <div
-            className="mockup-code w-full h-[600px] overflow-auto text-left"
+            className="mockup-code w-full h-[600px] overflow-auto text-left relative"
             ref={collectViewRef}
             onScroll={(e) => {
               lastScrollTopRef.current = e.currentTarget.scrollTop
@@ -485,10 +488,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
                     <>
                       {displayLog}
                       {footerHint && (
-                        <>
-                          {'\n'}
-                          <span className="text-gray-400">{footerHint}</span>
-                        </>
+                        <> {'\n'}{footerHint} </>
                       )}
                     </>
                   ) : (
@@ -497,6 +497,18 @@ const LogViewer: React.FC<LogViewerProps> = ({
                 </code>
               </pre>
             </div>
+            {footerHint && footerAction && (
+              <div className="sticky bottom-0 z-10 w-full">
+                <div className="flex justify-start pl-2 pb-2">
+                  <button
+                    className="btn btn-primary btn-sm shadow px-6 min-w-[160px] opacity-80 hover:opacity-100"
+                    onClick={footerAction}
+                  >
+                    続きを表示
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

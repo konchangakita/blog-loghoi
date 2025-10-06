@@ -159,6 +159,7 @@ const CollectlogContnet = () => {
     if (!state.selectedZip) return
 
     setState(prev => ({ ...prev, loadingDisplay: true, selectedLogFile: logFile }))
+    setHasLoadedOnce(false)
     
     try {
       // まずファイルサイズをチェック
@@ -210,7 +211,7 @@ const CollectlogContnet = () => {
       } else {
         setHasMore(false)
       }
-      setHasLoadedOnce(true)
+      // 初回全文読みでは「続きを読む」未押下のためフラグは立てない
     } catch (error) {
       console.error('ログ内容読み込みエラー:', error)
       setState(prev => ({ 
@@ -237,6 +238,7 @@ const CollectlogContnet = () => {
         if (fileSizeBytes && fileSizeBytes > 0) {
           setHasMore(newLoaded < fileSizeBytes)
         }
+        // 「続きを読む」を押したのでフラグON
         setHasLoadedOnce(true)
         return {
           ...prev,
@@ -326,18 +328,10 @@ const CollectlogContnet = () => {
             selectedZip={state.selectedZip}
             selectedLogFile={state.selectedLogFile}
             appendTick={appendTick}
-            footerHint={hasLoadedOnce && hasMore ? 'まだ続きがあります…（続きを読む を押してください）' : ''}
+            footerHint={(hasMore || (state.displayLog?.includes('最初の10000文字のみ') ?? false)) ? '続きがあります' : ''}
+            footerAction={(hasMore || (state.displayLog?.includes('最初の10000文字のみ') ?? false)) ? handleLoadMore : undefined}
           />
-          {state.selectedZip && state.selectedLogFile && (
-            <div className="mt-2">
-              <div className="flex justify-start items-center gap-3">
-                <button className="btn btn-sm" onClick={handleLoadMore} disabled={state.loadingDisplay}>続きを読む</button>
-                {hasLoadedOnce && hasMore && (
-                  <span className="text-xs text-gray-500">まだ続きがあります...</span>
-                )}
-              </div>
-            </div>
-          )}
+          {/* 下部のグレーボタンは廃止（ビュワー内のオレンジボタンに統合） */}
         </div>
       </div>
     </>
