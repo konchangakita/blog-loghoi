@@ -332,11 +332,65 @@ spec:
 
 ---
 
+## 🚚 次のリファクタリング移行計画（追加）
+
+- パフォーマンス最適化（最優先）
+  - APIレスポンス高速化（キャッシュ導入、必要箇所の遅延取得）
+  - フロントのメモ化・リスト仮想化・画像/アイコン最適化
+  - 大容量ログの段階読み（ストリーミング/範囲取得）
+
+- エラーハンドリング統一の仕上げ
+  - API契約の型定義共有（frontend/backendの共通スキーマ）
+  - 例外→APIErrorへの統一、メッセージ基準表の整備
+
+- ログ基盤・運用性
+  - 構造化ログ（JSON）＋相関ID導入
+  - 重要イベント（開始/終了/失敗）をInfo、それ以外をDebugへ明確化
+
+- コンテナ/ビルド整備
+  - Buildx/BuildKit対応、イメージサイズ最適化
+  - node_modules/.cacheの適切化、Dockerレイヤ分離の改善
+
+- CI/CDとテスト
+  - E2Eの自動化（Collect Log/UUID Explorerの主要ユースケース）
+  - 最低限のAPI統合テスト（/uuid, /col 系）
+  - Lint/TypeチェックのPRゲート化
+
+- 設定管理とセキュリティ
+  - 設定の外部化徹底（.env, ConfigMap/Secret整備）
+  - 秘密情報スキャン/検知（pre-commit導入）
+
+- UX細部改善
+  - 並べ替え/フィルタ条件の保持（URLクエリ/ローカルストレージ）
+  - ローディング/エラー表示の一貫性・再利用強化
+
+- Kubernetes対応の仕上げ
+  - HPA/リソース制限、RollingUpdate設定
+  - Readiness/Liveness Probeの閾値調整
+
+- 型・コード品質
+  - 共通型の分離（shared/）と依存の単純化
+  - ESLint/Prettierルール最終整備、命名と責務分離の微修正
+
+### 短期ロードマップ（提案）
+- Sprint 1（1週間）: パフォーマンス最適化＋ログ基盤（相関ID/レベル整理）
+- Sprint 2（1週間）: E2E自動化＋API統合テスト＋CIゲート
+- Sprint 3（1週間）: Build/Config/K8s仕上げ＋UX細部
+
+### ブランチ運用（提案）
+- base: `refactor`
+- feature:
+  - `feature/perf-optimization`
+  - `feature/log-structured-correlation`
+  - `feature/e2e-and-ci`
+  - `feature/k8s-polish`
+  - `feature/ux-polish`
+
 **参考**: [Tidy First: A Personal Practice of Sustainable Software Development](https://www.oreilly.com/library/view/tidy-first/9781098150948/)
 
-**最終更新**: 2025年10月4日  
-**進捗状況**: 67% 完了  
-**次のマイルストーン**: エラーハンドリング統一の完了
+**最終更新**: 2025年10月6日  
+**進捗状況**: 92% 完了  
+**次のマイルストーン**: パフォーマンス最適化の完了
 
 この計画に基づいて、段階的かつ安全なリファクタリングを実施し、Kubernetes化への準備を進めます。
 
