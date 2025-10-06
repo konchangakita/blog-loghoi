@@ -28,6 +28,8 @@ class LogCollectionRequest(BaseModel):
 class LogDisplayRequest(BaseModel):
     log_file: str
     zip_name: str
+    start: int | None = None  # 先頭からのオフセット（バイト）
+    length: int | None = None # 読み取る長さ（バイト）
 
 
 # ========================================
@@ -81,7 +83,7 @@ async def get_logfile_size(request: LogDisplayRequest) -> Dict[str, Any]:
 async def display_log(request: LogDisplayRequest) -> Dict[str, Any]:
     """ログ表示API"""
     try:
-        data = col.get_logcontent(request.log_file, request.zip_name)
+        data = col.get_logcontent(request.log_file, request.zip_name, start=request.start, length=request.length)
         return create_success_response(data, "ログ内容を取得しました")
     except Exception as e:
         raise handle_api_error(e, "ログ表示")
