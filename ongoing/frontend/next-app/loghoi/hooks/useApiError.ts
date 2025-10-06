@@ -56,7 +56,18 @@ export const useApiError = () => {
   ): Promise<APISuccessResponse<T>> => {
     try {
       const data = await response.json()
-      
+
+      // 後方互換: statusフィールドがない従来のレスポンスを自動ラップ
+      if (data && typeof data === 'object' && !('status' in data)) {
+        return {
+          status: 'success',
+          message: 'Success',
+          operation,
+          data: data as T,
+          timestamp: new Date().toISOString(),
+        }
+      }
+
       if (data.status === 'error') {
         const errorData = data as APIErrorResponse
         const error = new APIError(

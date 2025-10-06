@@ -105,12 +105,12 @@ export const useCollectLogApi = () => {
         'getLogFileSize',
         { logFile, zipName }
       )
-      
-      if (result?.status === 'error' || !result?.data) {
-        throw new APIError(result?.error || 'ファイルサイズの取得に失敗しました')
+      // executeApiCall は後方互換で payload を返す
+      // 期待形: { file_size: number, file_size_mb: number }
+      if (result && typeof result === 'object' && 'file_size' in result && 'file_size_mb' in result) {
+        return result as { file_size: number; file_size_mb: number }
       }
-      
-      return result.data
+      return null
     } catch (error) {
       if (error instanceof APIError) {
         return null
@@ -141,13 +141,13 @@ export const useCollectLogApi = () => {
       
       if (!result) return null
       
-      // 空のファイルかチェック
-      if (typeof result.data === 'object' && result.data && 'empty' in result.data && result.data.empty) {
-        return `EMPTY_FILE:${result.data.message}`
+      // 後方互換: result は string または { empty: boolean, message: string } の可能性
+      if (typeof result === 'object' && result && 'empty' in result) {
+        const r: any = result
+        if (r.empty) return `EMPTY_FILE:${r.message}`
       }
-      
-      // 大きなログファイルの場合は最初の10000文字のみを表示
-      const content = typeof result.data === 'string' ? result.data : ''
+
+      const content = typeof result === 'string' ? result : (typeof (result as any).data === 'string' ? (result as any).data : '')
       const maxLength = 10000
       if (content.length > maxLength) {
         return content.substring(0, maxLength) + '\n\n... (ログが長すぎるため、最初の10000文字のみを表示しています)'
