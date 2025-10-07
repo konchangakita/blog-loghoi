@@ -526,16 +526,22 @@ async def clear_cache(pattern: Optional[str] = None) -> Dict[str, Any]:
         if pattern:
             cleared_count = cache.clear_by_pattern(pattern)
             message = f"パターン '{pattern}' にマッチする {cleared_count} 件のキャッシュをクリアしました"
+            stats = cache.get_stats()
+            return create_success_response({
+                "cleared_count": cleared_count,
+                "pattern": pattern,
+                "cache_stats": stats
+            }, message)
         else:
+            stats_before = cache.get_stats()
             cache.clear()
             message = "すべてのキャッシュをクリアしました"
-        
-        stats = cache.get_stats()
-        return create_success_response({
-            "cleared_count": cleared_count if pattern else stats["total_items"],
-            "pattern": pattern,
-            "cache_stats": stats
-        }, message)
+            stats = cache.get_stats()
+            return create_success_response({
+                "cleared_count": stats_before["total_items"],
+                "pattern": pattern,
+                "cache_stats": stats
+            }, message)
     except Exception as e:
         log_error(e, "clear_cache", {"pattern": pattern})
         raise APIError(
