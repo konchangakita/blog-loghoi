@@ -21,15 +21,25 @@ class ConnectionManager:
         self.socket_connections: Dict[str, dict] = {}  # sid -> connection_info
         self.ssh_connections: Dict[str, any] = {}      # sid -> ssh_connection
         self.monitoring_tasks: Dict[str, asyncio.Task] = {}  # sid -> monitoring_task
-        
+        # 同時実行防止と制御
+        self._locks: Dict[str, asyncio.Lock] = {}
+        self._start_stop_in_progress: Set[str] = set()
+        # 制御パラメータ
+        self.max_lines_per_second: int = 20
+        self.idle_timeout_seconds: int = 300
+
     async def add_socket_connection(self, sid: str) -> None:
         """SocketIO接続を追加"""
         self.socket_connections[sid] = {
             'connected_at': time.time(),
-            'is_active': True
+            'is_active': True,
+            'last_emit_ts': time.time(),
+            'idle_watch_task': None
         }
         print(f"SocketIO接続を追加: {sid}")
-    
+        # アイドルタイムアウト監視を開始
+        await self._ensure_idle_watch(sid)
+
     async def remove_socket_connection(self, sid: str) -> None:
         """SocketIO接続を削除し、関連するSSH接続も即座に切断"""
         print(f"🔌 SocketIO接続を削除開始: {sid}")
@@ -44,19 +54,35 @@ class ConnectionManager:
         await self._cleanup_monitoring_task(sid)
         print(f"🔌 ログ監視タスクのクリーンアップ完了: {sid}")
         
+        # アイドル監視タスクを停止
+        if sid in self.socket_connections and self.socket_connections[sid].get('idle_watch_task'):
+            task = self.socket_connections[sid]['idle_watch_task']
+            try:
+                task.cancel()
+            except Exception:
+                pass
+            self.socket_connections[sid]['idle_watch_task'] = None
+        
         # SocketIO接続情報を削除
         if sid in self.socket_connections:
             del self.socket_connections[sid]
             print(f"🔌 SocketIO接続情報を削除: {sid}")
         
         print(f"🔌 SocketIO接続を削除完了: {sid}")
-    
+
     async def add_ssh_connection(self, sid: str, cvm_ip: str) -> bool:
         """SSH接続を追加"""
         try:
             # 既存のSSH接続がある場合は先にクリーンアップ
             if sid in self.ssh_connections:
                 await self._cleanup_ssh_connection(sid)
+            
+            # 同時実行防止
+            async with self._get_lock(sid):
+                if sid in self._start_stop_in_progress:
+                    print(f"start/stop処理中のためSSH開始をスキップ: {sid}")
+                    return False
+                self._start_stop_in_progress.add(sid)
             
             print(f"SSH接続を開始: {cvm_ip} (SID: {sid})")
             ssh_connection = connect_ssh(cvm_ip)
@@ -72,16 +98,24 @@ class ConnectionManager:
         except Exception as e:
             print(f"SSH接続エラー: {e}")
             return False
-    
+        finally:
+            if sid in self._start_stop_in_progress:
+                self._start_stop_in_progress.remove(sid)
+
     async def start_log_monitoring(self, sid: str, log_path: str, log_name: str, sio) -> bool:
         """ログ監視を開始"""
-        if sid not in self.ssh_connections:
-            print(f"SSH接続がありません: {sid}")
-            return False
-        
-        if sid in self.monitoring_tasks:
-            print(f"既にログ監視中です: {sid}")
-            return False
+        # 同時実行防止
+        async with self._get_lock(sid):
+            if sid not in self.ssh_connections:
+                print(f"SSH接続がありません: {sid}")
+                return False
+            if sid in self.monitoring_tasks:
+                print(f"既にログ監視中です: {sid}")
+                return False
+            if sid in self._start_stop_in_progress:
+                print(f"start/stop処理中のため監視開始をスキップ: {sid}")
+                return False
+            self._start_stop_in_progress.add(sid)
         
         try:
             # 過去のログを取得
@@ -99,20 +133,35 @@ class ConnectionManager:
         except Exception as e:
             print(f"ログ監視開始エラー: {e}")
             return False
-    
+        finally:
+            if sid in self._start_stop_in_progress:
+                self._start_stop_in_progress.remove(sid)
+
     async def stop_log_monitoring(self, sid: str) -> None:
         """ログ監視を停止"""
-        await self._cleanup_monitoring_task(sid)
+        async with self._get_lock(sid):
+            self._start_stop_in_progress.add(sid)
+        try:
+            await self._cleanup_monitoring_task(sid)
+        finally:
+            if sid in self._start_stop_in_progress:
+                self._start_stop_in_progress.remove(sid)
 
     async def stop_all(self, sid: str) -> None:
         """指定SIDの監視とSSH接続をすべて停止し、非アクティブ化する"""
         print(f"🔌 stop_all 開始: {sid}")
-        await self._cleanup_monitoring_task(sid)
-        await self._cleanup_ssh_connection(sid)
+        async with self._get_lock(sid):
+            self._start_stop_in_progress.add(sid)
+        try:
+            await self._cleanup_monitoring_task(sid)
+            await self._cleanup_ssh_connection(sid)
+        finally:
+            if sid in self._start_stop_in_progress:
+                self._start_stop_in_progress.remove(sid)
         if sid in self.socket_connections:
             self.socket_connections[sid]['is_active'] = False
         print(f"🔌 stop_all 完了: {sid}")
-    
+
     async def _cleanup_ssh_connection(self, sid: str) -> None:
         """SSH接続をクリーンアップ"""
         if sid in self.ssh_connections:
@@ -170,6 +219,8 @@ class ConnectionManager:
     async def _monitor_realtime_logs(self, sid: str, log_path: str, log_name: str, sio) -> None:
         """リアルタイムログ監視"""
         line_count = 0
+        tokens = self.max_lines_per_second
+        last_refill = time.time()
         
         try:
             # 接続がアクティブかチェック
@@ -193,9 +244,18 @@ class ConnectionManager:
             # ログを読み取り
             while sid in self.socket_connections and self.socket_connections[sid]['is_active']:
                 try:
+                    # レート制御（1秒毎のトークン補充）
+                    now = time.time()
+                    if now - last_refill >= 1.0:
+                        tokens = self.max_lines_per_second
+                        last_refill = now
                     line = stdout.readline()
                     if not line:
                         break
+                    # トークンが尽きている場合はスキップ
+                    if tokens <= 0:
+                        continue
+                    tokens -= 1
                     
                     line_count += 1
                     # 各行の逐次出力は抑制（送信のみ）
@@ -208,6 +268,8 @@ class ConnectionManager:
                             'line_number': line_count,
                             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S')
                         })
+                        if sid in self.socket_connections:
+                            self.socket_connections[sid]['last_emit_ts'] = time.time()
                     except Exception as e:
                         print(f"SocketIOログ送信エラー: {e}")
                         break
@@ -240,6 +302,36 @@ class ConnectionManager:
             except Exception as e:
                 print(f"🔌 SSH接続クリーンアップエラー: {e}")
             print(f"🔌 リアルタイムログ監視を終了: {sid}")
+
+    async def _ensure_idle_watch(self, sid: str) -> None:
+        """アイドルタイムアウト監視開始（監視未開始時のみ適用）"""
+        if sid not in self.socket_connections:
+            return
+        if self.socket_connections[sid].get('idle_watch_task'):
+            return
+        async def watcher():
+            try:
+                while sid in self.socket_connections and self.socket_connections[sid]['is_active']:
+                    # 監視開始後はタイムアウトしない
+                    if sid in self.monitoring_tasks:
+                        await asyncio.sleep(2)
+                        continue
+                    last = self.socket_connections[sid].get('last_emit_ts', time.time())
+                    if time.time() - last > self.idle_timeout_seconds:
+                        print(f"⏲️ アイドルタイムアウトにより停止: {sid}")
+                        await self.stop_all(sid)
+                        break
+                    await asyncio.sleep(2)
+            except asyncio.CancelledError:
+                pass
+        task = asyncio.create_task(watcher())
+        self.socket_connections[sid]['idle_watch_task'] = task
+
+    def _get_lock(self, sid: str) -> asyncio.Lock:
+        """SIDに紐づくロックを取得/生成"""
+        if sid not in self._locks:
+            self._locks[sid] = asyncio.Lock()
+        return self._locks[sid]
     
     def get_connection_status(self, sid: str) -> dict:
         """接続状態を取得"""
