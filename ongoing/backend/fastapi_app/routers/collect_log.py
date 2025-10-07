@@ -3,7 +3,7 @@
 """
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 
 from core.broker_col import CollectLogGateway
