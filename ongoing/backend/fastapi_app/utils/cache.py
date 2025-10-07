@@ -59,8 +59,11 @@ class SimpleTTLCache:
         """
         import re
         try:
+            # パターンが^で始まらない場合は自動的に追加
+            if not pattern.startswith('^'):
+                pattern = '^' + pattern
             regex = re.compile(pattern)
-            keys_to_clear = [k for k in self._store.keys() if regex.match(k)]
+            keys_to_clear = [k for k in self._store.keys() if regex.search(k)]
             for k in keys_to_clear:
                 try:
                     del self._store[k]
