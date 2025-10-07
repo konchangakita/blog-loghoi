@@ -367,14 +367,14 @@ async def stop_tail_f(sid, data):
     print(f"tail -f stop requested (SID: {sid})")
     
     try:
-        # ログ監視を停止（SSH接続は維持）
-        await connection_manager.stop_log_monitoring(sid)
+        # ログ監視とSSH接続を停止（仕様: 停止時はSSHごと切断）
+        await connection_manager.stop_all(sid)
         
         await sio.emit('tail_f_status', {
             'status': 'stopped',
-            'message': 'tail -f停止'
+            'message': 'tail -f停止（SSH切断済み）'
         }, to=sid)
-        print(f"tail -f stopped: {sid}")
+        print(f"tail -f stopped (and SSH closed): {sid}")
         
     except Exception as e:
         print(f"tail -f stop error: {e}")
