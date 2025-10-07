@@ -51,6 +51,8 @@ export default function UuidPage() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>()
 

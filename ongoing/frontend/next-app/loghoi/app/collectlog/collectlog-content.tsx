@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 // components
@@ -61,12 +61,12 @@ const CollectlogContnet = () => {
   const [cacheStats, setCacheStats] = useState<any>(null)
 
   // キャッシュ統計を取得
-  const fetchCacheStats = async () => {
+  const fetchCacheStats = useCallback(async () => {
     const stats = await getCacheStats()
     if (stats) {
       setCacheStats(stats)
     }
-  }
+  }, [getCacheStats])
 
   // キャッシュクリア
   const handleClearCache = async (pattern?: string) => {
