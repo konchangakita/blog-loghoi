@@ -425,6 +425,11 @@ async def connect_cluster(request: UuidConnectRequest):
         validate_required_fields(request.dict(), ["cluster_name", "prism_ip"])
         
         result = uuid_api.connect_cluster(request)
+        
+        # データ収集完了後、UUID関連のキャッシュをクリア
+        cleared_count = cache.clear_by_pattern(r"^uuid:")
+        print(f"Cache cleared: {cleared_count} items (uuid:*)")
+        
         return create_success_response(
             data=result,
             message="クラスター接続が成功しました",
@@ -512,4 +517,46 @@ async def get_content_dataset(request: UuidContentRequest):
         raise APIError(
             message="UUIDコンテンツの取得中にエラーが発生しました",
             details={"cluster": request.cluster, "content": request.content}
+        )
+
+@router.post("/cache/clear", response_model=Dict[str, Any])
+async def clear_cache(pattern: Optional[str] = None) -> Dict[str, Any]:
+    """キャッシュクリアAPI"""
+    try:
+        if pattern:
+            cleared_count = cache.clear_by_pattern(pattern)
+            message = f"パターン '{pattern}' にマッチする {cleared_count} 件のキャッシュをクリアしました"
+            stats = cache.get_stats()
+            return create_success_response({
+                "cleared_count": cleared_count,
+                "pattern": pattern,
+                "cache_stats": stats
+            }, message)
+        else:
+            stats_before = cache.get_stats()
+            cache.clear()
+            message = "すべてのキャッシュをクリアしました"
+            stats = cache.get_stats()
+            return create_success_response({
+                "cleared_count": stats_before["total_items"],
+                "pattern": pattern,
+                "cache_stats": stats
+            }, message)
+    except Exception as e:
+        log_error(e, "clear_cache", {"pattern": pattern})
+        raise APIError(
+            message="キャッシュクリア中にエラーが発生しました",
+            details={"pattern": pattern}
+        )
+
+@router.get("/cache/stats", response_model=Dict[str, Any])
+async def get_cache_stats() -> Dict[str, Any]:
+    """キャッシュ統計情報取得API"""
+    try:
+        stats = cache.get_stats()
+        return create_success_response(stats, "キャッシュ統計情報を取得しました")
+    except Exception as e:
+        log_error(e, "get_cache_stats")
+        raise APIError(
+            message="キャッシュ統計情報取得中にエラーが発生しました"
         )

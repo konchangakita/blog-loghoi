@@ -158,9 +158,9 @@ class ConnectionManager:
             if ssh_history:
                 stdin, stdout, stderr = ssh_history.exec_command(f"tail -n 20 {log_path}")
                 
+                # 逐次行の出力は抑制（要点ログのみ残す）
                 for line in stdout:
-                    if line.strip():
-                        print(f"過去ログ: {line.strip()}")
+                    pass
                 
                 ssh_history.close()
                 print(f"過去のログ取得完了: {sid}")
@@ -195,11 +195,10 @@ class ConnectionManager:
                 try:
                     line = stdout.readline()
                     if not line:
-                        print(f"stdoutが終了しました: {sid}")
                         break
                     
                     line_count += 1
-                    print(f"リアルタイムログ [{line_count}]: {line.strip()}")
+                    # 各行の逐次出力は抑制（送信のみ）
                     
                     # SocketIOでログを送信
                     try:

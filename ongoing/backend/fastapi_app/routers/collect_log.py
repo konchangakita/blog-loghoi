@@ -3,7 +3,7 @@
 """
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 
 from core.broker_col import CollectLogGateway
@@ -42,6 +42,11 @@ async def collect_logs(request: LogCollectionRequest) -> Dict[str, Any]:
     try:
         print(f"POST /api/col/getlogs: {request.cvm}")
         data = col.collect_logs(request.cvm)
+        
+        # ログ収集完了後、Collect Log関連のキャッシュをクリア
+        cleared_count = cache.clear_by_pattern(r"^col:")
+        print(f"Cache cleared: {cleared_count} items (col:*)")
+        
         return create_success_response(data, "ログ収集が完了しました")
     except Exception as e:
         raise handle_api_error(e, "ログ収集")
@@ -87,6 +92,41 @@ async def display_log(request: LogDisplayRequest) -> Dict[str, Any]:
         return create_success_response(data, "ログ内容を取得しました")
     except Exception as e:
         raise handle_api_error(e, "ログ表示")
+
+@router.post("/cache/clear", response_model=Dict[str, Any])
+async def clear_cache(pattern: Optional[str] = None) -> Dict[str, Any]:
+    """キャッシュクリアAPI"""
+    try:
+        if pattern:
+            cleared_count = cache.clear_by_pattern(pattern)
+            message = f"パターン '{pattern}' にマッチする {cleared_count} 件のキャッシュをクリアしました"
+            stats = cache.get_stats()
+            return create_success_response({
+                "cleared_count": cleared_count,
+                "pattern": pattern,
+                "cache_stats": stats
+            }, message)
+        else:
+            stats_before = cache.get_stats()
+            cache.clear()
+            message = "すべてのキャッシュをクリアしました"
+            stats = cache.get_stats()
+            return create_success_response({
+                "cleared_count": stats_before["total_items"],
+                "pattern": pattern,
+                "cache_stats": stats
+            }, message)
+    except Exception as e:
+        raise handle_api_error(e, "キャッシュクリア")
+
+@router.get("/cache/stats", response_model=Dict[str, Any])
+async def get_cache_stats() -> Dict[str, Any]:
+    """キャッシュ統計情報取得API"""
+    try:
+        stats = cache.get_stats()
+        return create_success_response(stats, "キャッシュ統計情報を取得しました")
+    except Exception as e:
+        raise handle_api_error(e, "キャッシュ統計情報取得")
 
 @router.get("/download/{zip_name}")
 async def download_zip(zip_name: str):

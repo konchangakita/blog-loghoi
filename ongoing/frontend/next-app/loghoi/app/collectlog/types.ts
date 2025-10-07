@@ -71,6 +71,14 @@ export interface CollectLogState {
   // 追加読み込み: 読み込み済みバイト数
   loadedBytes?: number
   
+  // キャッシュ統計
+  cacheStats?: {
+    total_items: number
+    expired_items: number
+    active_items: number
+    keys: string[]
+  }
+  
   // エラー
   error?: string
 }

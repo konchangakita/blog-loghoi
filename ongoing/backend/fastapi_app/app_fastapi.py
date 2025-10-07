@@ -297,7 +297,8 @@ async def monitor_realtime_logs(ssh, log_path, log_name):
 @sio.event
 async def connect(sid, environ, auth=None):
     """SocketIO接続時の処理"""
-    print(f"SocketIO クライアント {sid} が接続しました")
+    # 要点ログのみ出力
+    print(f"SocketIO connected: {sid}")
     
     # 接続管理システムに追加
     await connection_manager.add_socket_connection(sid)
@@ -308,17 +309,16 @@ async def connect(sid, environ, auth=None):
 @sio.event
 async def disconnect(sid):
     """SocketIO切断時の処理"""
-    print(f"SocketIO クライアント {sid} が切断しました")
-    
+    print(f"SocketIO disconnected: {sid}")
     # 接続管理システムから削除（SSH接続とログ監視も即座に停止）
-    print(f"接続を即座にクリーンアップ開始 (切断: {sid})")
     await connection_manager.remove_socket_connection(sid)
-    print(f"接続を即座にクリーンアップ完了 (切断: {sid})")
+    print(f"Cleanup done for: {sid}")
 
 @sio.event
 async def start_tail_f(sid, data):
     """tail -f開始イベント"""
-    print(f"tail -f開始要求: {data} (SID: {sid})")
+    # 詳細データ出力は抑制
+    print(f"tail -f start requested (SID: {sid})")
     
     try:
         cvm_ip = data.get('cvm_ip', '10.38.112.31')
@@ -352,10 +352,10 @@ async def start_tail_f(sid, data):
             'status': 'started',
             'message': f'tail -f開始: {cvm_ip}'
         }, to=sid)
-        print(f"tail -f開始成功: {sid}")
+        print(f"tail -f started: {sid}")
             
     except Exception as e:
-        print(f"tail -f開始エラー: {e}")
+        print(f"tail -f start error: {e}")
         await sio.emit('tail_f_status', {
             'status': 'error',
             'message': f'tail -f開始エラー: {str(e)}'
@@ -364,7 +364,7 @@ async def start_tail_f(sid, data):
 @sio.event
 async def stop_tail_f(sid, data):
     """tail -f停止イベント"""
-    print(f"tail -f停止要求: {data} (SID: {sid})")
+    print(f"tail -f stop requested (SID: {sid})")
     
     try:
         # ログ監視を停止（SSH接続は維持）
@@ -374,10 +374,10 @@ async def stop_tail_f(sid, data):
             'status': 'stopped',
             'message': 'tail -f停止'
         }, to=sid)
-        print(f"tail -f停止成功: {sid}")
+        print(f"tail -f stopped: {sid}")
         
     except Exception as e:
-        print(f"tail -f停止エラー: {e}")
+        print(f"tail -f stop error: {e}")
         await sio.emit('tail_f_status', {
             'status': 'error',
             'message': f'tail -f停止エラー: {str(e)}'
