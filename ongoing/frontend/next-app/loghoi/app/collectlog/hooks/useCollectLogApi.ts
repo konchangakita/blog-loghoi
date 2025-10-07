@@ -228,6 +228,55 @@ export const useCollectLogApi = () => {
     }
   }, [])
 
+  const clearCache = useCallback(async (pattern?: string): Promise<{ cleared_count: number; pattern?: string; cache_stats: any } | null> => {
+    try {
+      const backendUrl = getBackendUrl()
+      const url = `${backendUrl}/api/col/cache/clear`
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ pattern }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return data.data
+    } catch (error) {
+      console.error('キャッシュクリアエラー:', error)
+      return null
+    }
+  }, [])
+
+  const getCacheStats = useCallback(async (): Promise<any | null> => {
+    try {
+      const backendUrl = getBackendUrl()
+      const url = `${backendUrl}/api/col/cache/stats`
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json()
+      return data.data
+    } catch (error) {
+      console.error('キャッシュ統計取得エラー:', error)
+      return null
+    }
+  }, [])
+
   return {
     loading,
     error: errorState.error,
@@ -242,5 +291,7 @@ export const useCollectLogApi = () => {
     getLogContent,
     getLogContentRange,
     downloadZip,
+    clearCache,
+    getCacheStats,
   }
 }

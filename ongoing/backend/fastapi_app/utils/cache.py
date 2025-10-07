@@ -52,5 +52,38 @@ class SimpleTTLCache:
             except KeyError:
                 pass
 
+    def clear_by_pattern(self, pattern: str) -> int:
+        """
+        正規表現パターンにマッチするキーのキャッシュをクリア
+        戻り値: クリアしたキーの数
+        """
+        import re
+        try:
+            regex = re.compile(pattern)
+            keys_to_clear = [k for k in self._store.keys() if regex.match(k)]
+            for k in keys_to_clear:
+                try:
+                    del self._store[k]
+                except KeyError:
+                    pass
+            return len(keys_to_clear)
+        except re.error:
+            # 正規表現エラーの場合は空文字列として扱う
+            return 0
+
+    def get_stats(self) -> Dict[str, Any]:
+        """キャッシュの統計情報を取得"""
+        now = time.time()
+        total_items = len(self._store)
+        expired_items = sum(1 for _, (expires_at, _) in self._store.items() 
+                          if self._is_expired(expires_at))
+        
+        return {
+            "total_items": total_items,
+            "expired_items": expired_items,
+            "active_items": total_items - expired_items,
+            "keys": list(self._store.keys())
+        }
+
 
 
