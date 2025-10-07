@@ -88,5 +88,20 @@ class SimpleTTLCache:
             "keys": list(self._store.keys())
         }
 
+    def cleanup_expired(self) -> int:
+        """期限切れのキャッシュを削除し、削除件数を返す"""
+        removed = 0
+        now = time.time()
+        keys = list(self._store.keys())
+        for key in keys:
+            expires_at, _ = self._store.get(key, (0, None))
+            if now > expires_at:
+                try:
+                    del self._store[key]
+                    removed += 1
+                except KeyError:
+                    pass
+        return removed
+
 
 

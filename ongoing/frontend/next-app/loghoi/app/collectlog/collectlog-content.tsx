@@ -34,8 +34,6 @@ const CollectlogContnet = () => {
     getLogContent,
     getLogContentRange,
     downloadZip,
-    clearCache,
-    getCacheStats,
   } = useCollectLogApi()
 
   // 状態管理
@@ -58,25 +56,7 @@ const CollectlogContnet = () => {
   const [fileSizeBytes, setFileSizeBytes] = useState<number | null>(null)
   const [hasMore, setHasMore] = useState<boolean>(false)
   const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false)
-  const [cacheStats, setCacheStats] = useState<any>(null)
-
-  // キャッシュ統計を取得
-  const fetchCacheStats = useCallback(async () => {
-    const stats = await getCacheStats()
-    if (stats) {
-      setCacheStats(stats)
-    }
-  }, [getCacheStats])
-
-  // キャッシュクリア
-  const handleClearCache = async (pattern?: string) => {
-    const result = await clearCache(pattern)
-    if (result) {
-      console.log(`キャッシュクリア完了: ${result.cleared_count}件`)
-      // 統計を再取得
-      await fetchCacheStats()
-    }
-  }
+  // キャッシュ管理UIは非表示化（自動クリーンアップに移行）
 
   // 初期化
   useEffect(() => {
@@ -102,12 +82,11 @@ const CollectlogContnet = () => {
         setState(prev => ({ ...prev, loading: false }))
       }
       
-      // キャッシュ統計を取得
-      await fetchCacheStats()
+      // 自動クリーンアップ方式のためUI更新は不要
     }
 
     initializeData()
-  }, [ClusterName, PrismIp, getCvmList, fetchCacheStats])
+  }, [ClusterName, PrismIp, getCvmList])
 
   // イベントハンドラー
   const handleCvmChange = (cvm: string) => {
@@ -133,8 +112,7 @@ const CollectlogContnet = () => {
       })
       setState(prev => ({ ...prev, zipList: sorted }))
       
-      // キャッシュ統計を更新（ログ収集でキャッシュがクリアされたため）
-      await fetchCacheStats()
+      // 自動クリーンアップ方式のためUI更新は不要
     }
     
     setState(prev => ({ ...prev, collecting: false }))
@@ -344,49 +322,7 @@ const CollectlogContnet = () => {
             loading={state.loading}
           />
 
-          {/* キャッシュ管理 */}
-          <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-700">キャッシュ管理</h3>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleClearCache('^col:')}
-                  className="px-3 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600"
-                >
-                  Collect Log キャッシュクリア
-                </button>
-                <button
-                  onClick={() => handleClearCache()}
-                  className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
-                >
-                  全キャッシュクリア
-                </button>
-                <button
-                  onClick={fetchCacheStats}
-                  className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                >
-                  統計更新
-                </button>
-              </div>
-            </div>
-            {cacheStats && (
-              <div className="text-xs text-gray-600">
-                <div>総アイテム数: {cacheStats.total_items}</div>
-                <div>有効アイテム数: {cacheStats.active_items}</div>
-                <div>期限切れアイテム数: {cacheStats.expired_items}</div>
-                {cacheStats.keys.length > 0 && (
-                  <div className="mt-1">
-                    <div>キー一覧:</div>
-                    <div className="ml-2 text-xs text-gray-500">
-                      {cacheStats.keys.map((key: string, index: number) => (
-                        <div key={index}>• {key}</div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+          {/* キャッシュ管理UIは非表示化 */}
         </div>
         
         <div className="flex-1 min-w-0 max-w-full overflow-hidden">
