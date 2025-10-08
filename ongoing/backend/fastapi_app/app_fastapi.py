@@ -20,7 +20,7 @@ import uvicorn
 import socketio
 
 # 接続管理システムのインポート
-from connection_manager import connection_manager
+from fastapi_app.connection_manager import connection_manager
 
 # Elasticsearch
 from elasticsearch import Elasticsearch
