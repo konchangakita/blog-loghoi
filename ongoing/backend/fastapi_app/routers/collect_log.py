@@ -10,6 +10,7 @@ from core.broker_col import CollectLogGateway
 from core.common import connect_ssh
 from utils.error_handler import handle_api_error, create_success_response, create_error_response
 from utils.cache import SimpleTTLCache
+from utils.structured_logger import api_logger, EventType, log_execution_time
 
 # ルーターの作成
 router = APIRouter(prefix="/api/col", tags=["collect-log"])
@@ -39,18 +40,36 @@ class LogDisplayRequest(BaseModel):
 # ========================================
 
 @router.post("/getlogs", response_model=Dict[str, Any])
+@log_execution_time(api_logger)
 async def collect_logs(request: LogCollectionRequest) -> Dict[str, Any]:
     """ログ収集API"""
     try:
-        print(f"POST /api/col/getlogs: {request.cvm}")
+        api_logger.info(
+            "Log collection started",
+            event_type=EventType.DATA_CREATE,
+            cvm=request.cvm
+        )
+        
         data = col.collect_logs(request.cvm)
         
         # ログ収集完了後、Collect Log関連のキャッシュをクリア
         cleared_count = cache.clear_by_pattern(r"^col:")
-        print(f"Cache cleared: {cleared_count} items (col:*)")
+        
+        api_logger.info(
+            "Log collection completed",
+            event_type=EventType.DATA_CREATE,
+            cvm=request.cvm,
+            cache_cleared=cleared_count
+        )
         
         return create_success_response(data, "ログ収集が完了しました")
     except Exception as e:
+        api_logger.error(
+            "Log collection failed",
+            event_type=EventType.API_ERROR,
+            cvm=request.cvm,
+            error=str(e)
+        )
         raise handle_api_error(e, "ログ収集")
 
 @router.get("/ziplist", response_model=Dict[str, List[str]])

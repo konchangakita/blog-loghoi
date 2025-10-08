@@ -15,6 +15,7 @@ from utils.error_handler import (
     validate_required_fields, validate_http_status
 )
 from utils.cache import SimpleTTLCache
+from utils.structured_logger import api_logger, EventType, log_execution_time
 
 router = APIRouter(prefix="/api/uuid", tags=["uuid"])
 cache = SimpleTTLCache()
@@ -454,17 +455,32 @@ class UuidAPI:
 uuid_api = UuidAPI()
 
 @router.post("/connect")
+@log_execution_time(api_logger)
 async def connect_cluster(request: UuidConnectRequest):
     """Connect to cluster and store UUID data"""
     try:
         # 必須フィールドのバリデーション
         validate_required_fields(request.dict(), ["cluster_name", "prism_ip"])
         
+        api_logger.info(
+            "Cluster connection started",
+            event_type=EventType.DATA_CREATE,
+            cluster_name=request.cluster_name,
+            prism_ip=request.prism_ip
+        )
+        
         result = await uuid_api.connect_cluster(request)
         
         # データ収集完了後、UUID関連のキャッシュをクリア
         cleared_count = cache.clear_by_pattern(r"^uuid:")
-        print(f"Cache cleared: {cleared_count} items (uuid:*)")
+        
+        api_logger.info(
+            "Cluster connection completed",
+            event_type=EventType.DATA_CREATE,
+            cluster_name=request.cluster_name,
+            prism_ip=request.prism_ip,
+            cache_cleared=cleared_count
+        )
         
         return create_success_response(
             data=result,
@@ -472,8 +488,22 @@ async def connect_cluster(request: UuidConnectRequest):
             operation="connect_cluster"
         )
     except (ValidationError, AuthenticationError, NotFoundError) as e:
+        api_logger.error(
+            "Cluster connection validation failed",
+            event_type=EventType.API_ERROR,
+            cluster_name=request.cluster_name,
+            prism_ip=request.prism_ip,
+            error=str(e)
+        )
         raise e
     except Exception as e:
+        api_logger.error(
+            "Cluster connection failed",
+            event_type=EventType.API_ERROR,
+            cluster_name=request.cluster_name,
+            prism_ip=request.prism_ip,
+            error=str(e)
+        )
         log_error(e, "connect_cluster", {"cluster_name": request.cluster_name, "prism_ip": request.prism_ip})
         raise APIError(
             message="クラスター接続中にエラーが発生しました",
