@@ -64,7 +64,41 @@ chore(deps): Flask 2.3.0にアップデート
 
 ## Pull Request 運用
 
+### 🚨 重要: PRを作成せずに直接マージすることは禁止
+
+### PR作成の必須手順
+1. **featureブランチで作業完了後、必ずリモートにpush**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+2. **GitHub上でPRを作成（またはCLIコマンド使用）**
+   ```bash
+   # GitHub CLIを使用する場合
+   gh pr create --base refactor --head feature/your-feature-name \
+     --title "[#123] feat: 機能名" \
+     --body "変更内容の説明"
+   ```
+
+3. **PRテンプレートに従って説明を記載**
+   - 変更内容
+   - テスト結果
+   - 影響範囲
+   - スクリーンショット（UI変更の場合）
+
+4. **レビュー承認後にマージ**
+   - マージ方法: `Squash and merge` または `Create a merge commit`
+   - マージ後、ローカルのfeatureブランチを削除
+
+5. **ローカルブランチのクリーンアップ**
+   ```bash
+   git checkout refactor
+   git pull origin refactor
+   git branch -d feature/your-feature-name
+   ```
+
 ### PR作成ルール
+- **すべてのfeatureブランチは必ずPR経由でrefactorにマージ**
 - すべてのPRには最低1人のレビューアが必要
 - PRタイトルは関連チケット番号を含める（例: `[#123] feat: ログ収集機能の追加`）
 - 自動テストが通らない限りマージ禁止
@@ -113,9 +147,20 @@ chore(deps): Flask 2.3.0にアップデート
 ### 禁止行為
 以下は禁止されています：
 
-- **refactorブランチに直接コミット** - PR経由でのみ変更可能（現在のメイン開発ブランチ）
-- **mainブランチでのpush** - 本番リリース専用のため直接操作禁止
-- **コミットメッセージに「test」や「tmp」と書く** - 正式なコミットメッセージを使用
+- ❌ **refactorブランチに直接コミット** - PR経由でのみ変更可能（現在のメイン開発ブランチ）
+- ❌ **mainブランチでのpush** - 本番リリース専用のため直接操作禁止
+- ❌ **PRを作成せずにfeatureブランチをrefactorに直接マージ** - `git merge`コマンドでの直接マージは禁止
+  ```bash
+  # ❌ 禁止: 直接マージ
+  git checkout refactor
+  git merge feature/your-feature-name
+  
+  # ✅ 正しい方法: PRを作成してからマージ
+  git push origin feature/your-feature-name
+  # GitHub上でPR作成 → レビュー → マージ
+  ```
+- ❌ **コミットメッセージに「test」や「tmp」と書く** - 正式なコミットメッセージを使用
+- ❌ **--no-verify フラグの使用** - フックをスキップしない（特別な理由がない限り）
 
 ### 将来的な禁止行為（developブランチ作成後）
 - **developブランチに直接コミット** - PR経由でのみ変更可能
