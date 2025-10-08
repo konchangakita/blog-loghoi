@@ -462,12 +462,16 @@ spec:
    - Playwright依存関係のインストール完了
    - 型定義エラーの解消
 
-### 🔄 次回の作業予定
-1. **構造化ログと相関ID**（優先度：高）
-   - 既存実装の見直しと必要に応じた簡素化
-   - 段階的な導入計画の検討
+8. **構造化ログと相関IDの適用**
+   - 主要APIに構造化ログを適用（Collect Log/UUID API）
+   - 相関IDによる分散トレーシング実装
+   - JSON形式のログ出力
+   - 実行時間の自動計測
+   - イベントタイプの統一
+   - PR#7マージ完了: https://github.com/konchangakita/blog-loghoi/pull/7
 
-3. **Kubernetes対応の仕上げ**（優先度：中）
+### 🔄 次回の作業予定
+1. **Kubernetes対応の仕上げ**（優先度：高）
    - HPA/リソース制限の設定
    - Readiness/Liveness Probeの調整
    - ConfigMap/Secret の整備
