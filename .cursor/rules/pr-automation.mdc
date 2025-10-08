@@ -1,0 +1,213 @@
+---
+description: PR作成自動化とレビュープロセス管理用ルール
+globs: ["**/*"]
+alwaysApply: false
+---
+
+# PR作成自動化ルール
+
+## PR作成の自動化
+
+### 機能開発完了時のPR作成
+機能開発が完了した際は、以下の手順でPRを自動作成する：
+
+1. **ブランチの確認**
+   ```bash
+   git status
+   git branch --show-current
+   ```
+
+2. **変更内容の確認**
+   ```bash
+   git diff --name-only
+   git log --oneline -10
+   ```
+
+3. **PR作成テンプレートの適用**
+   - `PR_TEMPLATE.md`の内容を参考にPR説明を作成
+   - 変更内容、テスト結果、影響範囲を明記
+
+4. **GitHub CLIを使用したPR作成**
+   ```bash
+   gh pr create --title "[#チケット番号] feat: 機能名" \
+     --body-file PR_TEMPLATE.md \
+     --base refactor \
+     --head $(git branch --show-current)
+   ```
+
+### PR作成時の必須項目
+- **タイトル**: `[#チケット番号] type: 簡潔な説明`
+- **ベースブランチ**: `refactor`（現在のメイン開発ブランチ）
+- **レビューア**: 最低1人の指定
+- **ラベル**: 適切なラベル（feat, fix, docs, refactor等）
+- **チェックリスト**: PR_TEMPLATE.mdの項目を確認
+
+## レビュープロセス
+
+### 自動レビュー項目
+PR作成時に以下の項目を自動チェック：
+
+1. **コード品質**
+   - [ ] Linterが通るか
+   - [ ] テストが通るか
+   - [ ] コードカバレッジは適切か
+
+2. **ルール準拠**
+   - [ ] フォルダ制限（ongoing/配下）を守っているか
+   - [ ] コミットメッセージがConventional Commits形式か
+   - [ ] FastAPI中心の開発方針に従っているか
+
+3. **ドキュメント**
+   - [ ] 変更内容が適切に記述されているか
+   - [ ] 影響範囲が明記されているか
+   - [ ] テスト方法が記載されているか
+
+### レビューア向けガイド
+レビューアは以下の観点でレビューを実施：
+
+1. **機能性**
+   - [ ] 要件を満たしているか
+   - [ ] エラーハンドリングは適切か
+   - [ ] パフォーマンスに問題はないか
+
+2. **コード品質**
+   - [ ] 可読性は高いか
+   - [ ] 命名は適切か
+   - [ ] 重複コードはないか
+
+3. **セキュリティ**
+   - [ ] 認証・認可は適切か
+   - [ ] 入力値検証はあるか
+   - [ ] 機密情報の漏洩リスクはないか
+
+## 自動化スクリプト
+
+### PR作成スクリプト
+```bash
+#!/bin/bash
+# create-pr.sh
+
+# 現在のブランチを取得
+CURRENT_BRANCH=$(git branch --show-current)
+
+# ブランチ名から機能名を抽出
+FEATURE_NAME=$(echo $CURRENT_BRANCH | sed 's/feature\///')
+
+# PRタイトルを生成
+PR_TITLE="feat: ${FEATURE_NAME}"
+
+# PR作成
+gh pr create \
+  --title "$PR_TITLE" \
+  --body-file PR_TEMPLATE.md \
+  --base refactor \
+  --head "$CURRENT_BRANCH" \
+  --assignee @me \
+  --label "enhancement"
+
+echo "PR created: $PR_TITLE"
+```
+
+### 自動テスト実行
+```bash
+#!/bin/bash
+# run-tests.sh
+
+echo "Running tests..."
+
+# バックエンドテスト
+if [ -d "ongoing/backend" ]; then
+  cd ongoing/backend
+  pytest tests/ -v --cov=./ --cov-report=html
+  cd ../..
+fi
+
+# フロントエンドテスト
+if [ -d "ongoing/frontend" ]; then
+  cd ongoing/frontend/next-app
+  npm test
+  cd ../../..
+fi
+
+echo "Tests completed"
+```
+
+## PR管理
+
+### ラベル管理
+- `enhancement`: 新機能追加
+- `bug`: バグ修正
+- `documentation`: ドキュメント更新
+- `refactor`: リファクタリング
+- `chore`: ビルド/依存関連更新
+- `hotfix`: 緊急修正
+- `breaking-change`: 破壊的変更
+
+### マイルストーン管理
+- 機能ごとにマイルストーンを作成
+- 進捗状況を可視化
+- リリース計画との連携
+
+### 自動マージ条件
+以下の条件を満たした場合のみ自動マージ：
+
+1. **必須条件**
+   - [ ] 最低1人の承認
+   - [ ] すべてのテストが通る
+   - [ ] Linterが通る
+   - [ ] セキュリティスキャンが通る
+
+2. **オプション条件**
+   - [ ] コードカバレッジ80%以上
+   - [ ] パフォーマンステストが通る
+   - [ ] 統合テストが通る
+
+## 緊急時対応
+
+### Hotfix PR作成
+```bash
+#!/bin/bash
+# create-hotfix-pr.sh
+
+HOTFIX_BRANCH=$(git branch --show-current)
+ISSUE_NUMBER=$1
+
+gh pr create \
+  --title "[#${ISSUE_NUMBER}] hotfix: 緊急修正" \
+  --body "## 緊急修正
+
+### 問題
+[問題の詳細]
+
+### 修正内容
+[修正内容の詳細]
+
+### 影響範囲
+[影響範囲の説明]
+
+### テスト
+- [ ] 修正内容のテスト
+- [ ] 既存機能への影響確認" \
+  --base main \
+  --head "$HOTFIX_BRANCH" \
+  --assignee @me \
+  --label "hotfix" \
+  --label "urgent"
+
+echo "Hotfix PR created: $HOTFIX_BRANCH"
+```
+
+## 継続的改善
+
+### PR分析
+- PR作成からマージまでの時間
+- レビュー回数
+- コメント数
+- マージ成功率
+
+### 改善提案
+- 定期的なPR分析結果の共有
+- レビュープロセスの最適化
+- 自動化の拡張
+
+このルールに従って、効率的なPR作成とレビュープロセスを実現してください。

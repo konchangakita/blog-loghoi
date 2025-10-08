@@ -27,6 +27,8 @@ class ConnectionManager:
         # 制御パラメータ
         self.max_lines_per_second: int = 20
         self.idle_timeout_seconds: int = 300
+        self.max_retries: int = 5
+        self.retry_backoff_seconds: float = 2.0
 
     async def add_socket_connection(self, sid: str) -> None:
         """SocketIO接続を追加"""
@@ -39,6 +41,11 @@ class ConnectionManager:
         print(f"SocketIO接続を追加: {sid}")
         # アイドルタイムアウト監視を開始
         await self._ensure_idle_watch(sid)
+
+    async def record_heartbeat(self, sid: str) -> None:
+        """クライアントからのハートビートを記録"""
+        if sid in self.socket_connections:
+            self.socket_connections[sid]['last_heartbeat_ts'] = time.time()
 
     async def remove_socket_connection(self, sid: str) -> None:
         """SocketIO接続を削除し、関連するSSH接続も即座に切断"""
@@ -70,6 +77,23 @@ class ConnectionManager:
         
         print(f"🔌 SocketIO接続を削除完了: {sid}")
 
+    async def _connect_ssh_with_retry(self, cvm_ip: str):
+        """SSH接続をリトライ付きで確立する"""
+        attempt = 0
+        while attempt < self.max_retries:
+            try:
+                print(f"[RTLOG] SSH接続試行 {attempt+1}/{self.max_retries}: {cvm_ip}")
+                ssh = connect_ssh(cvm_ip)
+                if ssh:
+                    print(f"[RTLOG] SSH接続成功: {cvm_ip}")
+                    return ssh
+                print(f"[RTLOG] SSH接続失敗: {cvm_ip}")
+            except Exception as e:
+                print(f"[RTLOG] SSH接続エラー({attempt+1}/{self.max_retries}): {e}")
+            attempt += 1
+            await asyncio.sleep(self.retry_backoff_seconds * attempt)
+        return None
+
     async def add_ssh_connection(self, sid: str, cvm_ip: str) -> bool:
         """SSH接続を追加"""
         try:
@@ -80,23 +104,23 @@ class ConnectionManager:
             # 同時実行防止
             async with self._get_lock(sid):
                 if sid in self._start_stop_in_progress:
-                    print(f"start/stop処理中のためSSH開始をスキップ: {sid}")
+                    print(f"[RTLOG] start/stop処理中のためSSH開始をスキップ: {sid}")
                     return False
                 self._start_stop_in_progress.add(sid)
             
-            print(f"SSH接続を開始: {cvm_ip} (SID: {sid})")
-            ssh_connection = connect_ssh(cvm_ip)
+            print(f"[RTLOG] SSH接続を開始: {cvm_ip} (SID: {sid})")
+            ssh_connection = await self._connect_ssh_with_retry(cvm_ip)
             
             if not ssh_connection:
-                print(f"SSH接続に失敗: {cvm_ip}")
+                print(f"[RTLOG] SSH接続に失敗（最大リトライ到達）: {cvm_ip}")
                 return False
             
             self.ssh_connections[sid] = ssh_connection
-            print(f"SSH接続成功: {cvm_ip} (SID: {sid})")
+            print(f"[RTLOG] SSH接続成功: {cvm_ip} (SID: {sid})")
             return True
             
         except Exception as e:
-            print(f"SSH接続エラー: {e}")
+            print(f"[RTLOG] SSH接続エラー: {e}")
             return False
         finally:
             if sid in self._start_stop_in_progress:
@@ -225,20 +249,20 @@ class ConnectionManager:
         try:
             # 接続がアクティブかチェック
             if sid not in self.socket_connections or not self.socket_connections[sid]['is_active']:
-                print(f"接続が非アクティブです: {sid}")
+                print(f"[RTLOG] 接続が非アクティブです: {sid}")
                 return
             
             # リアルタイムログ用の新しいSSH接続を作成
             from common import connect_ssh
             cvm_ip = "10.38.113.32"  # 固定IPを使用
-            print(f"リアルタイムログ用SSH接続を作成: {cvm_ip} (SID: {sid})")
-            ssh_connection = connect_ssh(cvm_ip)
+            print(f"[RTLOG] リアルタイムログ用SSH接続を作成: {cvm_ip} (SID: {sid})")
+            ssh_connection = await self._connect_ssh_with_retry(cvm_ip)
             
             if not ssh_connection:
-                print(f"SSH接続に失敗: {cvm_ip}")
+                print(f"[RTLOG] SSH接続に失敗: {cvm_ip}")
                 return
             
-            print(f"tail -fコマンドを実行: {log_path} (SID: {sid})")
+            print(f"[RTLOG] tail -fコマンドを実行: {log_path} (SID: {sid})")
             stdin, stdout, stderr = ssh_connection.exec_command(f"tail -f {log_path}")
             
             # ログを読み取り
@@ -258,7 +282,6 @@ class ConnectionManager:
                     tokens -= 1
                     
                     line_count += 1
-                    # 各行の逐次出力は抑制（送信のみ）
                     
                     # SocketIOでログを送信
                     try:
@@ -271,37 +294,37 @@ class ConnectionManager:
                         if sid in self.socket_connections:
                             self.socket_connections[sid]['last_emit_ts'] = time.time()
                     except Exception as e:
-                        print(f"SocketIOログ送信エラー: {e}")
+                        print(f"[RTLOG] SocketIOログ送信エラー: {e}")
                         break
                     
                     await asyncio.sleep(0.1)
                     
                 except asyncio.CancelledError:
-                    print(f"ログ監視タスクがキャンセルされました: {sid}")
+                    print(f"[RTLOG] ログ監視タスクがキャンセルされました: {sid}")
                     raise
                 except Exception as e:
-                    print(f"ログ読み取りエラー: {e}")
+                    print(f"[RTLOG] ログ読み取りエラー: {e}")
                     break
             
             # 接続がアクティブでない場合は終了
             if sid not in self.socket_connections or not self.socket_connections[sid]['is_active']:
-                print(f"接続が非アクティブになりました: {sid}")
+                print(f"[RTLOG] 接続が非アクティブになりました: {sid}")
                 
         except asyncio.CancelledError:
-            print(f"ログ監視タスクがキャンセルされました: {sid}")
+            print(f"[RTLOG] ログ監視タスクがキャンセルされました: {sid}")
             raise
         except Exception as e:
-            print(f"ログ監視タスクで予期しないエラー: {e}")
+            print(f"[RTLOG] ログ監視タスクで予期しないエラー: {e}")
         finally:
             # SSH接続をクリーンアップ
             try:
                 if 'ssh_connection' in locals():
-                    print(f"🔌 リアルタイムログ用SSH接続を切断: {sid}")
+                    print(f"[RTLOG] 🔌 リアルタイムログ用SSH接続を切断: {sid}")
                     ssh_connection.close()
-                    print(f"SSH connection close: {sid}")
+                    print(f"[RTLOG] SSH connection close: {sid}")
             except Exception as e:
-                print(f"🔌 SSH接続クリーンアップエラー: {e}")
-            print(f"🔌 リアルタイムログ監視を終了: {sid}")
+                print(f"[RTLOG] 🔌 SSH接続クリーンアップエラー: {e}")
+            print(f"[RTLOG] 🔌 リアルタイムログ監視を終了: {sid}")
 
     async def _ensure_idle_watch(self, sid: str) -> None:
         """アイドルタイムアウト監視開始（監視未開始時のみ適用）"""
@@ -316,8 +339,9 @@ class ConnectionManager:
                     if sid in self.monitoring_tasks:
                         await asyncio.sleep(2)
                         continue
-                    last = self.socket_connections[sid].get('last_emit_ts', time.time())
-                    if time.time() - last > self.idle_timeout_seconds:
+                    # 監視未開始時は接続開始時刻で判定
+                    connected_at = self.socket_connections[sid].get('connected_at', time.time())
+                    if time.time() - connected_at > self.idle_timeout_seconds:
                         print(f"⏲️ アイドルタイムアウトにより停止: {sid}")
                         await self.stop_all(sid)
                         break

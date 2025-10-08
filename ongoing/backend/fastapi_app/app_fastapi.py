@@ -37,6 +37,7 @@ from config import Config
 
 # ルーターのインポート
 from routers.collect_log import router as collect_log_router
+from routers.collect_log import cache as collect_cache
 from routers.uuid import router as uuid_router
 
 # エラーハンドリングのインポート
@@ -802,6 +803,33 @@ async def startup_event():
     print(f"📊 Elasticsearch: {Config.ELASTICSEARCH_URL}")
     print(f"🌐 Server: {Config.BACKEND_HOST}:{Config.BACKEND_PORT}")
     print(f"📖 API Documentation: http://{Config.BACKEND_HOST}:{Config.BACKEND_PORT}/docs")
+    # キャッシュ定期クリーンアップタスク開始
+    global _cache_cleanup_task
+    async def _cache_cleanup_loop():
+        while True:
+            try:
+                await asyncio.sleep(300)  # 5分ごと
+                removed = collect_cache.cleanup_expired()
+                if removed:
+                    print(f"[CACHE] expired entries cleaned: {removed}")
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[CACHE] cleanup error: {e}")
+    _cache_cleanup_task = asyncio.create_task(_cache_cleanup_loop())
+
+async def shutdown_event():
+    """アプリケーション停止時の処理"""
+    global _cache_cleanup_task
+    try:
+        if '_cache_cleanup_task' in globals() and _cache_cleanup_task:
+            _cache_cleanup_task.cancel()
+    except Exception:
+        pass
+
+# ハンドラ登録
+app.add_event_handler("startup", startup_event)
+app.add_event_handler("shutdown", shutdown_event)
 
 # アプリケーション起動時のメッセージ
 print("🚀 Starting LogHoi FastAPI Backend")

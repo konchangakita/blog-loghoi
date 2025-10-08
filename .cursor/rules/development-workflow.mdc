@@ -1,0 +1,296 @@
+---
+description: 開発ワークフローとテンプレート - PR作成、テスト実行、デプロイ手順
+globs: ["**/*"]
+alwaysApply: false
+---
+
+# 開発ワークフロー & テンプレート
+
+## 機能開発フロー
+
+### 1. ブランチ作成（現在の状況）
+```bash
+# 新機能開発開始（refactorブランチから）
+git checkout refactor
+git pull origin refactor
+git checkout -b feature/log-collection-improvement
+
+# 将来的にはdevelopブランチから（リファクタリング完了後）
+# git checkout develop
+# git pull origin develop
+# git checkout -b feature/new-dashboard-feature
+```
+
+### 2. 開発作業
+- 小さなコミット単位で作業
+- 各コミットはConventional Commits形式で記述
+- 機能ごとにテストを追加
+
+### 3. PR作成（自動化推奨）
+```bash
+# 自動化スクリプトを使用（推奨）
+./scripts/create-pr.sh -t [チケット番号] -n [機能名]
+
+# 例: チケット番号123、機能名log-collection-improvement
+./scripts/create-pr.sh -t 123 -n log-collection-improvement
+
+# 手動でPR作成する場合
+gh pr create --title "[#123] feat: log-collection-improvement" \
+  --body-file PR_TEMPLATE.md \
+  --base refactor \
+  --head $(git branch --show-current)
+```
+
+### 3.1 PR作成テンプレート
+```markdown
+## 概要
+[変更内容の概要を記述]
+
+## 変更内容
+- [ ] 新機能追加
+- [ ] バグ修正
+- [ ] リファクタリング
+- [ ] ドキュメント更新
+
+## テスト
+- [ ] ユニットテスト追加
+- [ ] 統合テスト実行
+- [ ] 手動テスト実施
+
+## 影響範囲
+[変更による影響範囲を記述]
+
+## 関連チケット
+Closes #[チケット番号]
+```
+
+## テスト実行手順
+
+### 自動化スクリプト使用（推奨）
+```bash
+# すべてのテストを実行
+./scripts/run-tests.sh
+
+# バックエンドテストのみ（カバレッジ付き）
+./scripts/run-tests.sh -b -c
+
+# フロントエンドテストのみ（詳細出力）
+./scripts/run-tests.sh -f -v
+
+# ヘルプ表示
+./scripts/run-tests.sh -h
+```
+
+### 手動実行
+
+#### バックエンド（Python）
+```bash
+# 依存関係インストール
+pip install -r requirements.txt
+pip install -r requirements_test.txt
+
+# ユニットテスト実行
+pytest tests/ -v --cov=./ --cov-report=html
+
+# Lint実行
+pylint backend/
+flake8 backend/
+mypy backend/
+```
+
+#### フロントエンド（Next.js）
+```bash
+# 依存関係インストール
+npm install
+
+# テスト実行
+npm test
+
+# Lint & Format
+npm run lint
+npm run format
+
+# ビルド確認
+npm run build
+```
+
+#### Docker環境
+```bash
+# 開発環境起動
+docker-compose -f docker-compose.yml up -d
+
+# テスト実行
+docker-compose exec backend pytest
+docker-compose exec frontend npm test
+
+# ログ確認
+docker-compose logs -f
+```
+
+## デプロイ手順
+
+### 開発環境（現在の状況）
+```bash
+# refactorブランチのデプロイ
+git checkout refactor
+git pull origin refactor
+docker-compose -f docker-compose.yml up -d --build
+
+# 将来的にはdevelopブランチのデプロイ（リファクタリング完了後）
+# git checkout develop
+# git pull origin develop
+# docker-compose -f docker-compose.yml up -d --build
+```
+
+### 本番環境
+```bash
+# mainブランチのデプロイ
+git checkout main
+git pull origin main
+git tag v1.0.0
+git push origin v1.0.0
+
+# Kubernetesデプロイ
+kubectl apply -f k8s/
+```
+
+## コードレビューチェックリスト
+
+### 機能性
+- [ ] 要件を満たしているか
+- [ ] エラーハンドリングは適切か
+- [ ] パフォーマンスに問題はないか
+
+### コード品質
+- [ ] 可読性は高いか
+- [ ] 命名は適切か
+- [ ] 重複コードはないか
+
+### セキュリティ
+- [ ] 認証・認可は適切か
+- [ ] 入力値検証はあるか
+- [ ] 機密情報の漏洩リスクはないか
+
+### テスト
+- [ ] テストカバレッジは十分か
+- [ ] エッジケースは考慮されているか
+- [ ] 統合テストは通るか
+
+## トラブルシューティング
+
+### よくある問題と解決方法
+
+#### ブランチ競合
+```bash
+git checkout feature/your-branch
+git rebase refactor
+# 競合解決後
+git rebase --continue
+```
+
+#### テスト失敗
+```bash
+# 環境リセット
+docker-compose down -v
+docker-compose up -d --build
+
+# キャッシュクリア
+pytest --cache-clear
+npm run clean
+```
+
+#### デプロイ失敗
+```bash
+# 前バージョンにロールバック
+git checkout [前のタグ]
+kubectl rollout undo deployment/backend
+```
+
+## 制限事項と禁止行為
+
+### ブランチ操作の制限
+```bash
+# ❌ 禁止: 直接コミット
+git checkout develop
+git add .
+git commit -m "fix: bug fix"  # 禁止
+
+# ❌ 禁止: mainブランチでのpush
+git checkout main
+git push origin main  # 禁止
+
+# ✅ 正しい手順: PR経由
+git checkout feature/new-feature
+git add .
+git commit -m "feat: new feature implementation"
+git push origin feature/new-feature
+# その後PRを作成
+```
+
+### コミットメッセージの制限
+```bash
+# ❌ 禁止: 非正式なメッセージ
+git commit -m "test"
+git commit -m "tmp"
+git commit -m "wip"
+git commit -m "fix"
+
+# ✅ 正しい: Conventional Commits形式
+git commit -m "feat: ログ収集機能の追加"
+git commit -m "fix: Elasticsearch接続エラーの修正"
+git commit -m "docs: READMEの更新"
+git commit -m "refactor: データベース接続処理を共通化"
+```
+
+### 開発作業の制限
+```bash
+# ❌ 禁止: blogフォルダでの直接編集
+cd /home/nutanix/konchangakita/blog-loghoi/blog/20241221
+# ここでの編集は禁止
+
+# ✅ 正しい: ongoingフォルダでの開発
+cd /home/nutanix/konchangakita/blog-loghoi/ongoing
+# ここで新しい機能や修正を開発
+
+# ✅ 正しい: 完了後の移動手順
+# 1. ongoing/で開発完了
+# 2. テスト・レビュー完了
+# 3. blog/YYYYMMDD/フォルダに移動
+```
+
+### フォルダ構成ルール
+- **`ongoing/`**: 現在開発中のすべてのコード
+  - `backend/`: バックエンド開発
+  - `frontend/`: フロントエンド開発
+  - `shared/`: 共通ライブラリ
+  - `tests/`: テストコード
+  - `k8s/`: Kubernetes設定
+  - `docs/`: ドキュメント
+
+- **`blog/`**: 過去のブログ記事対応履歴
+  - 直接編集禁止
+  - 完了した機能のみ移動可能
+  - 日付フォルダ形式（YYYYMMDD）
+
+### 例外処理
+- 緊急時（Hotfix）のみ、適切な手順に従ってmainブランチを操作可能
+- すべての例外操作は事前承認が必要
+- 例外操作後は必ず事後レビューを実施
+- `blog/`フォルダの修正が必要な場合も事前承認が必要
+
+## パフォーマンス監視
+
+### メトリクス確認
+- レスポンス時間
+- CPU使用率
+- メモリ使用量
+- データベース接続数
+
+### ログ確認
+```bash
+# アプリケーションログ
+kubectl logs -f deployment/backend
+
+# Elasticsearchログ
+docker-compose logs -f elastic
+```
