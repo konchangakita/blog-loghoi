@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir -U pip && \
 # アプリケーションコードのコピー
 COPY fastapi_app ./fastapi_app
 COPY core ./core
+COPY ../shared ./shared
 
 # アップロードディレクトリとログディレクトリの作成
 RUN mkdir -p /app/uploads /app/logs
