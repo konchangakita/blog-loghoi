@@ -1,53 +1,95 @@
 # Kubernetes デプロイメントガイド
 
 ## 概要
-このディレクトリには、LogHoiアプリケーションのKubernetesマニフェストが含まれています。
+このディレクトリには、Log HoihoiアプリケーションのKubernetesマニフェストが含まれています。
 本番環境でのスケーラブルなデプロイメントをサポートします。
 
+## アーキテクチャ
+- **Ingress**: Traefik (kommander-traefik) - 単一IPで複数サービスを公開
+- **Frontend**: Next.js アプリケーション (Port 3000)
+- **Backend**: FastAPI + Socket.IO (Port 7776)
+- **Database**: Elasticsearch (Port 9200)
+- **Storage**: Nutanix Volumes CSI
+- **LoadBalancer**: MetalLB (10.55.23.41-10.55.23.43)
+
 ## 前提条件
-- Kubernetes 1.24以上
+- Kubernetes 1.24以上 (本環境: v1.32.3)
 - kubectl CLI
-- Kustomize（オプション）
-- Metrics Server（HPA使用時）
+- Kubeconfig: `/home/nutanix/nkp/kon-hoihoi.conf`
+- Namespace: `loghoi` (新規作成)
+- StorageClass: `nutanix-volume` (既存)
+- IngressClass: `kommander-traefik` (既存)
+- MetalLB: IPアドレスプール 10.55.23.41-10.55.23.43
 
-## クイックスタート
+## クイックスタート（自動デプロイ）
 
-### 1. Namespaceの作成
+### 1. SSH秘密鍵のSecret作成
 ```bash
-kubectl apply -f namespace.yaml
+# SSH秘密鍵を指定してSecretを作成
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic loghoi-secrets \
+  --namespace=loghoi \
+  --from-file=SSH_PRIVATE_KEY=/path/to/your/ssh/private/key
 ```
 
-### 2. ConfigMapとSecretの作成
+### 2. 自動デプロイスクリプト実行
 ```bash
-# ConfigMapの適用
-kubectl apply -f configmap.yaml
-
-# Secretの作成（事前に値を設定）
-kubectl apply -f secret.yaml
+cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+./deploy.sh
 ```
 
-### 3. アプリケーションのデプロイ
+## 手動デプロイ
+
+### 1. ConfigMapの作成
+```bash
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f configmap.yaml
+```
+
+### 2. Secretの作成
+```bash
+# secret-template.yamlを参照してSecretを作成
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic loghoi-secrets \
+  --namespace=loghoi \
+  --from-file=SSH_PRIVATE_KEY=/path/to/ssh/key
+```
+
+### 3. Elasticsearch PVCの作成
+```bash
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f elasticsearch-pvc.yaml
+```
+
+### 4. アプリケーションのデプロイ
 ```bash
 # Elasticsearch
-kubectl apply -f elasticsearch-deployment.yaml
-
-# Backend
-kubectl apply -f backend-deployment.yaml
-
-# Frontend
-kubectl apply -f frontend-deployment.yaml
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f elasticsearch-deployment.yaml
 
 # Services
-kubectl apply -f services.yaml
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f services.yaml
+
+# Backend & Frontend
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f backend-deployment.yaml
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f frontend-deployment.yaml
 
 # Ingress
-kubectl apply -f ingress.yaml
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f ingress.yaml
 
 # HPA（オプション）
-kubectl apply -f hpa.yaml
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f hpa.yaml
 ```
 
-### 4. Kustomizeを使用する場合
+## Dockerイメージのビルド
+
+### ローカルビルド
+```bash
+cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+./build-and-push.sh
+```
+
+### レジストリへプッシュ
+```bash
+PUSH_IMAGES=true DOCKER_REGISTRY=your-registry.io ./build-and-push.sh
+```
+
+## Kustomizeを使用する場合
 ```bash
 kubectl apply -k .
 ```

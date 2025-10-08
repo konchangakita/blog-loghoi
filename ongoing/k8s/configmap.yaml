@@ -20,7 +20,7 @@ data:
   FRONTEND_PORT: "3000"
   
   # Elasticsearch設定
-  ELASTICSEARCH_URL: "http://elasticsearch:9200"
+  ELASTICSEARCH_URL: "http://elasticsearch-service:9200"
   ELASTICSEARCH_INDEX_PREFIX: "loghoi"
   
   # ログ設定

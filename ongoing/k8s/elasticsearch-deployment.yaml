@@ -62,6 +62,7 @@ spec:
           mountPath: /usr/share/elasticsearch/data
       volumes:
       - name: elasticsearch-data
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: elasticsearch-data
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
