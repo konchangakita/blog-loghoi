@@ -22,8 +22,8 @@ spec:
     spec:
       containers:
       - name: backend
-        image: loghoi/backend:latest
-        imagePullPolicy: Never
+        image: konchangakita/loghoi-backend:v1.0.0
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 7776
           name: http
