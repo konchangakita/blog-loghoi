@@ -64,7 +64,7 @@ export const Loading: React.FC<LoadingProps> = ({
     }
 
     switch (size) {
-      case 'xs': return sizes.xs
+      case 'xs': return sizes
       case 'sm': return sizesMd
       case 'lg': return sizesLg
       case 'xl': return sizesXl
