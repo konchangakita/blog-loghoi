@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: loghoi-backend
-  namespace: loghoi
+  namespace: hoihoi
   labels:
     app: loghoi
     component: backend

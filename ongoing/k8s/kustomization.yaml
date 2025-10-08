@@ -3,7 +3,7 @@ kind: Kustomization
 
 metadata:
   name: loghoi
-  namespace: loghoi
+  namespace: hoihoi
 
 resources:
   - namespace.yaml

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: elasticsearch
-  namespace: loghoi
+  namespace: hoihoi
   labels:
     app: elasticsearch
     component: database
@@ -62,6 +62,7 @@ spec:
           mountPath: /usr/share/elasticsearch/data
       volumes:
       - name: elasticsearch-data
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: elasticsearch-data
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
