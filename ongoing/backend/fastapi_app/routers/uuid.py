@@ -240,23 +240,58 @@ class UuidAPI:
             print(f"SSH key authentication failed: {e}")
             raise HTTPException(status_code=401, detail="SSH key authentication failed")
 
-    def get_xdata(self, prism_ip: str) -> Dict[str, Any]:
-        """Get all UUID data from cluster"""
+    async def get_xdata(self, prism_ip: str) -> Dict[str, Any]:
+        """Get all UUID data from cluster (parallelized)"""
+        import asyncio
+        import aiohttp
+        
         res = {}
         headers = self.connection_headers(prism_ip)
         
-        res["cluster"] = self.get_cluster(prism_ip, headers)
-        res["vms"] = self.get_vms(prism_ip, headers)
-        res['storage_containers'] = self.get_storage_containers(prism_ip, headers)
-        res['volume_groups'] = self.get_volume_groups(prism_ip, headers)
-        res['vfilers'] = self.get_vfilers(prism_ip, headers)
+        # 並列でAPI呼び出しを実行
+        async def fetch_data(session, url, name):
+            try:
+                async with session.get(url, headers=headers, ssl=False, timeout=30) as response:
+                    return name, await response.json(), response.status
+            except Exception as e:
+                print(f"Error fetching {name}: {e}")
+                return name, None, 500
         
-        if res['vfilers'].status_code == 200:
-            res_vfiler_json = res['vfilers'].json()
-            if len(res_vfiler_json['entities']):
+        async def fetch_all_data():
+            urls = {
+                'cluster': f"https://{prism_ip}:9440/PrismGateway/services/rest/v2.0/cluster/",
+                'vms': f"https://{prism_ip}:9440/PrismGateway/services/rest/v2.0/vms/",
+                'storage_containers': f"https://{prism_ip}:9440/PrismGateway/services/rest/v2.0/storage_containers/",
+                'volume_groups': f"https://{prism_ip}:9440/PrismGateway/services/rest/v2.0/volume_groups/",
+                'vfilers': f"https://{prism_ip}:9440/PrismGateway/services/rest/v1/vfilers/"
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                tasks = [fetch_data(session, url, name) for name, url in urls.items()]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                for result in results:
+                    if isinstance(result, Exception):
+                        continue
+                    name, data, status = result
+                    if data is not None:
+                        # レスポンスオブジェクトの代わりに辞書を格納
+                        res[name] = {'data': data, 'status_code': status}
+                    else:
+                        res[name] = {'data': None, 'status_code': status}
+        
+        # 非同期実行
+        asyncio.run(fetch_all_data())
+        
+        # vfilersの結果に基づいてsharesを取得
+        if res.get('vfilers', {}).get('status_code') == 200:
+            vfiler_data = res['vfilers']['data']
+            if vfiler_data and len(vfiler_data.get('entities', [])):
+                # sharesを同期的に取得（依存関係のため）
                 res['shares'] = self.get_shares(prism_ip, headers)
-                # Get share details if shares exist
                 if res['shares'].status_code == 200:
+                    res['res_share_details'] = []
+                else:
                     res['res_share_details'] = []
             else:
                 res['shares'] = None
@@ -267,24 +302,25 @@ class UuidAPI:
         
         return res
 
-    def connect_cluster(self, request: UuidConnectRequest) -> Dict[str, Any]:
+    async def connect_cluster(self, request: UuidConnectRequest) -> Dict[str, Any]:
         """Connect to cluster and store UUID data"""
         try:
-            res = self.get_xdata(request.prism_ip)
+            res = await self.get_xdata(request.prism_ip)
             
             # Check if cluster connection is successful
-            if hasattr(res["cluster"], "status_code"):
-                if res["cluster"].status_code == 200:
-                    # Store data in Elasticsearch
-                    data = es.put_data_uuid(res)
-                    time.sleep(1)
-                    return {"status": "success", "data": data}
-                else:
-                    r_json = res["cluster"].json()
-                    error_msg = r_json["message_list"][0]["message"]
+            cluster_data = res.get("cluster", {})
+            if cluster_data.get("status_code") == 200:
+                # Store data in Elasticsearch
+                data = es.put_data_uuid(res)
+                time.sleep(1)
+                return {"status": "success", "data": data}
+            else:
+                cluster_json = cluster_data.get("data", {})
+                if cluster_json and "message_list" in cluster_json:
+                    error_msg = cluster_json["message_list"][0]["message"]
                     raise HTTPException(status_code=400, detail=error_msg)
-            else:  # timeout
-                raise HTTPException(status_code=408, detail="Connection timeout")
+                else:
+                    raise HTTPException(status_code=500, detail="Cluster connection failed")
         except HTTPException:
             # HTTPExceptionはそのまま再発生
             raise
@@ -424,7 +460,7 @@ async def connect_cluster(request: UuidConnectRequest):
         # 必須フィールドのバリデーション
         validate_required_fields(request.dict(), ["cluster_name", "prism_ip"])
         
-        result = uuid_api.connect_cluster(request)
+        result = await uuid_api.connect_cluster(request)
         
         # データ収集完了後、UUID関連のキャッシュをクリア
         cleared_count = cache.clear_by_pattern(r"^uuid:")
