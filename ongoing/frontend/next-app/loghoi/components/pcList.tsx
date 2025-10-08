@@ -113,12 +113,12 @@ export default function PcList2() {
     pcList.map((val: dict, idx: number) => {
       const clusterListSub = clusterList[val.prism_ip]
       return (
-        <div className='table table-compact p-4' key={idx + 1}>
-          <table className='table '>
+        <div className='w-full flex justify-center p-4' key={idx + 1}>
+          <table className='table table-compact mx-auto'>
             <thead className='sticky top-0'>
               <tr className='hover'>
-                <th>
-                  <div className='text-2xl'>
+                <th className='text-center'>
+                  <div className='text-2xl text-center'>
                     <p className='inline px-4'>
                       <Link href={{ pathname: 'gatekeeper', query: { pcip: val.prism_ip } }}>
                         PC {val.prism_ip} &#91; {val.timestamp_jst} &#93;
@@ -128,7 +128,7 @@ export default function PcList2() {
                 </th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className='text-left'>
               <DisplayCluster clusterList={clusterListSub} />
             </tbody>
           </table>
@@ -150,7 +150,7 @@ export default function PcList2() {
 
   return (
     <>
-      <div className='text-2xl font-bold m-5'>PC LIST</div>
+      <div className='text-2xl font-bold m-5'>Prism Central List</div>
       
       {showAlert && displayError}
       
