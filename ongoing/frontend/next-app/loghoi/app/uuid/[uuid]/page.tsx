@@ -81,7 +81,7 @@ export default function UuidContentPage() {
   if (error || !uuidData) {
     return (
       <div className="alert alert-error">
-        <span>データの取得に失敗しました: {error}</span>
+        <span>データの取得に失敗しました: {error?.message || 'Unknown error'}</span>
       </div>
     )
   }

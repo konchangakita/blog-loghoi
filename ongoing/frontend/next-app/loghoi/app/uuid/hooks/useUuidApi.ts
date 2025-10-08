@@ -11,6 +11,7 @@ interface UuidApiResponse {
     sclist: Record<string, any>
   }
   cluster_name: string
+  main_flag: string | null
   timestamp_list: {
     local_time: string
   }
