@@ -26,7 +26,22 @@ git checkout -b feature/log-collection-improvement
 - 各コミットはConventional Commits形式で記述
 - 機能ごとにテストを追加
 
-### 3. PR作成テンプレート
+### 3. PR作成（自動化推奨）
+```bash
+# 自動化スクリプトを使用（推奨）
+./scripts/create-pr.sh -t [チケット番号] -n [機能名]
+
+# 例: チケット番号123、機能名log-collection-improvement
+./scripts/create-pr.sh -t 123 -n log-collection-improvement
+
+# 手動でPR作成する場合
+gh pr create --title "[#123] feat: log-collection-improvement" \
+  --body-file PR_TEMPLATE.md \
+  --base refactor \
+  --head $(git branch --show-current)
+```
+
+### 3.1 PR作成テンプレート
 ```markdown
 ## 概要
 [変更内容の概要を記述]
@@ -51,7 +66,24 @@ Closes #[チケット番号]
 
 ## テスト実行手順
 
-### バックエンド（Python）
+### 自動化スクリプト使用（推奨）
+```bash
+# すべてのテストを実行
+./scripts/run-tests.sh
+
+# バックエンドテストのみ（カバレッジ付き）
+./scripts/run-tests.sh -b -c
+
+# フロントエンドテストのみ（詳細出力）
+./scripts/run-tests.sh -f -v
+
+# ヘルプ表示
+./scripts/run-tests.sh -h
+```
+
+### 手動実行
+
+#### バックエンド（Python）
 ```bash
 # 依存関係インストール
 pip install -r requirements.txt
@@ -66,7 +98,7 @@ flake8 backend/
 mypy backend/
 ```
 
-### フロントエンド（Next.js）
+#### フロントエンド（Next.js）
 ```bash
 # 依存関係インストール
 npm install
@@ -82,7 +114,7 @@ npm run format
 npm run build
 ```
 
-### Docker環境
+#### Docker環境
 ```bash
 # 開発環境起動
 docker-compose -f docker-compose.yml up -d
