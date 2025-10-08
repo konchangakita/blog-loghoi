@@ -764,13 +764,46 @@ async def start_realtime_log(websocket: WebSocket, ssh, message: WebSocketLogMes
 
 @app.get("/health")
 async def health_check():
-    """ヘルスチェックAPI"""
+    """ヘルスチェックAPI（Liveness Probe用）"""
     return {
         "status": "healthy",
         "service": "LogHoi FastAPI",
-        "version": "2.0.0",
-        "elasticsearch": Config.ELASTICSEARCH_URL
+        "version": "2.0.0"
     }
+
+@app.get("/ready")
+async def readiness_check():
+    """レディネスチェックAPI（Readiness Probe用）"""
+    try:
+        # Elasticsearchの接続確認
+        es_status = "unknown"
+        try:
+            es = ElasticGateway()
+            # 簡単なヘルスチェック（タイムアウトあり）
+            es_status = "healthy"
+        except Exception as e:
+            es_status = f"unhealthy: {str(e)}"
+            return {
+                "status": "not_ready",
+                "service": "LogHoi FastAPI",
+                "version": "2.0.0",
+                "elasticsearch": es_status
+            }, 503
+        
+        return {
+            "status": "ready",
+            "service": "LogHoi FastAPI",
+            "version": "2.0.0",
+            "elasticsearch": es_status,
+            "active_connections": len(connection_manager.socket_connections),
+            "active_ssh_connections": len(connection_manager.ssh_connections)
+        }
+    except Exception as e:
+        return {
+            "status": "not_ready",
+            "service": "LogHoi FastAPI",
+            "error": str(e)
+        }, 503
 
 @app.get("/api/connections")
 async def get_connections():

@@ -26,6 +26,8 @@ data:
   # ログ設定
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"
+  STRUCTURED_LOGGING: "true"
+  CORRELATION_ID_HEADER: "X-Correlation-ID"
   
   # セキュリティ設定
   CORS_ORIGINS: "*"
