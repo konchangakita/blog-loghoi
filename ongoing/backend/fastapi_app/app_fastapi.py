@@ -43,6 +43,10 @@ from routers.uuid import router as uuid_router
 # エラーハンドリングのインポート
 from utils.error_handler import global_exception_handler, APIError, ValidationError, AuthenticationError, AuthorizationError, NotFoundError, ConflictError, ServiceUnavailableError
 
+# ログミドルウェアのインポート
+from middleware.logging_middleware import LoggingMiddleware
+from utils.structured_logger import system_logger, EventType
+
 # ========================================
 # Pydantic Models (Request/Response)
 # ========================================
@@ -79,6 +83,9 @@ app = FastAPI(
     docs_url="/docs",  # Swagger UI
     redoc_url="/redoc"  # ReDoc
 )
+
+# ログミドルウェアを追加
+app.add_middleware(LoggingMiddleware)
 
 # SocketIOサーバーの作成
 sio = socketio.AsyncServer(
@@ -799,10 +806,15 @@ async def app_info():
 # アプリケーション起動時の処理
 async def startup_event():
     """アプリケーション起動時の処理"""
-    print("🚀 Starting LogHoi FastAPI Backend")
-    print(f"📊 Elasticsearch: {Config.ELASTICSEARCH_URL}")
-    print(f"🌐 Server: {Config.BACKEND_HOST}:{Config.BACKEND_PORT}")
-    print(f"📖 API Documentation: http://{Config.BACKEND_HOST}:{Config.BACKEND_PORT}/docs")
+    system_logger.info(
+        "Starting LogHoi FastAPI Backend",
+        event_type=EventType.SYSTEM_START,
+        elasticsearch_url=Config.ELASTICSEARCH_URL,
+        server_host=Config.BACKEND_HOST,
+        server_port=Config.BACKEND_PORT,
+        api_docs=f"http://{Config.BACKEND_HOST}:{Config.BACKEND_PORT}/docs"
+    )
+    
     # キャッシュ定期クリーンアップタスク開始
     global _cache_cleanup_task
     async def _cache_cleanup_loop():
@@ -811,31 +823,46 @@ async def startup_event():
                 await asyncio.sleep(300)  # 5分ごと
                 removed = collect_cache.cleanup_expired()
                 if removed:
-                    print(f"[CACHE] expired entries cleaned: {removed}")
+                    system_logger.debug(
+                        "Cache cleanup completed",
+                        event_type="cache.cleanup",
+                        removed_count=removed
+                    )
             except asyncio.CancelledError:
+                system_logger.info("Cache cleanup task cancelled", event_type="cache.cleanup.stop")
                 break
             except Exception as e:
-                print(f"[CACHE] cleanup error: {e}")
+                system_logger.error(
+                    "Cache cleanup error",
+                    event_type="cache.cleanup.error",
+                    error=str(e)
+                )
     _cache_cleanup_task = asyncio.create_task(_cache_cleanup_loop())
 
 async def shutdown_event():
     """アプリケーション停止時の処理"""
+    system_logger.info(
+        "Shutting down LogHoi FastAPI Backend",
+        event_type=EventType.SYSTEM_STOP
+    )
+    
     global _cache_cleanup_task
     try:
         if '_cache_cleanup_task' in globals() and _cache_cleanup_task:
             _cache_cleanup_task.cancel()
-    except Exception:
-        pass
+    except Exception as e:
+        system_logger.error(
+            "Error during shutdown",
+            event_type=EventType.SYSTEM_ERROR,
+            error=str(e)
+        )
 
 # ハンドラ登録
 app.add_event_handler("startup", startup_event)
 app.add_event_handler("shutdown", shutdown_event)
 
-# アプリケーション起動時のメッセージ
-print("🚀 Starting LogHoi FastAPI Backend")
-print(f"📊 Elasticsearch: {Config.ELASTICSEARCH_URL}")
-print(f"🌐 Server: {Config.BACKEND_HOST}:{Config.BACKEND_PORT}")
-print(f"📖 API Documentation: http://{Config.BACKEND_HOST}:{Config.BACKEND_PORT}/docs")
+# アプリケーション起動時のメッセージ（既にstartup_eventでログ出力済み）
+# 構造化ログに移行済みのため、print文は削除
 
 if __name__ == "__main__":
     uvicorn.run(
