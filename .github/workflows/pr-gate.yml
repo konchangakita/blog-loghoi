@@ -48,6 +48,7 @@ jobs:
       
       - name: Label PR based on files changed
         uses: actions/labeler@v5
+        continue-on-error: true
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
