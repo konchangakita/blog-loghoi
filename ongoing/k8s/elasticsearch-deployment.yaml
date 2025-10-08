@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: elasticsearch
-  namespace: hoihoi
+  namespace: loghoi
   labels:
     app: elasticsearch
     component: database

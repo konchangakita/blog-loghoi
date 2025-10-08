@@ -16,7 +16,7 @@
 - Kubernetes 1.24以上 (本環境: v1.32.3)
 - kubectl CLI
 - Kubeconfig: `/home/nutanix/nkp/kon-hoihoi.conf`
-- Namespace: `hoihoi` (既存)
+- Namespace: `loghoi` (新規作成)
 - StorageClass: `nutanix-volume` (既存)
 - IngressClass: `kommander-traefik` (既存)
 - MetalLB: IPアドレスプール 10.55.23.41-10.55.23.43
@@ -27,7 +27,7 @@
 ```bash
 # SSH秘密鍵を指定してSecretを作成
 kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic loghoi-secrets \
-  --namespace=hoihoi \
+  --namespace=loghoi \
   --from-file=SSH_PRIVATE_KEY=/path/to/your/ssh/private/key
 ```
 
@@ -48,7 +48,7 @@ kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f configmap.yaml
 ```bash
 # secret-template.yamlを参照してSecretを作成
 kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic loghoi-secrets \
-  --namespace=hoihoi \
+  --namespace=loghoi \
   --from-file=SSH_PRIVATE_KEY=/path/to/ssh/key
 ```
 

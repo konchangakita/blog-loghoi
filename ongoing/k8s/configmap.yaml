@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: loghoi-config
-  namespace: hoihoi
+  namespace: loghoi
   labels:
     app: loghoi
     component: config

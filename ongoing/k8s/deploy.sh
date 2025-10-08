@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 
 # 設定
 KUBECONFIG_PATH="${KUBECONFIG:-/home/nutanix/nkp/kon-hoihoi.conf}"
-NAMESPACE="hoihoi"
+NAMESPACE="loghoi"
 
 echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}   Log Hoihoi Kubernetes Deployment  ${NC}"
