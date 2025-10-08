@@ -23,7 +23,7 @@ spec:
       containers:
       - name: backend
         image: loghoi/backend:latest
-        imagePullPolicy: Always
+        imagePullPolicy: Never
         ports:
         - containerPort: 7776
           name: http
