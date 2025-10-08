@@ -450,13 +450,15 @@ spec:
    - 包括的なCI/CDドキュメント作成
    - PR#5マージ完了: https://github.com/konchangakita/blog-loghoi/pull/5
 
-### 🔄 次回の作業予定
-1. **CI/CDの動作確認とチューニング**（優先度：高）
-   - 実際のPRでCI/CD動作確認
-   - 必要に応じてワークフロー調整
-   - Codecovトークン設定（オプション）
+6. **CI/CD動作確認とチューニング**
+   - labeler設定ファイル追加
+   - エラーハンドリング改善（continue-on-error）
+   - テストPR#6で動作確認完了
+   - すべてのチェックが正常に動作することを確認
+   - PR#6マージ完了: https://github.com/konchangakita/blog-loghoi/pull/6
 
-2. **構造化ログと相関ID**（優先度：中）
+### 🔄 次回の作業予定
+1. **構造化ログと相関ID**（優先度：高）
    - 既存実装の見直しと必要に応じた簡素化
    - 段階的な導入計画の検討
 
