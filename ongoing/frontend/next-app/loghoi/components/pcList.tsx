@@ -23,8 +23,8 @@ const DisplayCluster = ({ clusterList }: any) => {
       const icon = iconList[val.hypervisor]
       return (
         <tr className='' key={idx + 1}>
-          <td className='whitespace-normal'>
-            <div className='ml-8'>
+          <td className='whitespace-normal pl-16 md:pl-24 lg:pl-40 text-left'>
+            <div className='inline-flex items-center'>
               <Image src={icon} width={30} height={30} alt={''} className='inline' />
               <div className='inline px-2'>
                 {val.name} {val.prism_ip}
@@ -45,6 +45,7 @@ export default function PcList2() {
   const requestUrl = `${getBackendUrl()}/api/pclist`
   const [data, setData] = useState<ResValues>()
   const [showAlert, setShowAlert] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -63,11 +64,13 @@ export default function PcList2() {
             errorType: 'CONNECTION_ERROR'
           })
           setShowAlert(true)
+          setIsLoading(false)
           return
         }
         
         const data = await response.json()
         setData(data)
+        setIsLoading(false)
         
         // エラーがある場合はアラートを表示
         if (data.error && data.errorType !== 'NO_DATA') {
@@ -83,6 +86,7 @@ export default function PcList2() {
           errorType: 'NETWORK_ERROR'
         })
         setShowAlert(true)
+        setIsLoading(false)
       }
     }
     fetchData()
@@ -114,11 +118,11 @@ export default function PcList2() {
       const clusterListSub = clusterList[val.prism_ip]
       return (
         <div className='w-full flex justify-center p-4' key={idx + 1}>
-          <table className='table table-compact mx-auto'>
-            <thead className='sticky top-0'>
-              <tr className='hover'>
+          <table className='table table-compact mx-auto w-full max-w-3xl'>
+            <thead>
+              <tr>
                 <th className='text-center'>
-                  <div className='text-2xl text-center'>
+                  <div className='text-2xl'>
                     <p className='inline px-4'>
                       <Link href={{ pathname: 'gatekeeper', query: { pcip: val.prism_ip } }}>
                         PC {val.prism_ip} &#91; {val.timestamp_jst} &#93;
@@ -128,7 +132,7 @@ export default function PcList2() {
                 </th>
               </tr>
             </thead>
-            <tbody className='text-left'>
+            <tbody>
               <DisplayCluster clusterList={clusterListSub} />
             </tbody>
           </table>
@@ -148,9 +152,21 @@ export default function PcList2() {
     </div>
   )
 
+  // ローディング表示
+  if (isLoading) {
+    return (
+      <>
+        <div className='text-2xl font-bold m-5 text-center'>Prism Central List</div>
+        <div className='flex flex-col justify-center items-center'>
+          <div className='text-lg text-gray-500 animate-pulse'>Loading...</div>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
-      <div className='text-2xl font-bold m-5'>Prism Central List</div>
+      <div className='text-2xl font-bold m-5 text-center'>Prism Central List</div>
       
       {showAlert && displayError}
       
