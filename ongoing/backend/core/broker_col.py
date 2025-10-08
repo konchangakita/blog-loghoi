@@ -242,6 +242,49 @@ class CollectLogGateway():
         except Exception as e:
             return {'error': str(e)}
 
+    def get_logcontent_paginated(self, log_file, zip_name, start_line: int = 0, end_line: int = 1000):
+        """ログファイルを行ベースでページネーション読み込み"""
+        filename_without_ext, _ = os.path.splitext(zip_name)
+        log_path = os.path.join(OUTPUT_LOGDIR, filename_without_ext, log_file)
+        
+        try:
+            if not os.path.exists(log_path):
+                return {'error': 'File not found'}
+            
+            lines = []
+            with open(log_path, 'r', encoding='utf-8', errors='replace') as file:
+                for i, line in enumerate(file):
+                    if i >= end_line:
+                        break
+                    if i >= start_line:
+                        lines.append(line.rstrip('\n\r'))
+            
+            return {
+                'lines': lines,
+                'range': {
+                    'start_line': start_line,
+                    'end_line': min(end_line, start_line + len(lines)),
+                    'total_returned': len(lines)
+                }
+            }
+        except Exception as e:
+            return {'error': str(e)}
+
+    def get_logfile_line_count(self, log_file, zip_name):
+        """ログファイルの総行数を取得"""
+        filename_without_ext, _ = os.path.splitext(zip_name)
+        log_path = os.path.join(OUTPUT_LOGDIR, filename_without_ext, log_file)
+        
+        try:
+            if not os.path.exists(log_path):
+                return 0
+            
+            with open(log_path, 'r', encoding='utf-8', errors='replace') as file:
+                return sum(1 for _ in file)
+        except Exception as e:
+            print(f"Error counting lines: {e}")
+            return 0
+
     def get_logfile_size(self, log_file, zip_name):
         """ログファイルのサイズを取得"""
         filename_without_ext, _ = os.path.splitext(zip_name)

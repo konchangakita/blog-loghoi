@@ -1,9 +1,10 @@
 'use client'
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import io from 'socket.io-client'
 import { saveAs } from 'file-saver'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { getBackendUrl } from '../../lib/getBackendUrl'
+import VirtualizedLogList from './VirtualizedLogList'
 
 // 共通の型定義
 export interface LogEntry {
@@ -26,6 +27,9 @@ export interface LogViewerProps {
   footerHint?: string
   // フッターヒントをクリックしたときのアクション（続きを読むなど）
   footerAction?: () => void
+  // 仮想化設定
+  enableVirtualization?: boolean
+  virtualizationThreshold?: number
   
   // collectlog用プロパティ
   logsInZip?: string[]
@@ -75,6 +79,9 @@ const LogViewer: React.FC<LogViewerProps> = ({
   appendTick,
   footerHint,
   footerAction,
+  // 仮想化設定
+  enableVirtualization = true,
+  virtualizationThreshold = 1000,
   // collectlog用
   logsInZip,
   displayLog,
@@ -100,11 +107,25 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const [isConnecting, setIsConnecting] = useState(false)
   const [realtimeLogs, setRealtimeLogs] = useState<LogEntry[]>([])
 
-  // 表示するログを決定
-  const displayLogs = variant === 'realtime' ? realtimeLogs : logs
-  const filteredLogs = displayLogs.filter((log) => 
-    log.line.toLowerCase().includes(filter.toLowerCase())
+  // 表示するログを決定（メモ化）
+  const displayLogs = useMemo(() => 
+    variant === 'realtime' ? realtimeLogs : logs || [], 
+    [variant, realtimeLogs, logs]
   )
+  
+  // フィルタリング処理をメモ化
+  const filteredLogs = useMemo(() => {
+    if (!filter) return displayLogs
+    const lowerFilter = filter.toLowerCase()
+    return displayLogs.filter((log) => 
+      log.line.toLowerCase().includes(lowerFilter)
+    )
+  }, [displayLogs, filter])
+
+  // 仮想化の判定
+  const shouldUseVirtualization = useMemo(() => {
+    return enableVirtualization && filteredLogs.length > virtualizationThreshold
+  }, [enableVirtualization, filteredLogs.length, virtualizationThreshold])
 
   // 自動スクロール
   useEffect(() => {
@@ -141,8 +162,8 @@ const LogViewer: React.FC<LogViewerProps> = ({
     lastOffsetFromBottomRef.current = el.scrollHeight - el.scrollTop
   }, [variant, appendTick])
 
-  // ダウンロード機能
-  const handleDownload = () => {
+  // ダウンロード機能（メモ化）
+  const handleDownload = useCallback(() => {
     const data = createDownloadData(displayLogs, variant)
     const fileName = generateFileName(variant, tailName)
     const blob = new Blob([data], { type: 'text/plain;charset=utf-8' })
@@ -151,17 +172,17 @@ const LogViewer: React.FC<LogViewerProps> = ({
     if (onDownload) {
       onDownload()
     }
-  }
+  }, [displayLogs, variant, tailName, onDownload])
 
-  // ログクリア機能
-  const handleClear = () => {
+  // ログクリア機能（メモ化）
+  const handleClear = useCallback(() => {
     if (variant === 'realtime') {
       setRealtimeLogs([])
     }
     if (onClear) {
       onClear()
     }
-  }
+  }, [variant, onClear])
 
   // SocketIO接続（realtimelog用）
   const handleConnect = () => {
@@ -564,27 +585,38 @@ const LogViewer: React.FC<LogViewerProps> = ({
         </label>
       </div>
 
-      <div className='mockup-code h-[480px] overflow-auto text-left mx-5' ref={logViewRef}>
+      <div className='mockup-code h-[480px] text-left mx-5' ref={logViewRef}>
         <div className='w-[640px]'>
-          <pre className='px-2'>
-            <code>
-              {filteredLogs.map((log: LogEntry, i) => {
-                return (
-                  <div className='text-xs m-0 flex items-start' key={i}>
-                    <span className='text-gray-500 mr-1 min-w-[40px] flex-shrink-0 text-right'>
-                      {String(i + 1).padStart(4, ' ')}
-                    </span>
-                    <span className='text-primary font-bold mr-1 min-w-[80px] flex-shrink-0'>
-                      [{log.name}]
-                    </span>
-                    <span className='text-gray-300 flex-1 break-all'>
-                      {log.line}
-                    </span>
-                  </div>
-                )
-              })}
-            </code>
-          </pre>
+          {shouldUseVirtualization ? (
+            <VirtualizedLogList
+              logs={filteredLogs}
+              height={480}
+              itemHeight={20}
+              overscan={10}
+            />
+          ) : (
+            <div className='h-full overflow-auto'>
+              <pre className='px-2'>
+                <code>
+                  {filteredLogs.map((log: LogEntry, i) => {
+                    return (
+                      <div className='text-xs m-0 flex items-start' key={i}>
+                        <span className='text-gray-500 mr-1 min-w-[40px] flex-shrink-0 text-right'>
+                          {String(i + 1).padStart(4, ' ')}
+                        </span>
+                        <span className='text-primary font-bold mr-1 min-w-[80px] flex-shrink-0'>
+                          [{log.name}]
+                        </span>
+                        <span className='text-gray-300 flex-1 break-all'>
+                          {log.line}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </code>
+              </pre>
+            </div>
+          )}
         </div>
       </div>
       <div className='p-1'>

@@ -30,6 +30,8 @@ class LogDisplayRequest(BaseModel):
     zip_name: str
     start: int | None = None  # 先頭からのオフセット（バイト）
     length: int | None = None # 読み取る長さ（バイト）
+    page: int | None = None   # ページ番号（1から開始）
+    page_size: int | None = None # ページサイズ（デフォルト: 1000行）
 
 
 # ========================================
@@ -86,9 +88,45 @@ async def get_logfile_size(request: LogDisplayRequest) -> Dict[str, Any]:
 
 @router.post("/logdisplay", response_model=Dict[str, Any])
 async def display_log(request: LogDisplayRequest) -> Dict[str, Any]:
-    """ログ表示API"""
+    """ログ表示API（ページネーション対応）"""
     try:
-        data = col.get_logcontent(request.log_file, request.zip_name, start=request.start, length=request.length)
+        # ページネーション処理
+        if request.page and request.page_size:
+            # ページベースの読み込み
+            page = max(1, request.page)
+            page_size = min(10000, max(100, request.page_size))  # 100-10000行の範囲
+            
+            # 行ベースのオフセット計算
+            start_line = (page - 1) * page_size
+            end_line = start_line + page_size
+            
+            data = col.get_logcontent_paginated(
+                request.log_file, 
+                request.zip_name, 
+                start_line=start_line,
+                end_line=end_line
+            )
+            
+            # 総行数を取得（キャッシュから）
+            total_lines_key = f"col:total_lines:{request.zip_name}:{request.log_file}"
+            total_lines = cache.get(total_lines_key)
+            if total_lines is None:
+                total_lines = col.get_logfile_line_count(request.log_file, request.zip_name)
+                cache.set(total_lines_key, total_lines, ttl_seconds=300)  # 5分キャッシュ
+            
+            # ページネーション情報を追加
+            data['pagination'] = {
+                'current_page': page,
+                'page_size': page_size,
+                'total_lines': total_lines,
+                'total_pages': (total_lines + page_size - 1) // page_size,
+                'has_next': page * page_size < total_lines,
+                'has_prev': page > 1
+            }
+        else:
+            # 従来のバイトベース読み込み
+            data = col.get_logcontent(request.log_file, request.zip_name, start=request.start, length=request.length)
+        
         return create_success_response(data, "ログ内容を取得しました")
     except Exception as e:
         raise handle_api_error(e, "ログ表示")
