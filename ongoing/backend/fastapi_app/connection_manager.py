@@ -12,6 +12,9 @@ from typing import Dict, Optional, Set
 sys.path.append(os.path.join(os.path.dirname(__file__), '../core'))
 from common import connect_ssh
 
+# 構造化ログのインポート
+from utils.structured_logger import system_logger, EventType
+
 
 class ConnectionManager:
     """接続の統合管理を行うクラス"""
@@ -97,6 +100,13 @@ class ConnectionManager:
     async def add_ssh_connection(self, sid: str, cvm_ip: str) -> bool:
         """SSH接続を追加"""
         try:
+            system_logger.info(
+                "SSH connection attempt started",
+                event_type="ssh.connect.start",
+                sid=sid,
+                cvm_ip=cvm_ip
+            )
+            
             # 既存のSSH接続がある場合は先にクリーンアップ
             if sid in self.ssh_connections:
                 await self._cleanup_ssh_connection(sid)
