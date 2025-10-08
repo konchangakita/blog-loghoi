@@ -39,7 +39,7 @@ export interface K8sBackendConfig {
  * Kubernetes環境変数から設定を取得
  * 優先順位: 環境変数 > デフォルト値
  */
-function getK8sConfig(): K8sBackendConfig {
+export function getK8sConfig(): K8sBackendConfig {
   return {
     // 基本設定（環境変数から取得）
     host: process.env.NEXT_PUBLIC_BACKEND_HOST || 
