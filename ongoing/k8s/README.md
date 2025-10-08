@@ -1,0 +1,348 @@
+# Kubernetes デプロイメントガイド
+
+## 概要
+このディレクトリには、LogHoiアプリケーションのKubernetesマニフェストが含まれています。
+本番環境でのスケーラブルなデプロイメントをサポートします。
+
+## 前提条件
+- Kubernetes 1.24以上
+- kubectl CLI
+- Kustomize（オプション）
+- Metrics Server（HPA使用時）
+
+## クイックスタート
+
+### 1. Namespaceの作成
+```bash
+kubectl apply -f namespace.yaml
+```
+
+### 2. ConfigMapとSecretの作成
+```bash
+# ConfigMapの適用
+kubectl apply -f configmap.yaml
+
+# Secretの作成（事前に値を設定）
+kubectl apply -f secret.yaml
+```
+
+### 3. アプリケーションのデプロイ
+```bash
+# Elasticsearch
+kubectl apply -f elasticsearch-deployment.yaml
+
+# Backend
+kubectl apply -f backend-deployment.yaml
+
+# Frontend
+kubectl apply -f frontend-deployment.yaml
+
+# Services
+kubectl apply -f services.yaml
+
+# Ingress
+kubectl apply -f ingress.yaml
+
+# HPA（オプション）
+kubectl apply -f hpa.yaml
+```
+
+### 4. Kustomizeを使用する場合
+```bash
+kubectl apply -k .
+```
+
+## アーキテクチャ
+
+### コンポーネント構成
+```
+┌─────────────────┐
+│    Ingress      │ ← 外部アクセス
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+┌───▼──┐  ┌──▼───┐
+│Frontend│  │Backend│
+│(Next.js)│  │(FastAPI)│
+└───┬──┘  └──┬───┘
+    │        │
+    └────┬───┘
+         │
+    ┌────▼────────┐
+    │Elasticsearch│
+    └─────────────┘
+```
+
+### リソース構成
+- **Backend**: 2-10 Pods（HPA）
+- **Frontend**: 2-5 Pods（HPA）
+- **Elasticsearch**: 1 Pod（StatefulSet推奨）
+
+## マニフェスト詳細
+
+### backend-deployment.yaml
+バックエンド（FastAPI）のDeployment
+
+**リソース設定:**
+- Requests: CPU 250m, Memory 256Mi
+- Limits: CPU 500m, Memory 512Mi
+
+**ヘルスチェック:**
+- Liveness: `/health` (30s初期遅延)
+- Readiness: `/ready` (10s初期遅延)
+
+**環境変数:**
+- ConfigMapから設定を読み込み
+- Secretから機密情報を読み込み
+
+### frontend-deployment.yaml
+フロントエンド（Next.js）のDeployment
+
+**リソース設定:**
+- Requests: CPU 200m, Memory 256Mi
+- Limits: CPU 400m, Memory 512Mi
+
+### hpa.yaml
+Horizontal Pod Autoscaler設定
+
+**Backend HPA:**
+- Min: 2, Max: 10 Pods
+- CPU: 70%, Memory: 80%
+- スケールアップ: 最大50%/分
+- スケールダウン: 最大10%/分、5分安定化
+
+**Frontend HPA:**
+- Min: 2, Max: 5 Pods
+- CPU: 70%, Memory: 80%
+
+### configmap.yaml
+アプリケーション設定
+
+**主要設定:**
+- アプリケーション情報
+- バックエンド/フロントエンド設定
+- Elasticsearch接続情報
+- ログ設定（JSON形式、構造化ログ）
+- パフォーマンス設定
+
+### secret.yaml
+機密情報（要作成）
+
+**必要な値:**
+- SSH秘密鍵
+- データベース認証情報
+- API キー
+
+### services.yaml
+Kubernetes Service定義
+
+**サービス:**
+- loghoi-backend: ClusterIP（内部通信）
+- loghoi-frontend: ClusterIP（内部通信）
+- elasticsearch: ClusterIP（内部通信）
+
+### ingress.yaml
+外部アクセス設定
+
+**ルーティング:**
+- `/` → Frontend
+- `/api/*` → Backend
+- `/docs` → Backend（Swagger UI）
+
+## デプロイメント手順
+
+### 開発環境
+```bash
+# 1. Namespace作成
+kubectl apply -f namespace.yaml
+
+# 2. ConfigMap/Secret作成
+kubectl apply -f configmap.yaml
+kubectl apply -f secret.yaml
+
+# 3. アプリケーションデプロイ
+kubectl apply -f elasticsearch-deployment.yaml
+kubectl apply -f backend-deployment.yaml
+kubectl apply -f frontend-deployment.yaml
+kubectl apply -f services.yaml
+
+# 4. 動作確認
+kubectl get pods -n loghoi
+kubectl logs -f -n loghoi -l component=backend
+```
+
+### 本番環境
+```bash
+# Kustomizeを使用
+kubectl apply -k overlays/production/
+
+# または個別に適用
+kubectl apply -f namespace.yaml
+kubectl apply -f configmap.yaml
+kubectl apply -f secret.yaml
+kubectl apply -f elasticsearch-deployment.yaml
+kubectl apply -f backend-deployment.yaml
+kubectl apply -f frontend-deployment.yaml
+kubectl apply -f services.yaml
+kubectl apply -f ingress.yaml
+kubectl apply -f hpa.yaml
+```
+
+## 運用
+
+### スケーリング
+```bash
+# 手動スケーリング
+kubectl scale deployment loghoi-backend -n loghoi --replicas=5
+
+# HPA状態確認
+kubectl get hpa -n loghoi
+kubectl describe hpa loghoi-backend-hpa -n loghoi
+```
+
+### ログ確認
+```bash
+# 全Podのログ
+kubectl logs -f -n loghoi -l app=loghoi
+
+# Backend Podのログ
+kubectl logs -f -n loghoi -l component=backend
+
+# 構造化ログの検索（jqを使用）
+kubectl logs -n loghoi -l component=backend | grep "^{" | jq '.'
+kubectl logs -n loghoi -l component=backend | grep "^{" | jq 'select(.correlation_id)'
+```
+
+### ヘルスチェック
+```bash
+# Liveness Probe
+kubectl exec -n loghoi deployment/loghoi-backend -- curl -s http://localhost:7776/health
+
+# Readiness Probe
+kubectl exec -n loghoi deployment/loghoi-backend -- curl -s http://localhost:7776/ready
+```
+
+### ローリングアップデート
+```bash
+# イメージ更新
+kubectl set image deployment/loghoi-backend backend=loghoi/backend:v2.0.0 -n loghoi
+
+# ロールアウト状態確認
+kubectl rollout status deployment/loghoi-backend -n loghoi
+
+# ロールバック
+kubectl rollout undo deployment/loghoi-backend -n loghoi
+```
+
+## トラブルシューティング
+
+### Podが起動しない
+```bash
+# Pod状態確認
+kubectl get pods -n loghoi
+kubectl describe pod <pod-name> -n loghoi
+
+# イベント確認
+kubectl get events -n loghoi --sort-by='.lastTimestamp'
+
+# ログ確認
+kubectl logs <pod-name> -n loghoi
+```
+
+### Readiness Probeが失敗する
+```bash
+# Readinessエンドポイントを直接確認
+kubectl exec -n loghoi <pod-name> -- curl -v http://localhost:7776/ready
+
+# Elasticsearch接続確認
+kubectl exec -n loghoi <pod-name> -- curl -v http://elasticsearch:9200
+```
+
+### HPAが動作しない
+```bash
+# Metrics Server確認
+kubectl get apiservice v1beta1.metrics.k8s.io
+
+# メトリクス確認
+kubectl top pods -n loghoi
+kubectl top nodes
+
+# HPA詳細
+kubectl describe hpa loghoi-backend-hpa -n loghoi
+```
+
+## セキュリティ
+
+### Secret管理
+```bash
+# Secretの作成（SSH鍵）
+kubectl create secret generic loghoi-secrets \
+  --from-file=SSH_PRIVATE_KEY=./path/to/private_key \
+  -n loghoi
+
+# Secretの確認
+kubectl get secrets -n loghoi
+kubectl describe secret loghoi-secrets -n loghoi
+```
+
+### RBAC設定
+```bash
+# ServiceAccountの作成
+kubectl create serviceaccount loghoi-sa -n loghoi
+
+# RoleBindingの設定
+kubectl create rolebinding loghoi-rb \
+  --role=loghoi-role \
+  --serviceaccount=loghoi:loghoi-sa \
+  -n loghoi
+```
+
+## モニタリング
+
+### Prometheus統合
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: loghoi-backend
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "7776"
+    prometheus.io/path: "/metrics"
+```
+
+### Grafana Dashboard
+- CPU/メモリ使用率
+- リクエスト数/レイテンシ
+- エラー率
+- アクティブ接続数
+
+## パフォーマンスチューニング
+
+### リソース調整
+```yaml
+resources:
+  requests:
+    memory: "512Mi"  # 実際の使用量に応じて調整
+    cpu: "500m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+```
+
+### HPA閾値調整
+```yaml
+metrics:
+- type: Resource
+  resource:
+    name: cpu
+    target:
+      type: Utilization
+      averageUtilization: 60  # 負荷に応じて調整
+```
+
+## 参考リンク
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [HPA Walkthrough](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/)
+- [Configure Liveness, Readiness and Startup Probes](https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/)
