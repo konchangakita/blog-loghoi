@@ -268,7 +268,7 @@ export default function UuidContentPage() {
                 } 
               }}
             >
-              <Image src='/xplorer_logo-neg.png' alt='xplorer logo neg' width={124} height={35} />
+              <Image src='/hoihoi_logo-neg.png' alt='hoihoi logo neg' width={122} height={35} />
             </Link>
           </div>
         </div>
