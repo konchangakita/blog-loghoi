@@ -13,7 +13,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../core'))
 from common import connect_ssh
 
 # 構造化ログのインポート
-from utils.structured_logger import system_logger, EventType
+from fastapi_app.utils.structured_logger import system_logger, EventType
 
 
 class ConnectionManager:
