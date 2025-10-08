@@ -29,14 +29,14 @@ echo -e "${GREEN}Building backend image...${NC}"
 cd "${BASE_DIR}/backend"
 docker build -t ${REGISTRY}/${NAMESPACE}/backend:${VERSION} \
              -t ${REGISTRY}/${NAMESPACE}/backend:latest \
-             -f Dockerfile .
+             -f Dockerfile.k8s .
 
 # フロントエンドイメージのビルド
 echo -e "${GREEN}Building frontend image...${NC}"
 cd "${BASE_DIR}/frontend/next-app/loghoi"
 docker build -t ${REGISTRY}/${NAMESPACE}/frontend:${VERSION} \
              -t ${REGISTRY}/${NAMESPACE}/frontend:latest \
-             -f Dockerfile .
+             -f Dockerfile.k8s .
 
 # イメージのプッシュ
 if [ "${PUSH_IMAGES}" = "true" ]; then
