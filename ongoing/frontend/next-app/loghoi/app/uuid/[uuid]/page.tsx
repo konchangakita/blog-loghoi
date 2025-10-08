@@ -299,7 +299,7 @@ export default function UuidContentPage() {
             <span className="text-black">Type:</span>
             <span className="text-4xl text-black">
               {mainFlag && entityName[mainFlag]}
-              {!mainFlag && uuidData.error}
+              {!mainFlag && (uuidData.error || 'Not Found')}
             </span>
             <div className="border-b-2 my-2 flex">
               <h2 className="text-black">UUID: {uuid}</h2>

@@ -130,7 +130,7 @@ export default function UuidSearchPage() {
   if (error || !uuidData) {
     return (
       <div className="alert alert-error">
-        <span>検索に失敗しました: {error}</span>
+        <span>検索に失敗しました: {error?.message || 'Unknown error'}</span>
       </div>
     )
   }
