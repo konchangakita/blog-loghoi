@@ -13,6 +13,7 @@ export interface InputProps {
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void
   onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
   disabled?: boolean
   required?: boolean
   size?: 'xs' | 'sm' | 'md' | 'lg'
@@ -36,6 +37,7 @@ export const Input: React.FC<InputProps> = ({
   onChange,
   onBlur,
   onFocus,
+  onKeyDown,
   disabled = false,
   required = false,
   size = 'md',
@@ -123,6 +125,7 @@ export const Input: React.FC<InputProps> = ({
           onChange={onChange}
           onBlur={onBlur}
           onFocus={onFocus}
+          onKeyDown={onKeyDown}
           disabled={disabled}
           required={required}
           className={`${inputClasses} ${icon && iconPosition === 'left' ? 'pl-10' : ''} ${icon && iconPosition === 'right' ? 'pr-10' : ''}`}
