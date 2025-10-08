@@ -1,0 +1,43 @@
+# Pull Request Labeler Configuration
+# Automatically label PRs based on changed files
+
+# Frontend changes
+frontend:
+  - changed-files:
+    - any-glob-to-any-file: 'ongoing/frontend/**'
+
+# Backend changes
+backend:
+  - changed-files:
+    - any-glob-to-any-file: 'ongoing/backend/**'
+
+# Documentation changes
+documentation:
+  - changed-files:
+    - any-glob-to-any-file: 
+      - '**/*.md'
+      - 'docs/**'
+
+# CI/CD changes
+ci-cd:
+  - changed-files:
+    - any-glob-to-any-file: '.github/workflows/**'
+
+# Configuration changes
+config:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/*.yml'
+      - '**/*.yaml'
+      - '**/*.json'
+      - '**/*.toml'
+
+# Test changes
+tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '**/test/**'
+      - '**/tests/**'
+      - '**/*.test.*'
+      - '**/*.spec.*'
+      - '**/e2e/**'
