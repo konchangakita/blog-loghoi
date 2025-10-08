@@ -188,8 +188,8 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         value={value}
         onChange={onChange}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && onSearch) {
-            onSearch()
+          if (e.key === 'Enter' && onSearch && value) {
+            onSearch(value)
           }
         }}
         icon={undefined} // 検索アイコンは別途実装
