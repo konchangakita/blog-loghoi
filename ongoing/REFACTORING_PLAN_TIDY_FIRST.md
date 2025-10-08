@@ -428,22 +428,30 @@ spec:
    - LoggingMiddlewareの実装
    - ※実装はしたが、適用は保留中
 
+3. **GitFlowワークフローの明確化**
+   - PR必須化ルールをCursorルールに追加
+   - refactorブランチ直接コミットの例外ルール整備（柔軟運用）
+
+4. **E2Eテストの自動化**
+   - Playwright環境のセットアップ（v1.40.0）
+   - Collect Log機能のE2Eテスト実装（11テストケース）
+   - UUID Explorer機能のE2Eテスト実装（11テストケース）
+   - テスト実行スクリプト追加（UI/ヘッド/デバッグモード）
+   - 包括的なテストドキュメント作成
+   - PR#4作成: https://github.com/konchangakita/blog-loghoi/pull/4
+
 ### 🔄 次回の作業予定
-1. **E2Eテストの自動化**（優先度：高）
-   - Collect Logの主要ユースケーステスト
-   - UUID Explorerの主要フローテスト
-   - Playwrightまたはpytestを使用した自動テスト
+1. **CI/CDパイプラインの構築**（優先度：高）
+   - GitHub Actionsの設定
+   - E2Eテストの統合
+   - Lint/TypeチェックのPRゲート化
+   - 自動テストの統合
 
 2. **構造化ログと相関ID**（優先度：中）
    - 既存実装の見直しと必要に応じた簡素化
    - 段階的な導入計画の検討
 
-3. **CI/CDパイプラインの構築**（優先度：中）
-   - GitHub Actionsの設定
-   - Lint/TypeチェックのPRゲート化
-   - 自動テストの統合
-
-4. **Kubernetes対応の仕上げ**（優先度：中）
+3. **Kubernetes対応の仕上げ**（優先度：中）
    - HPA/リソース制限の設定
    - Readiness/Liveness Probeの調整
    - ConfigMap/Secret の整備
