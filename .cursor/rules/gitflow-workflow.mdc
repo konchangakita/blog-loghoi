@@ -74,10 +74,14 @@ chore(deps): Flask 2.3.0にアップデート
 
 2. **GitHub上でPRを作成（またはCLIコマンド使用）**
    ```bash
-   # GitHub CLIを使用する場合
+   # GitHub CLIを使用する場合（メール通知なし）
    gh pr create --base refactor --head feature/your-feature-name \
      --title "[#123] feat: 機能名" \
      --body "変更内容の説明"
+   
+   # ※GitHubの通知設定でPR作成時のメールを無効化することを推奨
+   # Settings > Notifications > Email notification preferences
+   # "Pull requests" のチェックを外す
    ```
 
 3. **PRテンプレートに従って説明を記載**
