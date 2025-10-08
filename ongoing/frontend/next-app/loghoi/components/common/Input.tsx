@@ -171,12 +171,6 @@ export const SearchInput: React.FC<SearchInputProps> = ({
   onChange,
   ...props
 }) => {
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && onSearch) {
-      onSearch(e.currentTarget.value)
-    }
-  }
-
   const handleClear = () => {
     if (onClear) {
       onClear()
@@ -190,7 +184,11 @@ export const SearchInput: React.FC<SearchInputProps> = ({
         type="search"
         value={value}
         onChange={onChange}
-        onKeyPress={handleKeyPress}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && onSearch) {
+            onSearch()
+          }
+        }}
         icon={undefined} // 検索アイコンは別途実装
         className={`${props.className || ''} pr-10`}
       />
