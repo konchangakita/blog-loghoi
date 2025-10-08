@@ -34,6 +34,7 @@ export class HealthCheckManager {
   }
   private checkInterval?: NodeJS.Timeout
   private isRunning = false
+  private changeListeners: Array<(status: HealthStatus) => void> = []
 
   constructor(config?: Partial<HealthCheckConfig>) {
     const appConfig = getConfigManager().getConfig()
@@ -186,6 +187,9 @@ export class HealthCheckManager {
       if (this.config.onStatusChange) {
         this.config.onStatusChange(newStatus)
       }
+      
+      // リスナーに通知
+      this.notifyListeners()
     }
   }
 
@@ -221,6 +225,33 @@ export class HealthCheckManager {
    */
   private delay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  /**
+   * 変更リスナーを追加
+   */
+  addChangeListener(callback: (status: HealthStatus) => void): void {
+    this.changeListeners.push(callback)
+  }
+
+  /**
+   * 変更リスナーを削除
+   */
+  removeChangeListener(callback: (status: HealthStatus) => void): void {
+    this.changeListeners = this.changeListeners.filter(listener => listener !== callback)
+  }
+
+  /**
+   * リスナーに通知
+   */
+  private notifyListeners(): void {
+    this.changeListeners.forEach(listener => {
+      try {
+        listener(this.currentStatus)
+      } catch (error) {
+        console.error('Error in health check listener:', error)
+      }
+    })
   }
 }
 
