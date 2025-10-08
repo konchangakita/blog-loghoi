@@ -438,14 +438,23 @@ spec:
    - UUID Explorer機能のE2Eテスト実装（11テストケース）
    - テスト実行スクリプト追加（UI/ヘッド/デバッグモード）
    - 包括的なテストドキュメント作成
-   - PR#4作成: https://github.com/konchangakita/blog-loghoi/pull/4
+   - PR#4マージ完了: https://github.com/konchangakita/blog-loghoi/pull/4
+
+5. **CI/CDパイプラインの構築**
+   - GitHub Actions設定（Frontend CI/Backend CI/PR Gate）
+   - Lint/Typeチェック自動化
+   - E2Eテスト自動実行（Chromium）
+   - ユニットテスト + カバレッジ（Codecov統合）
+   - セキュリティスキャン（Safety/Bandit）
+   - PRゲート化（Conventional Commits/説明チェック/サイズ警告）
+   - 包括的なCI/CDドキュメント作成
+   - PR#5マージ完了: https://github.com/konchangakita/blog-loghoi/pull/5
 
 ### 🔄 次回の作業予定
-1. **CI/CDパイプラインの構築**（優先度：高）
-   - GitHub Actionsの設定
-   - E2Eテストの統合
-   - Lint/TypeチェックのPRゲート化
-   - 自動テストの統合
+1. **CI/CDの動作確認とチューニング**（優先度：高）
+   - 実際のPRでCI/CD動作確認
+   - 必要に応じてワークフロー調整
+   - Codecovトークン設定（オプション）
 
 2. **構造化ログと相関ID**（優先度：中）
    - 既存実装の見直しと必要に応じた簡素化
