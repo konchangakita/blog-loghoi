@@ -10,10 +10,10 @@ import glob
 import common
 
 
-JSON_LOGFILE = "/usr/src/config/col_logfile.json"
-JSON_COMMAND = "/usr/src/config/col_command.json"
-OUTPUT_LOGDIR = "/usr/src/output/log"
-OUTPUT_ZIPDIR = "/usr/src/output/zip"
+JSON_LOGFILE = "/app/config/col_logfile.json"
+JSON_COMMAND = "/app/config/col_command.json"
+OUTPUT_LOGDIR = "/app/output/log"
+OUTPUT_ZIPDIR = "/app/output/zip"
 
 os.makedirs(OUTPUT_LOGDIR, exist_ok=True)
 os.makedirs(OUTPUT_ZIPDIR, exist_ok=True)
