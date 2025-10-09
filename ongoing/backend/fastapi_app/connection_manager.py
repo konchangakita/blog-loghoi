@@ -275,6 +275,9 @@ class ConnectionManager:
             print(f"[RTLOG] tail -fコマンドを実行: {log_path} (SID: {sid})")
             stdin, stdout, stderr = ssh_connection.exec_command(f"tail -f {log_path}")
             
+            # stdout をノンブロッキングモードに設定
+            stdout.channel.setblocking(0)
+            
             # ログを読み取り
             while sid in self.socket_connections and self.socket_connections[sid]['is_active']:
                 try:
@@ -283,11 +286,23 @@ class ConnectionManager:
                     if now - last_refill >= 1.0:
                         tokens = self.max_lines_per_second
                         last_refill = now
-                    line = stdout.readline()
+                    
+                    # ノンブロッキングreadline
+                    line = None
+                    try:
+                        line = stdout.readline()
+                    except Exception:
+                        # データがない場合は次のループへ
+                        await asyncio.sleep(0.1)
+                        continue
+                    
                     if not line:
-                        break
+                        # データがない場合は少し待機
+                        await asyncio.sleep(0.1)
+                        continue
                     # トークンが尽きている場合はスキップ
                     if tokens <= 0:
+                        await asyncio.sleep(0.1)
                         continue
                     tokens -= 1
                     
@@ -307,7 +322,8 @@ class ConnectionManager:
                         print(f"[RTLOG] SocketIOログ送信エラー: {e}")
                         break
                     
-                    await asyncio.sleep(0.1)
+                    # 次のループの前に必ずyield（イベントループを解放）
+                    await asyncio.sleep(0.05)
                     
                 except asyncio.CancelledError:
                     print(f"[RTLOG] ログ監視タスクがキャンセルされました（正常終了）: {sid}")
