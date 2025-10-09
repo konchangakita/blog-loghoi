@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loghoi-backend-output
+  namespace: loghoi
+  labels:
+    app: loghoi
+    component: backend-storage
+spec:
+  accessModes:
+    - ReadWriteOnce  # Nutanix VolumeはRWOのみサポート
+  resources:
+    requests:
+      storage: 10Gi  # ログファイル保存用に10GB
+  storageClassName: nutanix-volume
+

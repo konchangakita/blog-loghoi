@@ -8,7 +8,7 @@ metadata:
     component: backend
     version: v1.0.15
 spec:
-  replicas: 2
+  replicas: 1  # PersistentVolume(RWO)使用のため1に変更
   selector:
     matchLabels:
       app: loghoi
@@ -80,6 +80,8 @@ spec:
           mountPath: /app/uploads
         - name: logs
           mountPath: /app/logs
+        - name: output
+          mountPath: /app/output
       volumes:
       - name: ssh-keys
         secret:
@@ -92,5 +94,8 @@ spec:
         emptyDir: {}
       - name: logs
         emptyDir: {}
+      - name: output
+        persistentVolumeClaim:
+          claimName: loghoi-backend-output
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
