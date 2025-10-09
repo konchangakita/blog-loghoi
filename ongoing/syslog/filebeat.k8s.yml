@@ -1,0 +1,23 @@
+filebeat.inputs:
+  - type: syslog
+    protocol.tcp:
+      host: "0.0.0.0:7515"
+
+# Kubernetes環境用のElasticsearch設定
+output.elasticsearch:
+  hosts: ["${ELASTICSEARCH_URL:elasticsearch-service:9200}"]
+  protocol: "http"
+
+# Kibana設定（オプション）
+setup.kibana:
+  host: "${KIBANA_URL:kibana-service:5601}"
+
+# HTTPエンドポイント（ヘルスチェック用）
+http.enabled: true
+http.host: "0.0.0.0"
+http.port: 5066
+
+# ログレベル
+logging.level: info
+logging.to_stderr: true
+
