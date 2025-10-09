@@ -310,8 +310,8 @@ class ConnectionManager:
                     await asyncio.sleep(0.1)
                     
                 except asyncio.CancelledError:
-                    print(f"[RTLOG] ログ監視タスクがキャンセルされました: {sid}")
-                    raise
+                    print(f"[RTLOG] ログ監視タスクがキャンセルされました（正常終了）: {sid}")
+                    return  # タスクキャンセルは正常終了として扱う
                 except Exception as e:
                     print(f"[RTLOG] ログ読み取りエラー: {e}")
                     break
@@ -321,8 +321,8 @@ class ConnectionManager:
                 print(f"[RTLOG] 接続が非アクティブになりました: {sid}")
                 
         except asyncio.CancelledError:
-            print(f"[RTLOG] ログ監視タスクがキャンセルされました: {sid}")
-            raise
+            print(f"[RTLOG] ログ監視タスクがキャンセルされました（正常終了）: {sid}")
+            # タスクキャンセルは正常終了として扱う
         except Exception as e:
             print(f"[RTLOG] ログ監視タスクで予期しないエラー: {e}")
         finally:

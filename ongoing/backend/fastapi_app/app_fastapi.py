@@ -253,7 +253,7 @@ async def monitor_realtime_logs(ssh, log_path, log_name):
                         
                     except asyncio.CancelledError:
                         print("ログ監視タスクがキャンセルされました")
-                        raise
+                        return  # タスクキャンセルは正常終了として扱う
                     except Exception as e:
                         print(f"ログ読み取りエラー: {e}")
                         break
@@ -291,8 +291,8 @@ async def monitor_realtime_logs(ssh, log_path, log_name):
                     break
         
     except asyncio.CancelledError:
-        print("ログ監視タスクがキャンセルされました")
-        raise
+        print("ログ監視タスクがキャンセルされました（正常終了）")
+        # タスクキャンセルは正常終了として扱う
     except Exception as e:
         print(f"ログ監視タスクで予期しないエラー: {e}")
     finally:
