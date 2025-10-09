@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useApiCall } from '../../../hooks/useApiError'
 import { APIError, validateRequiredFields } from '../../../lib/errorHandler'
+import { getBackendUrl } from '../../../lib/getBackendUrl'
 
 interface UuidApiResponse {
   list: {
@@ -31,7 +32,7 @@ export const useUuidApi = () => {
       // 必須フィールドのバリデーション
       validateRequiredFields(params, ['cluster'])
       
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const backendUrl = getBackendUrl()
       
       return await executeApiCall(
         () => fetch(`${backendUrl}/api/uuid/latestdataset`, {
@@ -58,7 +59,7 @@ export const useUuidApi = () => {
       // 必須フィールドのバリデーション
       validateRequiredFields(params, ['cluster', 'search'])
       
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const backendUrl = getBackendUrl()
       
       return await executeApiCall(
         () => fetch(`${backendUrl}/api/uuid/searchdataset`, {
@@ -84,7 +85,7 @@ export const useUuidApi = () => {
       // 必須フィールドのバリデーション
       validateRequiredFields(params, ['cluster', 'content'])
       
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const backendUrl = getBackendUrl()
       
       return await executeApiCall(
         () => fetch(`${backendUrl}/api/uuid/contentdataset`, {
@@ -107,7 +108,7 @@ export const useUuidApi = () => {
 
   const clearCache = useCallback(async (pattern?: string): Promise<{ cleared_count: number; pattern?: string; cache_stats: any } | null> => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const backendUrl = getBackendUrl()
       const url = `${backendUrl}/api/uuid/cache/clear`
       
       const response = await fetch(url, {
@@ -132,7 +133,7 @@ export const useUuidApi = () => {
 
   const getCacheStats = useCallback(async (): Promise<any | null> => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const backendUrl = getBackendUrl()
       const url = `${backendUrl}/api/uuid/cache/stats`
       
       const response = await fetch(url, {

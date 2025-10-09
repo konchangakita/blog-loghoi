@@ -12,6 +12,7 @@ import Navbar from '../../components/navbar'
 import Loading from '../../components/loading'
 import UuidCollecting from './components/UuidCollecting'
 import { ErrorDisplay, SearchInput, Button } from '../../components/common'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 type FormValues = {
   searchUuid: string
@@ -125,7 +126,7 @@ export default function UuidPage() {
         }),
       }
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const backendUrl = getBackendUrl()
       const response = await fetch(`${backendUrl}/api/uuid/connect`, requestOptions)
       
       if (response.status === 200) {
