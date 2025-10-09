@@ -297,19 +297,19 @@ class ElasticGateway(ElasticAPI):
         timestamp = datetime.utcnow()
         input_size = {}
 
-        # cluster
-        cluster_json = res["cluster"].json()
+        # cluster (辞書形式 {'data': {...}, 'status_code': ...} から取得)
+        cluster_json = res["cluster"]["data"] if isinstance(res["cluster"], dict) else res["cluster"].json()
         cluster_name = cluster_json["name"]
         cluster_uuid = cluster_json["uuid"]
 
         # vms
-        vms_json = res["vms"].json()
+        vms_json = res["vms"]["data"] if isinstance(res["vms"], dict) else res["vms"].json()
         input_size["vms"] = self.put_rest_pe(
             vms_json, timestamp, cluster_name, cluster_uuid, index_name="uuid_vms"
         )
 
         # storage_containers
-        storage_containers_json = res["storage_containers"].json()
+        storage_containers_json = res["storage_containers"]["data"] if isinstance(res["storage_containers"], dict) else res["storage_containers"].json()
         input_size["storage_containers"] = self.put_rest_pe(
             storage_containers_json,
             timestamp,
@@ -319,7 +319,7 @@ class ElasticGateway(ElasticAPI):
         )
 
         # volume_group
-        volume_groups_json = res["volume_groups"].json()
+        volume_groups_json = res["volume_groups"]["data"] if isinstance(res["volume_groups"], dict) else res["volume_groups"].json()
         input_size["volume_groups"] = self.put_rest_pe(
             volume_groups_json,
             timestamp,
@@ -329,7 +329,7 @@ class ElasticGateway(ElasticAPI):
         )
 
         # vfilers
-        vfilers_json = res["vfilers"].json()
+        vfilers_json = res["vfilers"]["data"] if isinstance(res["vfilers"], dict) else res["vfilers"].json()
         if len(vfilers_json["entities"]):
             input_size["vfliers"] = self.put_rest_pe(
                 vfilers_json,
@@ -340,7 +340,7 @@ class ElasticGateway(ElasticAPI):
             )
 
             # shares
-            shares_json = res["shares"].json()
+            shares_json = res["shares"]["data"] if isinstance(res["shares"], dict) else res["shares"].json()
             input_size["shares"] = self.put_rest_pe(
                 shares_json,
                 timestamp,
