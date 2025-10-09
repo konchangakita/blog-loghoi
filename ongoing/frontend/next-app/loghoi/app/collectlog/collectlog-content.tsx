@@ -209,6 +209,7 @@ const CollectlogContnet = () => {
         loadingDisplay: false,
         loadedBytes: content ? new TextEncoder().encode(content).length : 0
       }))
+      
       const loaded = content ? new TextEncoder().encode(content).length : 0
       if (fileSizeBytes && loaded >= 0) {
         setHasMore(loaded < fileSizeBytes)
