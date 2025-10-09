@@ -30,13 +30,7 @@ const VirtualizedLogList: React.FC<VirtualizedLogListProps> = ({
 
   // 表示するログのスライス
   const visibleLogs = useMemo(() => {
-    const sliceStart = performance.now()
-    const result = logs.slice(visibleRange.startIndex, visibleRange.endIndex + 1)
-    const sliceTime = performance.now() - sliceStart
-    if (sliceTime > 10) {
-      console.log(`🕒 [VirtualizedLogList] スライス処理: ${sliceTime.toFixed(2)}ms (総ログ数: ${logs.length}, 表示範囲: ${visibleRange.startIndex}-${visibleRange.endIndex})`)
-    }
-    return result
+    return logs.slice(visibleRange.startIndex, visibleRange.endIndex + 1)
   }, [logs, visibleRange])
 
   // スクロールハンドラー

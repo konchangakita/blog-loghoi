@@ -102,14 +102,19 @@ class ElasticGateway(ElasticAPI):
         index_name = "uuid_vms"
         query = {"function_score": {"query": {"match": {"cluster_name": cluster_name}}}}
         aggs = {"group_by_timestamp": {"terms": {"field": "timestamp", "size": 1000}}}
-        res = es.search(index=index_name, query=query, aggs=aggs)
-        _timeslot = [
-            slot["key_as_string"]
-            for slot in res["aggregations"]["group_by_timestamp"]["buckets"]
-        ]
-        timeslot = sorted(_timeslot, reverse=True)
-        timeslot_dict = common.change_timeslot(timeslot)
-        return timeslot_dict
+        try:
+            res = es.search(index=index_name, query=query, aggs=aggs)
+            _timeslot = [
+                slot["key_as_string"]
+                for slot in res["aggregations"]["group_by_timestamp"]["buckets"]
+            ]
+            timeslot = sorted(_timeslot, reverse=True)
+            timeslot_dict = common.change_timeslot(timeslot)
+            return timeslot_dict
+        except Exception as e:
+            # インデックスが存在しない場合は空リストを返す
+            print(f"[get_timeslot] インデックスが存在しないか、データがありません: {e}")
+            return []
 
     # input PC
     def put_pc(self, input_data):
