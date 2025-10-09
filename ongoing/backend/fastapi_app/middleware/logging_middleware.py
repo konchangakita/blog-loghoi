@@ -8,7 +8,7 @@ from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
-from utils.structured_logger import (
+from fastapi_app.utils.structured_logger import (
     set_correlation_id,
     set_request_id,
     get_correlation_id,
