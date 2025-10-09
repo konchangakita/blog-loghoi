@@ -18,11 +18,11 @@ spec:
       labels:
         app: loghoi
         component: frontend
-        version: v1.0.30
+        version: v1.0.31
     spec:
       containers:
       - name: frontend
-        image: konchangakita/loghoi-frontend:v1.0.30
+        image: konchangakita/loghoi-frontend:v1.0.31
         imagePullPolicy: Always
         ports:
         - containerPort: 7777

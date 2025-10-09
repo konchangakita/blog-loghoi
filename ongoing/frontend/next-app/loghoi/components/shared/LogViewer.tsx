@@ -255,47 +255,63 @@ const LogViewer: React.FC<LogViewerProps> = ({
       return
     }
 
+    // 既存のSocket接続があれば先に切断
+    if (socket) {
+      try {
+        socket.disconnect()
+      } catch (e) {
+        console.error('Failed to disconnect old socket:', e)
+      }
+      setSocket(null)
+    }
+
     setIsConnecting(true)
+    console.log('🔌 Creating new Socket.IO connection...')
     
     const backendUrl = getBackendUrl()
     const newsocket = io(`${backendUrl}/`, {
       transports: ['websocket'],
-      upgrade: true,
-      rememberUpgrade: false,
       timeout: 20000,
       forceNew: true,
-      // engine.ioのping設定は型未定義のため未設定
     })
     
-    // 接続確立後にtail -fを開始する（クリック駆動で接続→SSH開始）
+    // 接続確立後にtail -fを開始する
     newsocket.once('connect', () => {
+      console.log('🔌 Socket.IO connected, starting tail -f...')
       try {
         newsocket.emit('start_tail_f', {
           cvm_ip: cvmChecked,
           log_path: tailPath,
           log_name: tailName
         })
+        setIsConnecting(false)
       } catch (e) {
         console.error('start_tail_f emit failed:', e)
-      } finally {
         setIsConnecting(false)
       }
     })
 
-    // 既に接続済みの場合のフォールバック
-    if (newsocket.connected) {
-      try {
-        newsocket.emit('start_tail_f', {
-          cvm_ip: cvmChecked,
-          log_path: tailPath,
-          log_name: tailName
-        })
-      } catch (e) {
-        console.error('start_tail_f emit failed (already connected):', e)
-      } finally {
+    // 接続エラー時の処理
+    newsocket.once('connect_error', (error: any) => {
+      console.error('🔌 Socket.IO connection error:', error)
+      setIsConnecting(false)
+      alert('Socket.IO接続エラー: ' + error.message)
+    })
+
+    // 接続タイムアウト（25秒）
+    const connectionTimeout = setTimeout(() => {
+      if (!newsocket.connected) {
+        console.error('🔌 Socket.IO connection timeout')
         setIsConnecting(false)
+        newsocket.disconnect()
+        alert('Socket.IO接続がタイムアウトしました')
       }
-    }
+    }, 25000)
+
+    // 接続成功時にタイムアウトをクリア
+    newsocket.once('connect', () => {
+      clearTimeout(connectionTimeout)
+    })
 
     setSocket(newsocket)
   }
