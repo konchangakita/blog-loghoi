@@ -129,3 +129,4 @@ echo -e "3. Access the application:"
 echo -e "   ${BLUE}http://<INGRESS_IP>${NC}"
 echo ""
 
+
