@@ -4,7 +4,49 @@
 シスログ機能は、NutanixクラスターのシステムログをElasticsearchから検索・表示する機能です。クラスター名、キーワード、日時範囲を指定してログを検索し、結果を構造化して表示できます。
 
 ## バージョン
-1.0.0
+1.0.0（最終更新: 2025-10-09）
+
+## システム構成
+
+### Syslogデータフロー（全体像）
+
+```mermaid
+graph LR
+    A[Nutanix Cluster] -->|syslog送信| B[Syslogサーバー]
+    B -->|Filebeat収集| C[Elasticsearch]
+    C -->|検索| D[バックエンドAPI]
+    D -->|結果返却| E[フロントエンド]
+```
+
+### 1. Nutanix Syslog送信設定
+- **送信元**: Nutanix Cluster（Prism Element）
+- **設定場所**: Prism Element > Settings > Syslog Server
+- **送信プロトコル**: UDP/TCP（ポート514）
+- **送信先**: Syslogサーバー（Filebeat稼働サーバー）
+- **ログ形式**: RFC 3164/5424準拠
+
+### 2. Syslogサーバー（Filebeat）
+- **役割**: Nutanixから送信されたsyslogを受信し、Elasticsearchに転送
+- **使用ツール**: Filebeat
+- **受信ポート**: 514（UDP/TCP）
+- **設定ファイル**: `filebeat.yml`
+- **処理フロー**:
+  1. syslogメッセージを受信
+  2. パース処理（タイムスタンプ、ホスト名、ファシリティ、重要度、メッセージ）
+  3. Elasticsearchに転送
+
+### 3. Elasticsearch
+- **インデックス**: `filebeat-*`
+- **データ保存**: syslogメッセージを構造化して保存
+- **保持期間**: 設定による（デフォルト: 無期限）
+
+### 4. バックエンドAPI（FastAPI）
+- **役割**: Elasticsearchからログを検索
+- **エンドポイント**: `POST /api/sys/search`
+
+### 5. フロントエンド（Next.js）
+- **役割**: ログ検索UI、結果表示
+- **URL**: `/syslog`
 
 ## 機能概要
 
@@ -22,6 +64,12 @@
   - `cluster`: クラスター名
   - `prism`: Prism ElementのIPアドレス
 
+### 前提条件
+1. **Nutanix側**: Prism ElementでSyslogサーバーが設定済み
+2. **Syslogサーバー**: Filebeatが稼働し、syslogを受信中
+3. **Elasticsearch**: Filebeatからのデータ受信が正常
+4. **インデックス**: `filebeat-*`インデックスにデータが存在
+
 ## アーキテクチャ
 
 ### フロントエンド
@@ -37,11 +85,20 @@
 - **APIエンドポイント**: `/api/sys/search`
 
 ### データフロー
-1. フロントエンドで検索条件を入力
+
+#### ログ収集フロー（事前準備）
+1. **Nutanix設定**: Prism ElementでSyslogサーバーを設定
+2. **Syslog送信**: NutanixクラスターがSyslogサーバーにログを送信（UDP/TCP 514）
+3. **Filebeat受信**: Syslogサーバー上のFilebeatがsyslogを受信
+4. **パース処理**: Filebeatがsyslogメッセージをパース（タイムスタンプ、ホスト名、ファシリティ、重要度、メッセージ）
+5. **Elasticsearch転送**: FilebeatがElasticsearchの`filebeat-*`インデックスに保存
+
+#### ログ検索フロー（アプリケーション）
+1. フロントエンドで検索条件を入力（クラスター名、キーワード、日時範囲）
 2. FastAPIの`/api/sys/search`エンドポイントにPOSTリクエスト
 3. `SyslogGateway`がElasticsearchからログを検索
 4. 構造化されたログデータをフロントエンドに返却
-5. フロントエンドでログを表示・フィルタリング
+5. フロントエンドでログを表示・フィルタリング・ダウンロード
 
 ## 詳細仕様
 
@@ -224,11 +281,44 @@ class SyslogSearchRequest(BaseModel):
 
 #### 環境変数
 - `ELASTIC_SERVER`: ElasticsearchサーバーURL（デフォルト: `http://elasticsearch:9200`）
+- `ELASTICSEARCH_URL`: Kubernetes環境用（例: `http://elasticsearch-service:9200`）
+
+#### Filebeat設定（Syslogサーバー側）
+
+**設定ファイル場所**:
+- `/home/nutanix/konchangakita/blog-loghoi/ongoing/syslog/filebeat.yml`
+
+**実際の設定内容**:
+```yaml
+filebeat.inputs:
+  - type: syslog
+    protocol.tcp:
+      host: "0.0.0.0:7515"
+
+output.elasticsearch:
+  hosts: ["elasticsearch:9200"]
+  protocol: "http"
+
+setup.kibana:
+  host: "kibana:5601"
+```
+
+**設定のポイント**:
+- **受信ポート**: TCP 7515（標準の514ではなくカスタムポート）
+- **Elasticsearch出力**: `elasticsearch:9200`（Docker/Kubernetes内部DNS）
+- **Kibana連携**: `kibana:5601`
+
+**Nutanix Syslog設定**:
+- Prism Element > Settings > Syslog Server
+- Server IP: Syslogサーバー（Filebeat稼働サーバー）のIPアドレス
+- Port: 7515（Filebeatの受信ポートに合わせる）
+- Protocol: TCP
 
 #### Docker設定
 - フロントエンド: Next.jsアプリケーション
 - バックエンド: FastAPIアプリケーション
 - Elasticsearch: ログデータストレージ
+- Syslogサーバー: Filebeat（別サーバーまたはコンテナ）
 
 ## エラーハンドリング
 
@@ -293,6 +383,10 @@ class SyslogSearchRequest(BaseModel):
 - `/backend/shared/gateways/syslog_gateway.py` (ビジネスロジック)
 - `/backend/core/ela.py` (Elasticsearch操作)
 - `/backend/core/broker_sys.py` (旧実装、参考用)
+
+### Syslogサーバー
+- `/home/nutanix/konchangakita/blog-loghoi/ongoing/syslog/filebeat.yml` (Filebeat設定)
+- `/home/nutanix/konchangakita/blog-loghoi/ongoing/syslog/` (Syslogサーバー関連ファイル)
 
 ### 設定ファイル
 - `docker-compose_fastapi.yml`
