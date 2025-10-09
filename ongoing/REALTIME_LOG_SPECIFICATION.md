@@ -142,14 +142,22 @@ await sio.emit('tail_f_status', {
 3. **`app/realtimelog/realtimelog-logview.tsx`** - ログビューアラッパー
 4. **`components/shared/LogViewer.tsx`** - 共通ログビューアコンポーネント
 
+#### 状態管理
+```typescript
+// LogViewer.tsx (105-109行目)
+const [isActive, setIsActive] = useState(false)          // ログ取得中
+const [socket, setSocket] = useState<any>(null)          // Socket.IO接続
+const [isConnecting, setIsConnecting] = useState(false)  // 接続中
+const [isDisconnecting, setIsDisconnecting] = useState(false) // 切断中（NEW）
+const [realtimeLogs, setRealtimeLogs] = useState<LogEntry[]>([])
+```
+
 #### Socket.IO接続処理
 ```typescript
 // 接続開始（258-266行目）
 const backendUrl = getBackendUrl()
 const newsocket = io(`${backendUrl}/`, {
-  transports: ['polling', 'websocket'],
-  upgrade: true,
-  rememberUpgrade: false,
+  transports: ['websocket'],  // WebSocketのみ使用
   timeout: 20000,
   forceNew: true,
 })
@@ -257,15 +265,27 @@ Socket.IO接続: io(`${backendUrl}/`)
 ```
 ユーザー: 「ログ取得停止」ボタンクリック
   ↓
-イベント送信: stop_tail_f {}
+フロントエンド: 
+  1. 切断中状態に設定（isDisconnecting = true）
+  2. モーダル表示「切断中...」（スピナー表示）
+  3. イベント送信: stop_tail_f {}
   ↓
 バックエンド:
   1. ログ監視停止
   2. SSH接続切断
   3. 'tail_f_status' { status: 'stopped' } 送信
   ↓
-フロントエンド: Socket.IO切断
+フロントエンド:
+  1. tail_f_statusイベント受信
+  2. Socket.IO切断
+  3. 切断中状態解除（isDisconnecting = false）
+  4. モーダルを閉じる
 ```
+
+**UI状態遷移**:
+- 停止ボタンクリック → モーダル表示「STOP」ボタン
+- STOPクリック → 「切断中...」スピナー表示、キャンセル無効化
+- 切断完了 → モーダル自動クローズ
 
 #### 3-2. 自動停止（ページリロード・離脱）
 ```
@@ -639,7 +659,7 @@ io(`${backendUrl}/`, {
 ---
 
 作成日: 2025-10-09  
-最終更新: 2025-10-09 17:30
+最終更新: 2025-10-09 17:45
 
 ---
 

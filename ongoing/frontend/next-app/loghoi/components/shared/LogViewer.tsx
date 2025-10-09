@@ -105,6 +105,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const [isActive, setIsActive] = useState(false)
   const [socket, setSocket] = useState<any>(null)
   const [isConnecting, setIsConnecting] = useState(false)
+  const [isDisconnecting, setIsDisconnecting] = useState(false)
   const [realtimeLogs, setRealtimeLogs] = useState<LogEntry[]>([])
 
   // 表示するログを決定（メモ化）
@@ -213,6 +214,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     setSocket(null)
     setIsActive(false)
     setIsConnecting(false)
+    setIsDisconnecting(false)
   }
 
   // tail -f開始（realtimelog用）
@@ -302,22 +304,22 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const handleStopAll = () => {
     if (variant !== 'realtime') return
     
+    // 切断中状態に設定
+    setIsDisconnecting(true)
     
     if (socket && socket.connected) {
       socket.emit('stop_tail_f', {})
-    }
-    
-    if (socket) {
-      socket.disconnect()
-      setSocket(null)
-    }
-    
-    setIsActive(false)
-    setIsConnecting(false)
-    
-    const modal = document.getElementById('my-modal') as HTMLInputElement
-    if (modal) {
-      modal.checked = false
+      // tail_f_statusイベントで'stopped'を受信したら切断完了
+    } else {
+      // ソケットが接続されていない場合は即座に完了
+      setIsActive(false)
+      setIsConnecting(false)
+      setIsDisconnecting(false)
+      
+      const modal = document.getElementById('my-modal') as HTMLInputElement
+      if (modal) {
+        modal.checked = false
+      }
     }
   }
 
@@ -339,10 +341,39 @@ const LogViewer: React.FC<LogViewerProps> = ({
     socket.on('tail_f_status', (data: any) => {
       if (data.status === 'started') {
         setIsActive(true)
+        setIsDisconnecting(false)
       } else if (data.status === 'stopped') {
         setIsActive(false)
+        setIsDisconnecting(false)
+        
+        // Socket.IO切断とクリーンアップ
+        if (socket) {
+          socket.disconnect()
+          setSocket(null)
+        }
+        setIsConnecting(false)
+        
+        // モーダルを閉じる
+        const modal = document.getElementById('my-modal') as HTMLInputElement
+        if (modal) {
+          modal.checked = false
+        }
       } else if (data.status === 'error') {
         setIsActive(false)
+        setIsDisconnecting(false)
+        
+        // エラー時もクリーンアップ
+        if (socket) {
+          socket.disconnect()
+          setSocket(null)
+        }
+        setIsConnecting(false)
+        
+        // モーダルを閉じる
+        const modal = document.getElementById('my-modal') as HTMLInputElement
+        if (modal) {
+          modal.checked = false
+        }
       }
     })
 
@@ -356,6 +387,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     socket.on('disconnect', () => {
       setIsActive(false)
       setIsConnecting(false)
+      setIsDisconnecting(false)
     })
 
     socket.on('connect_error', (error: any) => {
@@ -396,6 +428,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
         }
         setIsActive(false)
         setIsConnecting(false)
+        setIsDisconnecting(false)
       }
     }
 
@@ -574,10 +607,17 @@ const LogViewer: React.FC<LogViewerProps> = ({
           <label className='modal-box relative text-left' htmlFor=''>
             <p className='text-lg font-bold'>ログ取得停止します</p>
             <div className='modal-action'>
-              <button className='btn btn-error' onClick={handleStopAll}>
-                STOP
-              </button>
-              <label htmlFor='my-modal' className='btn'>
+              {isDisconnecting ? (
+                <button className='btn btn-error btn-disabled'>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  切断中...
+                </button>
+              ) : (
+                <button className='btn btn-error' onClick={handleStopAll}>
+                  STOP
+                </button>
+              )}
+              <label htmlFor='my-modal' className={`btn ${isDisconnecting ? 'btn-disabled' : ''}`}>
                 キャンセル
               </label>
             </div>
