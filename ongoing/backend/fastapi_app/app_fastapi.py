@@ -32,20 +32,20 @@ from shared.gateways import (
     SyslogGateway, 
     ElasticGateway
 )
-from ..core.common import connect_ssh, get_cvmlist
-from ..config import Config
+from core.common import connect_ssh, get_cvmlist
+from config import Config
 
 # ルーターのインポート
-from .routers.collect_log import router as collect_log_router
-from .routers.collect_log import cache as collect_cache
-from .routers.uuid import router as uuid_router
+from routers.collect_log import router as collect_log_router
+from routers.collect_log import cache as collect_cache
+from routers.uuid import router as uuid_router
 
 # エラーハンドリングのインポート
-from .utils.error_handler import global_exception_handler, APIError, ValidationError, AuthenticationError, AuthorizationError, NotFoundError, ConflictError, ServiceUnavailableError
+from utils.error_handler import global_exception_handler, APIError, ValidationError, AuthenticationError, AuthorizationError, NotFoundError, ConflictError, ServiceUnavailableError
 
 # ログミドルウェアのインポート
-from .middleware.logging_middleware import LoggingMiddleware
-from .utils.structured_logger import system_logger, EventType
+from middleware.logging_middleware import LoggingMiddleware
+from utils.structured_logger import system_logger, EventType
 
 # ========================================
 # Pydantic Models (Request/Response)
