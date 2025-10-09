@@ -6,7 +6,7 @@ metadata:
   labels:
     app: loghoi
     component: backend
-    version: v1.0.14
+    version: v1.0.15
 spec:
   replicas: 2
   selector:
@@ -18,11 +18,13 @@ spec:
       labels:
         app: loghoi
         component: backend
-        version: v1.0.14
+        version: v1.0.15
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
       - name: backend
-        image: konchangakita/loghoi-backend:v1.0.14
+        image: konchangakita/loghoi-backend:v1.0.15
         imagePullPolicy: Always
         ports:
         - containerPort: 7776
@@ -82,10 +84,10 @@ spec:
       - name: ssh-keys
         secret:
           secretName: loghoi-secrets
+          defaultMode: 0400
           items:
           - key: SSH_PRIVATE_KEY
             path: ntnx-lockdown
-            mode: 0400
       - name: uploads
         emptyDir: {}
       - name: logs

@@ -8,6 +8,8 @@ metadata:
     component: ingress
   annotations:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    # Socket.IO用の設定（リクエストバッファリング無効化）
+    traefik.ingress.kubernetes.io/buffering: "false"
 spec:
   ingressClassName: kommander-traefik
   rules:

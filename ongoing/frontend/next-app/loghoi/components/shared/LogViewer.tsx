@@ -195,7 +195,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     
     const backendUrl = getBackendUrl()
     const newsocket = io(`${backendUrl}/`, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'],
       upgrade: true,
       rememberUpgrade: false,
       timeout: 20000,
@@ -257,7 +257,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     
     const backendUrl = getBackendUrl()
     const newsocket = io(`${backendUrl}/`, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'],
       upgrade: true,
       rememberUpgrade: false,
       timeout: 20000,
@@ -585,7 +585,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
         </label>
       </div>
 
-      <div className='mockup-code h-[480px] text-left mx-5' ref={logViewRef}>
+      <div className='mockup-code h-[480px] overflow-auto text-left mx-5' ref={logViewRef}>
         <div className='w-[640px]'>
           {shouldUseVirtualization ? (
             <VirtualizedLogList
@@ -595,27 +595,25 @@ const LogViewer: React.FC<LogViewerProps> = ({
               overscan={10}
             />
           ) : (
-            <div className='h-full overflow-auto'>
-              <pre className='px-2'>
-                <code>
-                  {filteredLogs.map((log: LogEntry, i) => {
-                    return (
-                      <div className='text-xs m-0 flex items-start' key={i}>
-                        <span className='text-gray-500 mr-1 min-w-[40px] flex-shrink-0 text-right'>
-                          {String(i + 1).padStart(4, ' ')}
-                        </span>
-                        <span className='text-primary font-bold mr-1 min-w-[80px] flex-shrink-0'>
-                          [{log.name}]
-                        </span>
-                        <span className='text-gray-300 flex-1 break-all'>
-                          {log.line}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </code>
-              </pre>
-            </div>
+            <pre className='px-2'>
+              <code>
+                {filteredLogs.map((log: LogEntry, i) => {
+                  return (
+                    <div className='text-xs m-0 flex items-start' key={i}>
+                      <span className='text-gray-500 mr-1 min-w-[40px] flex-shrink-0 text-right'>
+                        {String(i + 1).padStart(4, ' ')}
+                      </span>
+                      <span className='text-primary font-bold mr-1 min-w-[80px] flex-shrink-0'>
+                        [{log.name}]
+                      </span>
+                      <span className='text-gray-300 flex-1 break-all'>
+                        {log.line}
+                      </span>
+                    </div>
+                  )
+                })}
+              </code>
+            </pre>
           )}
         </div>
       </div>

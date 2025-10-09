@@ -49,7 +49,7 @@ class CollectLogGateway():
         print("[collectlog] download logfiles (SFTP -> SCP -> SSH cat)")
         remote_host = cvm
         remote_user = "nutanix"
-        key_file = "/usr/src/config/.ssh/ntnx-lockdown"
+        key_file = "/app/config/.ssh/ntnx-lockdown"
 
         success_files = 0
         failed_files = 0
