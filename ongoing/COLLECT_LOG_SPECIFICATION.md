@@ -106,12 +106,19 @@
     "cvm": "10.38.112.31"
   }
   ```
-- **レスポンス**:
+- **レスポンス（v1.1.0以降 - 非同期処理）**:
   ```json
   {
-    "message": "finished collect log"
+    "status": "success",
+    "message": "ログ収集を開始しました",
+    "data": {
+      "job_id": "8d52884e-5c05-416e-9fd2-764315aedc32",
+      "status": "pending"
+    }
   }
   ```
+- **処理時間**: 1-2ms（即座にレスポンス）
+- **備考**: バックグラウンドタスクで実行。完了確認は`GET /api/col/job/{job_id}`を使用
 
 ### 4.2 ZIP一覧取得API
 - **エンドポイント**: `GET /api/col/ziplist`
@@ -189,6 +196,27 @@
 ### 4.6 ZIPダウンロードAPI
 - **エンドポイント**: `GET /api/col/download/{zip_name}`
 - **レスポンス**: ZIPファイル（バイナリ）
+
+### 4.7 ジョブステータス確認API（v1.1.0で追加）
+- **エンドポイント**: `GET /api/col/job/{job_id}`
+- **説明**: ログ収集ジョブの進捗・完了状態を確認
+- **レスポンス**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "status": "pending" | "running" | "completed" | "failed",
+      "cvm": "10.55.23.29",
+      "created_at": "2025-10-09T15:09:18.355000",
+      "started_at": "2025-10-09T15:09:18.356000",
+      "completed_at": "2025-10-09T15:14:32.123000",
+      "result": { "message": "finished collect log" },
+      "error": null
+    }
+  }
+  ```
+- **ステータス遷移**: `pending` → `running` → `completed` / `failed`
+- **使用方法**: ログ収集開始後、5秒ごとにポーリングして完了を検知
 
 ## 5. ログ収集仕様
 
@@ -384,6 +412,172 @@
 
 ---
 
-**バージョン**: v1.0.0  
+**バージョン**: v1.1.0  
 **作成日**: 2025-10-03  
-**更新日**: 2025-10-06
+**更新日**: 2025-10-09
+
+---
+
+## 13. Kubernetes環境での動作（2025-10-09追加）
+
+### 13.1 解決した問題
+
+#### 問題1: ログ収集時の502 Bad Gateway エラー
+
+**症状**:
+- 「Start Collect Log」ボタンをクリックすると502エラー
+- バックエンドにリクエストが届かない
+- ブラウザで`APIError: HTTP error! status: 502`
+
+**根本原因**:
+- ログ収集処理が同期的（ブロッキング）で3-5分かかる
+- HTTPレスポンスが処理完了まで返らない
+- Traefik Ingressのデフォルトタイムアウト（60秒）より長い
+- タイムアウトで502 Bad Gatewayを返す
+
+**解決方法（非同期処理化）**:
+
+1. **バックグラウンドタスクで実行**
+```python
+# backend/fastapi_app/routers/collect_log.py
+
+from fastapi import BackgroundTasks
+import asyncio
+import uuid
+
+# ジョブ管理用の辞書
+collection_jobs: Dict[str, Dict[str, Any]] = {}
+
+async def run_log_collection(job_id: str, cvm: str) -> None:
+    """バックグラウンドでログ収集を実行"""
+    try:
+        collection_jobs[job_id]["status"] = "running"
+        
+        # 同期的な処理を別スレッドで実行（イベントループをブロックしない）
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, col.collect_logs, cvm)
+        
+        collection_jobs[job_id]["status"] = "completed"
+        collection_jobs[job_id]["result"] = data
+    except Exception as e:
+        collection_jobs[job_id]["status"] = "failed"
+        collection_jobs[job_id]["error"] = str(e)
+
+@router.post("/getlogs")
+async def collect_logs(request: LogCollectionRequest, background_tasks: BackgroundTasks):
+    """ログ収集API（非同期実行）"""
+    job_id = str(uuid.uuid4())
+    
+    collection_jobs[job_id] = {
+        "status": "pending",
+        "cvm": request.cvm,
+        "created_at": datetime.now().isoformat()
+    }
+    
+    # バックグラウンドタスクとして実行
+    background_tasks.add_task(run_log_collection, job_id, request.cvm)
+    
+    return create_success_response(
+        {"job_id": job_id, "status": "pending"},
+        "ログ収集を開始しました"
+    )
+```
+
+2. **ジョブステータス確認API追加**
+```python
+@router.get("/job/{job_id}")
+async def get_job_status(job_id: str):
+    """ログ収集ジョブのステータス確認API"""
+    if job_id not in collection_jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return create_success_response(collection_jobs[job_id])
+```
+
+3. **フロントエンドでポーリング**
+```typescript
+// フロントエンド: hooks/useCollectLogApi.ts
+
+const collectLogs = async (cvm: string) => {
+  // ログ収集ジョブを開始
+  const jobResponse = await fetch('/api/col/getlogs', {
+    method: 'POST',
+    body: JSON.stringify({ cvm })
+  })
+  
+  const jobId = jobResponse.job_id
+  console.log('ログ収集ジョブ開始:', jobId)
+  
+  // ジョブ完了をポーリング（最大5分、5秒ごと）
+  const maxAttempts = 60
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(resolve => setTimeout(resolve, 5000))
+    
+    const statusResponse = await fetch(`/api/col/job/${jobId}`)
+    
+    if (statusResponse?.status === 'completed') {
+      console.log('ログ収集完了:', jobId)
+      return { message: 'finished collect log' }
+    } else if (statusResponse?.status === 'failed') {
+      throw new Error(`ログ収集失敗: ${statusResponse.error}`)
+    }
+    
+    console.log(`ジョブステータス: ${statusResponse?.status}`)
+  }
+  
+  throw new Error('ログ収集がタイムアウトしました')
+}
+```
+
+**効果**:
+- ✅ 即座にレスポンス返却（1-2ms）
+- ✅ 502エラー解消
+- ✅ ログ収集中もヘルスチェック応答継続
+- ✅ Pod再起動なし
+- ✅ ユーザーに進捗フィードバック可能（ポーリング中）
+
+**修正ファイル**:
+- `backend/fastapi_app/routers/collect_log.py`
+- `frontend/next-app/loghoi/app/collectlog/hooks/useCollectLogApi.ts`
+
+**イメージバージョン**:
+- バックエンド: v1.0.17 → v1.0.18
+- フロントエンド: v1.0.32 → v1.0.33
+
+---
+
+### 13.2 新しいAPI仕様
+
+#### GET /api/col/job/{job_id}
+- **機能**: ログ収集ジョブのステータス確認
+- **レスポンス**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "status": "pending" | "running" | "completed" | "failed",
+      "cvm": "10.55.23.29",
+      "created_at": "2025-10-09T15:09:18.355000",
+      "started_at": "2025-10-09T15:09:18.356000",
+      "completed_at": "2025-10-09T15:14:32.123000",
+      "result": { "message": "finished collect log" },
+      "error": null
+    }
+  }
+  ```
+
+#### POST /api/col/getlogs（変更後）
+- **レスポンス**:
+  ```json
+  {
+    "status": "success",
+    "message": "ログ収集を開始しました",
+    "data": {
+      "job_id": "8d52884e-5c05-416e-9fd2-764315aedc32",
+      "status": "pending"
+    }
+  }
+  ```
+- **処理時間**: 1-2ms（即座にレスポンス）
+
+---
