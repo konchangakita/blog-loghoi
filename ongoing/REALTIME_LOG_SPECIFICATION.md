@@ -52,14 +52,38 @@ async def connect(sid, environ):
     print(f"SocketIO connected: {sid}")
 ```
 
-##### 2. `disconnect` イベント（319行目）
+##### 2. `disconnect` イベント（318-323行目）
 ```python
 @sio.event
 async def disconnect(sid):
     """SocketIO切断時の処理"""
     print(f"SocketIO disconnected: {sid}")
-    await connection_manager.stop_all(sid)
+    # 接続管理システムから削除（SSH接続とログ監視も即座に停止）
+    await connection_manager.remove_socket_connection(sid)
+    print(f"Cleanup done for: {sid}")
 ```
+
+**処理内容**:
+```python
+# connection_manager.py (53-73行目)
+async def remove_socket_connection(self, sid: str) -> None:
+    """SocketIO接続を削除し、関連するSSH接続も即座に切断"""
+    print(f"🔌 SocketIO接続を削除開始: {sid}")
+    
+    # 1. 関連するSSH接続を即座に切断
+    await self._cleanup_ssh_connection(sid)
+    
+    # 2. 関連するログ監視タスクを即座に停止
+    await self._cleanup_monitoring_task(sid)
+    
+    # 3. アイドル監視タスクを停止
+    if sid in self.socket_connections:
+        task = self.socket_connections[sid].get('idle_watch_task')
+        if task:
+            task.cancel()
+```
+
+**重要**: ページリロード、ブラウザ閉じる、ネットワーク切断など、あらゆる切断シナリオで自動的にリソースをクリーンアップ
 
 ##### 3. `start_tail_f` イベント（326行目）
 ```python
@@ -228,6 +252,8 @@ Socket.IO接続: io(`${backendUrl}/`)
 ```
 
 ### 3. ログ取得停止
+
+#### 3-1. 正常停止（ユーザー操作）
 ```
 ユーザー: 「ログ取得停止」ボタンクリック
   ↓
@@ -240,6 +266,74 @@ Socket.IO接続: io(`${backendUrl}/`)
   ↓
 フロントエンド: Socket.IO切断
 ```
+
+#### 3-2. 自動停止（ページリロード・離脱）
+```
+ユーザー: ページリロード（F5）/ ブラウザ閉じる / 他ページへ遷移
+  ↓
+フロントエンド: beforeunload/pagehideイベント発火
+  ↓
+  1. socket.emit('stop_tail_f', {}) 送信（可能な場合）
+  2. socket.disconnect() 実行
+  ↓
+バックエンド: disconnectイベント発火
+  ↓
+  1. connection_manager.stop_all(sid) 実行
+  2. すべてのSSH接続切断
+  3. すべてのログ監視停止
+```
+
+**実装詳細**:
+```typescript
+// components/shared/LogViewer.tsx (378-419行目)
+useEffect(() => {
+  if (variant !== 'realtime') return
+
+  const stopImmediately = () => {
+    try {
+      // 可能ならstopを先に通知
+      if (socket && socket.connected) {
+        try {
+          socket.emit('stop_tail_f', {})
+        } catch {}
+      }
+    } finally {
+      // 常に切断実行
+      if (socket) {
+        try {
+          socket.disconnect()
+        } catch {}
+      }
+      setIsActive(false)
+      setIsConnecting(false)
+    }
+  }
+
+  const handleBeforeUnload = () => {
+    stopImmediately()
+  }
+
+  const handlePageHide = () => {
+    stopImmediately()
+  }
+
+  window.addEventListener('beforeunload', handleBeforeUnload)
+  window.addEventListener('pagehide', handlePageHide)
+
+  // アンマウント時も確実に停止
+  return () => {
+    window.removeEventListener('beforeunload', handleBeforeUnload)
+    window.removeEventListener('pagehide', handlePageHide)
+    stopImmediately()
+  }
+}, [variant, socket])
+```
+
+**重要**: 
+- ✅ **`beforeunload`イベント**: ページリロード・閉じる時に発火
+- ✅ **`pagehide`イベント**: ページが非表示になる時に発火（iOS Safari対応）
+- ✅ **アンマウント時のクリーンアップ**: コンポーネント破棄時も確実に切断
+- ✅ **二重の保護**: フロントエンドで切断 + バックエンドで`disconnect`イベント処理
 
 ---
 
@@ -318,33 +412,36 @@ io(`${backendUrl}/`)  // 例: https://10.55.23.41/
 
 ---
 
-## 不足しているファイル・設定
+## 完了した設定・ファイル
 
-### 🔴 必須
+### ✅ 完了済み
 
 #### 1. `lib/rt-logs.ts`
-- **状態**: ❌ 存在しない
-- **影響**: ログファイル選択リストが表示されない
-- **対応**: ファイルを作成する
+- **状態**: ✅ 作成済み（2025-10-05）
+- **内容**: Nutanix CVMの主要ログファイルリスト
+- **ファイルサイズ**: 6612 bytes
 
-### 🟡 推奨
+#### 2. SSH接続設定
+- **状態**: ✅ 完了（2025-10-09）
+- **対応済み**:
+  - SSH秘密鍵パス修正（`/usr/src` → `/app`）
+  - fsGroup設定でパーミッション解決
+  - Kubernetes Secretを最新の鍵で更新
 
-#### 2. SSH接続テスト
-- **状態**: ⚠️ 未確認
-- **影響**: tail -f開始時にSSH接続エラーが発生する可能性
-- **対応**: 
-  - SSH秘密鍵が正しく配置されているか確認
-  - CVMへのSSH接続をテスト
-  - known_hostsの設定確認
+#### 3. ログビューワー表示
+- **状態**: ✅ 完了（2025-10-09）
+- **対応済み**: 2層構造に戻してスクロール・表示を修正
 
-#### 3. ネットワークポリシー
+### 🟡 要確認
+
+#### 4. ネットワークポリシー
 - **状態**: ⚠️ 未確認
 - **影響**: Kubernetes PodからCVMへのSSH接続（ポート22）がブロックされる可能性
 - **対応**: NetworkPolicyまたはファイアウォール設定を確認
 
 ### 🟢 オプション
 
-#### 4. `/api/rt/taillist` エンドポイント
+#### 5. `/api/rt/taillist` エンドポイント
 - **状態**: ❌ 未実装
 - **影響**: なし（現在は使用されていない）
 - **対応**: 将来的に動的ログファイルリスト取得が必要な場合に実装
@@ -356,7 +453,7 @@ io(`${backendUrl}/`)  // 例: https://10.55.23.41/
 ### エラー1: ログファイルリストが表示されない
 **原因**: `lib/rt-logs.ts`が存在しない  
 **症状**: ブラウザコンソールに`Module not found: Can't resolve '@/lib/rt-logs'`  
-**対処**: `lib/rt-logs.ts`を作成する
+**対処**: ✅ 解決済み（2025-10-05にファイル作成完了）
 
 ### エラー2: Socket.IO接続エラー
 **原因**: Ingressで`/socket.io`パスが設定されていない  
@@ -385,22 +482,22 @@ io(`${backendUrl}/`)  // 例: https://10.55.23.41/
 
 ### 🔴 即座に対応が必要
 
-1. **`lib/rt-logs.ts`ファイルを作成**
-   - ファイルパス: `frontend/next-app/loghoi/lib/rt-logs.ts`
-   - 内容: Nutanix CVMの主要ログファイルリスト
-   - 優先度: 最高
+1. **Socket.IO動作確認**
+   - 実際にCVMのログがリアルタイムで流れてくるかテスト
+   - バックエンドで`start_tail_f`イベントが受信されているか確認
+   - `tail_f_status`イベントのステータス確認
+   - フロントエンドで`log`イベントが受信されているか確認
 
 ### 🟡 動作確認後に対応
 
-2. **SSH接続テスト**
-   - バックエンドPodからCVMへのSSH接続確認
-   - SSH秘密鍵の配置確認
-   - known_hostsの設定確認
-
-3. **エラーハンドリング改善**
+2. **エラーハンドリング改善**
    - フロントエンドでのエラーメッセージ表示改善
    - タイムアウト処理の追加
    - 再接続ロジックの実装
+
+3. **ネットワークポリシー確認**
+   - Kubernetes PodからCVMへのSSH接続（ポート22）が可能か確認
+   - NetworkPolicyまたはファイアウォール設定の確認
 
 ### 🟢 将来的に検討
 
@@ -530,23 +627,25 @@ io(`${backendUrl}/`, {
 - ✅ バックエンドのSocket.IO実装は完了
 - ✅ フロントエンドのSocket.IO接続実装は完了
 - ✅ Ingressの設定は完了
-- ❌ **`lib/rt-logs.ts`が不足** ← これが原因でログファイルリストが表示されない
+- ✅ `lib/rt-logs.ts`ファイル作成完了（2025-10-05）
+- ✅ SSH接続設定完了（鍵パス修正、fsGroup設定、Secret更新）
+- ✅ ログビューワー表示修正完了（2層構造に戻す）
 
 ### 次のステップ
-1. **`lib/rt-logs.ts`を作成** （最優先）
-2. SSH接続テスト
-3. 動作確認
+1. **Socket.IO動作確認** - 実際にログが流れてくるかテスト
+2. **エラーハンドリング改善** - タイムアウト、再接続ロジック
+3. **パフォーマンス最適化** - ログバッファリング、メモリ管理
 
 ---
 
 作成日: 2025-10-09  
-最終更新: 2025-10-09
+最終更新: 2025-10-09 17:30
 
 ---
 
-## 解決した問題 (2025-10-09)
+## 解決した問題
 
-### 問題: Socket.IO接続が404エラー
+### 1. Socket.IO接続が404エラー (2025-10-09 午前)
 
 **症状**:
 ```
@@ -579,5 +678,171 @@ $ curl "https://10.55.23.41/socket.io/?EIO=4&transport=polling"
 ```
 
 ✅ Socket.IO接続が正常に動作
+
+---
+
+### 2. Socket.IO polling時の400 Bad Request (2025-10-09 午後)
+
+**症状**:
+```
+POST https://10.55.23.41/socket.io/?EIO=4&transport=polling&sid=xxx 400 (Bad Request)
+SocketIO connection error: xhr poll error
+```
+
+**原因**:
+- TraefikがSocket.IOのpollingリクエストをバッファリング
+- POSTリクエストのボディが正しく転送されない
+
+**解決方法**:
+1. **Ingressにバッファリング無効化アノテーション追加**
+   ```yaml
+   annotations:
+     traefik.ingress.kubernetes.io/router.buffering.flushinterval: "0"
+   ```
+
+2. **フロントエンドでWebSocket優先使用**
+   ```typescript
+   // 修正前
+   transports: ['polling', 'websocket']
+   
+   // 修正後
+   transports: ['websocket']
+   ```
+
+**修正ファイル**:
+- `k8s/ingress.yaml`
+- `frontend/next-app/loghoi/app/realtimelog/realtimelog-content.tsx`
+
+**フロントエンドイメージ**: v1.0.28 → v1.0.29
+
+✅ WebSocket接続が安定動作
+
+---
+
+### 3. SSH接続エラー (2025-10-09 午後)
+
+**症状**:
+```
+[Errno 13] Permission denied: '/app/config/.ssh/ntnx-lockdown'
+[Errno 2] No such file or directory: '/usr/src/config/.ssh/ntnx-lockdown'
+paramiko.ssh_exception.AuthenticationException: Authentication (publickey) failed
+```
+
+**原因**:
+1. SSH鍵パスがハードコード（`/usr/src/config/.ssh/ntnx-lockdown`）
+2. SSH鍵ファイルの権限不足（root:root、appuserが読めない）
+3. Kubernetes Secretの鍵が古い（ローカルの鍵と不一致）
+
+**解決方法**:
+
+1. **SSH鍵パスを修正**
+   ```python
+   # 修正前
+   private_key_path = '/usr/src/config/.ssh/ntnx-lockdown'
+   
+   # 修正後
+   private_key_path = '/app/config/.ssh/ntnx-lockdown'
+   ```
+
+2. **Pod securityContextにfsGroupを追加**
+   ```yaml
+   securityContext:
+     fsGroup: 1000  # appuserのグループID
+   ```
+
+3. **Kubernetes Secretを最新の鍵で更新**
+   ```bash
+   kubectl create secret generic loghoi-secrets \
+     --from-file=ntnx-lockdown=/home/nutanix/konchangakita/blog-loghoi/ongoing/backend/config/.ssh/ntnx-lockdown \
+     --from-file=ntnx-lockdown.pub=/home/nutanix/konchangakita/blog-loghoi/ongoing/backend/config/.ssh/ntnx-lockdown.pub \
+     --dry-run=client -o yaml | kubectl apply -f -
+   ```
+
+**修正ファイル**:
+- `backend/core/broker_col.py`
+- `backend/core/common.py`
+- `k8s/backend-deployment.yaml`
+
+**バックエンドイメージ**: v1.0.14 → v1.0.15
+
+✅ SSH接続が正常動作
+
+---
+
+### 4. ログビューワー表示の不具合 (2025-10-09 午後)
+
+**症状**:
+- ログが画面内で途切れ、スクロールバーが表示されない
+- 横スクロールが機能しない
+- ログが長いとビューワーが横に伸びてしまう
+
+**原因**:
+- `LogViewer`コンポーネント共通化時に複雑な3層構造を導入
+- `overflow-auto`が内側のdivに設定され、外側のdivが固定サイズになっていた
+
+**解決方法**:
+共通化前のシンプルな2層構造に戻す
+
+```tsx
+// 正しい構造（2層）
+<div className='mockup-code h-[480px] overflow-auto text-left mx-5' ref={logViewRef}>
+  <div className='w-[640px]'>
+    <pre className='px-2'>
+      <code>
+        {filteredLogs.map((log: LogEntry, i) => {
+          return (
+            <div className='text-xs m-0 flex items-start' key={i}>
+              <span className='text-gray-500 mr-1 min-w-[40px] flex-shrink-0 text-right'>
+                {String(i + 1).padStart(4, ' ')}
+              </span>
+              <span className='text-primary font-bold mr-1 min-w-[80px] flex-shrink-0'>
+                [{log.name}]
+              </span>
+              <span className='text-gray-300 flex-1 break-all'>
+                {log.line}
+              </span>
+            </div>
+          )
+        })}
+      </code>
+    </pre>
+  </div>
+</div>
+```
+
+**重要なポイント**:
+1. **外側の`mockup-code`に`overflow-auto`** - スクロールは外側で処理
+2. **内側は`w-[640px]`のみ** - 640px固定幅、余計な`overflow-auto`や`h-full`は不要
+3. **シンプルな2層構造** - `mockup-code` > `w-[640px]` > `pre` > `code`
+4. **ログ行は`break-all`** - 長い行は折り返す
+5. **`flex items-start`** - 行番号とログ名を横並びに
+
+**修正ファイル**:
+- `components/shared/LogViewer.tsx`
+
+**フロントエンドイメージ**: v1.0.28 → v1.0.29
+
+✅ ログビューワーが正常に表示・スクロール動作
+
+---
+
+## 現在の既知の問題
+
+### ⚠️ Socket.IOの挙動が不安定
+
+**症状**:
+- WebSocket接続は確立されるが、実際のログデータが流れてこない可能性
+- `start_tail_f`イベント送信後のレスポンスが不明確
+
+**次の調査項目**:
+1. バックエンドで`start_tail_f`イベントが正しく受信されているか
+2. SSH接続が確立され、`tail -f`が実行されているか
+3. `log`イベントが正しく送信されているか
+4. フロントエンドで`log`イベントが正しく受信されているか
+
+**調査方法**:
+- バックエンドログで`start_tail_f`の受信を確認
+- `tail_f_status`イベントのステータスを確認
+- フロントエンドのコンソールで受信イベントをログ出力
 
 ---
