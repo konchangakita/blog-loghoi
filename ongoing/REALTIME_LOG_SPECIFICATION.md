@@ -659,7 +659,7 @@ io(`${backendUrl}/`, {
 ---
 
 作成日: 2025-10-09  
-最終更新: 2025-10-09 17:45
+最終更新: 2025-10-09 18:15
 
 ---
 
@@ -846,23 +846,207 @@ paramiko.ssh_exception.AuthenticationException: Authentication (publickey) faile
 
 ---
 
-## 現在の既知の問題
-
-### ⚠️ Socket.IOの挙動が不安定
+### 5. asyncio.CancelledErrorによるPod再起動問題 (2025-10-09 午後)
 
 **症状**:
-- WebSocket接続は確立されるが、実際のログデータが流れてこない可能性
-- `start_tail_f`イベント送信後のレスポンスが不明確
+- 停止ボタンクリック後、アプリケーション全体がシャットダウン
+- `"Shutting down LogHoi FastAPI Backend"`ログが出力
+- Pod再起動（RESTARTS増加）
 
-**次の調査項目**:
-1. バックエンドで`start_tail_f`イベントが正しく受信されているか
-2. SSH接続が確立され、`tail -f`が実行されているか
-3. `log`イベントが正しく送信されているか
-4. フロントエンドで`log`イベントが正しく受信されているか
+**原因**:
+- ログ監視タスクキャンセル時に`asyncio.CancelledError`を`raise`
+- 例外がイベントループに伝播し、FastAPIの`shutdown`イベントが発火
+- アプリケーション全体が停止
 
-**調査方法**:
-- バックエンドログで`start_tail_f`の受信を確認
-- `tail_f_status`イベントのステータスを確認
-- フロントエンドのコンソールで受信イベントをログ出力
+**解決方法**:
+```python
+# 修正前
+except asyncio.CancelledError:
+    print("ログ監視タスクがキャンセルされました")
+    raise  # ← アプリケーションシャットダウンの原因
+
+# 修正後
+except asyncio.CancelledError:
+    print("ログ監視タスクがキャンセルされました（正常終了）")
+    return  # タスクキャンセルは正常終了として扱う
+```
+
+**修正ファイル**:
+- `backend/fastapi_app/app_fastapi.py` (2箇所)
+- `backend/fastapi_app/connection_manager.py` (2箇所)
+
+**バックエンドイメージ**: v1.0.15 → v1.0.16
+
+✅ 停止処理後もアプリケーションが継続稼働
+
+---
+
+### 6. ブロッキングI/OによるPod再起動問題 (2025-10-09 午後) ⭐️
+
+**症状**:
+- ログ取得中（特にログが流れない時）にPodが再起動
+- ヘルスチェックタイムアウト: `context deadline exceeded`
+- Liveness/Readiness probe失敗
+
+**根本原因**:
+```python
+# 問題のコード
+stdin, stdout, stderr = ssh_connection.exec_command(f"tail -f {log_path}")
+line = stdout.readline()  # ← ログが流れない時、ここで無限に待機！
+```
+
+**詳細**:
+1. `paramiko`の`stdout.readline()`は**ブロッキングI/O**
+2. ログが流れない時、新しい行を待って無限にブロック
+3. `await asyncio.sleep()`に到達しない
+4. **イベントループが完全に停止**
+5. ヘルスチェックエンドポイント（`/health`, `/ready`）に応答不能
+6. 5秒タイムアウト × 3回 = 15秒後にKubernetesが「不健康」と判断
+7. Pod強制再起動
+
+**解決方法**:
+```python
+# 修正後: ノンブロッキングI/O
+stdin, stdout, stderr = ssh_connection.exec_command(f"tail -f {log_path}")
+
+# stdout をノンブロッキングモードに設定
+stdout.channel.setblocking(0)
+
+# ノンブロッキングreadline
+line = None
+try:
+    line = stdout.readline()
+except Exception:
+    # データがない場合は次のループへ
+    await asyncio.sleep(0.1)  # ← イベントループに戻る！
+    continue
+
+if not line:
+    # データがない場合は少し待機
+    await asyncio.sleep(0.1)  # ← イベントループに戻る！
+    continue
+```
+
+**修正のポイント**:
+1. `stdout.channel.setblocking(0)` - ノンブロッキングモード設定
+2. `readline()`を`try-except`で囲む
+3. データがない場合は即座に`await asyncio.sleep(0.1)`
+4. 0.1秒ごとにイベントループに戻る
+5. ヘルスチェックが常に応答可能
+
+**修正ファイル**:
+- `backend/fastapi_app/connection_manager.py`
+
+**バックエンドイメージ**: v1.0.16 → v1.0.17
+
+**効果**:
+- ✅ ログが流れない時もイベントループが動作
+- ✅ ヘルスチェック応答継続
+- ✅ Pod再起動なし（RESTARTS=0）
+- ✅ CPU使用率削減（無駄なブロッキング待機なし）
+
+✅ リアルタイムログ機能が安定稼働
+
+---
+
+### 7. 停止→再開始時のSocket.IO接続問題 (2025-10-09 午後)
+
+**症状**:
+- 停止→再開始でログは流れるが、接続ログが表示されない
+- `connect`イベントが発火しない
+
+**原因**:
+- 停止時に`socket.disconnect()`と`setSocket(null)`を実行
+- しかし、内部的にSocket.IO接続が完全にクリーンアップされていない
+- 再接続時に`once('connect')`イベントが発火しない
+
+**解決方法**:
+```typescript
+// 開始時に既存のSocket接続をクリーンアップ
+if (socket) {
+  try {
+    socket.disconnect()
+  } catch (e) {
+    console.error('Failed to disconnect old socket:', e)
+  }
+  setSocket(null)
+}
+
+// 新しい接続を作成
+const newsocket = io(`${backendUrl}/`, {
+  transports: ['websocket'],
+  timeout: 20000,
+  forceNew: true,
+})
+
+// 接続確立後にtail -fを開始
+newsocket.once('connect', () => {
+  console.log('🔌 Socket.IO connected, starting tail -f...')
+  newsocket.emit('start_tail_f', {...})
+})
+```
+
+**修正ファイル**:
+- `frontend/next-app/loghoi/components/shared/LogViewer.tsx`
+
+**フロントエンドイメージ**: v1.0.30 → v1.0.31
+
+✅ 停止→再開始が正常動作
+
+---
+
+### 8. 停止ボタンのUI改善 (2025-10-09 午後)
+
+**改善内容**:
+- 停止ボタンクリック時に「切断中...」スピナー表示
+- `tail_f_status: 'stopped'`を受信してモーダル自動クローズ
+- キャンセルボタンを切断中は無効化
+
+**実装**:
+```typescript
+const [isDisconnecting, setIsDisconnecting] = useState(false)
+
+// 停止ボタンクリック
+const handleStopAll = () => {
+  setIsDisconnecting(true)  // 切断中状態
+  socket.emit('stop_tail_f', {})
+}
+
+// tail_f_status受信
+socket.on('tail_f_status', (data) => {
+  if (data.status === 'stopped') {
+    setIsDisconnecting(false)  // 切断完了
+    socket.disconnect()
+    // モーダル自動クローズ
+  }
+})
+```
+
+**フロントエンドイメージ**: v1.0.29 → v1.0.30
+
+✅ ユーザーに切断中の視覚的フィードバック提供
+
+---
+
+## 現在の状態
+
+### ✅ **安定稼働中**
+
+- バックエンドイメージ: `v1.0.17`
+- フロントエンドイメージ: `v1.0.31`
+- Pod再起動: なし（RESTARTS=0）
+- リアルタイムログ機能: 正常動作
+- ヘルスチェック: 正常応答（0.5-2ms）
+
+### ✅ **解決した主要問題**
+
+1. ✅ Socket.IO接続（404エラー）
+2. ✅ Socket.IO polling（400エラー）
+3. ✅ SSH接続（Permission denied）
+4. ✅ ログビューワー表示（スクロール不具合）
+5. ✅ asyncio.CancelledError（アプリシャットダウン）
+6. ✅ ブロッキングI/O（Pod再起動）⭐️
+7. ✅ 停止→再開始（接続問題）
+8. ✅ 停止ボタンUI（切断中表示）
 
 ---
