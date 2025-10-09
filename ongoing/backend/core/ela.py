@@ -4,21 +4,25 @@ from elasticsearch import helpers
 from datetime import datetime
 from datetime import timezone, timedelta
 import json
+import os
 
 import common
 
-# 外部にElasticsearchを立てた時用
-try:
-    f = open("setting.json", "r")
-    setting_json = json.load(f)
-    ELASTIC_SERVER = setting_json["ELASTIC_SERVER"]
-    f.close()
+# Elasticsearch接続設定
+# 優先順位: 環境変数 > setting.json > デフォルト
+ELASTIC_SERVER = os.getenv('ELASTICSEARCH_URL')
 
-except:
-    ELASTIC_SERVER = "http://elasticsearch:9200"
+if not ELASTIC_SERVER:
+    # 外部にElasticsearchを立てた時用
+    try:
+        f = open("setting.json", "r")
+        setting_json = json.load(f)
+        ELASTIC_SERVER = setting_json["ELASTIC_SERVER"]
+        f.close()
+    except:
+        ELASTIC_SERVER = "http://elasticsearch-service:9200"
 
 print("##### ELASTIC_SERVER:", ELASTIC_SERVER, "######")
-
 
 def change_timestamp(timestamp):
     timestamp_dict = []
