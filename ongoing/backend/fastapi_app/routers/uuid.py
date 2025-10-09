@@ -340,7 +340,13 @@ class UuidAPI:
         """Get latest UUID dataset"""
         timeslot = es.get_timeslot(cluster_name)
         if not timeslot:
-            raise HTTPException(status_code=404, detail="No data found for cluster")
+            # データが存在しない場合は空の構造を返す（404ではなく200で返す）
+            return {
+                'list': {},
+                'cluster_name': cluster_name,
+                'timeslot': [],
+                'timestamp_list': None
+            }
         
         timestamp_utcstr = timeslot[0]['utc_time']
         timestamp_list = change_timestamp(timestamp_utcstr)
@@ -521,11 +527,9 @@ async def get_latest_dataset(request: UuidQueryRequest):
         def _factory():
             return uuid_api.get_latestdataset(request.cluster)
         result = cache.get_or_set(cache_key, ttl_seconds=15, factory=_factory)
-        if not result or not result.get('list'):
-            raise NotFoundError(
-                message="UUIDデータが見つかりません",
-                details={"cluster": request.cluster}
-            )
+        # データが空でも正常レスポンスとして返す（フロントエンドで「データなし」表示）
+        if not result:
+            result = {'list': {}, 'cluster_name': request.cluster, 'timeslot': [], 'timestamp_list': None}
         
         return create_success_response(
             data=result,
