@@ -7,15 +7,15 @@ import paramiko
 import re
 from base64 import b64encode
 
-from ..core.ela import ElasticGateway
-from ..utils.common import change_timestamp
-from ..utils.error_handler import (
+from core.ela import ElasticGateway
+from fastapi_app.utils.common import change_timestamp
+from fastapi_app.utils.error_handler import (
     APIError, ValidationError, AuthenticationError, NotFoundError, 
     create_success_response, create_error_response, log_error,
     validate_required_fields, validate_http_status
 )
-from ..utils.cache import SimpleTTLCache
-from ..utils.structured_logger import api_logger, EventType, log_execution_time
+from fastapi_app.utils.cache import SimpleTTLCache
+from fastapi_app.utils.structured_logger import api_logger, EventType, log_execution_time
 
 router = APIRouter(prefix="/api/uuid", tags=["uuid"])
 cache = SimpleTTLCache()
