@@ -28,10 +28,17 @@ spec:
             name: loghoi-backend-service
             port:
               number: 7776
+      - path: /kibana
+        pathType: Prefix
+        backend:
+          service:
+            name: kibana-service
+            port:
+              number: 5601
       - path: /
         pathType: Prefix
         backend:
           service:
             name: loghoi-frontend-service
             port:
-              number: 3000
+              number: 7777

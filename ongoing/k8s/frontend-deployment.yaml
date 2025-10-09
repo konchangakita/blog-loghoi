@@ -22,10 +22,10 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: konchangakita/loghoi-frontend:v1.0.10
+        image: konchangakita/loghoi-frontend:v1.0.12
         imagePullPolicy: Always
         ports:
-        - containerPort: 3000
+        - containerPort: 7777
           name: http
           protocol: TCP
         env:
@@ -54,7 +54,7 @@ spec:
         livenessProbe:
           httpGet:
             path: /
-            port: 3000
+            port: 7777
           initialDelaySeconds: 30
           periodSeconds: 10
           timeoutSeconds: 5
@@ -62,7 +62,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /
-            port: 3000
+            port: 7777
           initialDelaySeconds: 5
           periodSeconds: 5
           timeoutSeconds: 3
