@@ -6,7 +6,7 @@ metadata:
   labels:
     app: loghoi
     component: frontend
-    version: v1.0.0
+    version: v1.0.3
 spec:
   replicas: 2
   selector:
@@ -18,12 +18,12 @@ spec:
       labels:
         app: loghoi
         component: frontend
-        version: v1.0.0
+        version: v1.0.3
     spec:
       containers:
       - name: frontend
-        image: konchangakita/loghoi-frontend:v1.0.0
-        imagePullPolicy: IfNotPresent
+        image: konchangakita/loghoi-frontend:v1.0.3
+        imagePullPolicy: Always
         ports:
         - containerPort: 3000
           name: http

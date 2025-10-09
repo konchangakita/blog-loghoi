@@ -12,18 +12,22 @@ RUN apt-get update -y && \
 # アプリケーションディレクトリの作成
 WORKDIR /app
 
-# 依存関係のインストール
-COPY requirements.txt .
+# 依存関係のインストール（ビルドコンテキストがongoing/のため）
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -U pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # アプリケーションコードのコピー
-COPY fastapi_app ./fastapi_app
-COPY core ./core
-COPY ../shared ./shared
+COPY backend/fastapi_app ./fastapi_app
+COPY backend/core ./core
+COPY backend/config ./config
+COPY shared ./shared
+
+# Python パス設定（重要！）
+ENV PYTHONPATH=/app:/app/shared
 
 # アップロードディレクトリとログディレクトリの作成
-RUN mkdir -p /app/uploads /app/logs
+RUN mkdir -p /app/uploads /app/logs /app/output/log /app/output/zip
 
 # 非rootユーザーの作成
 RUN useradd -m -u 1000 appuser && \
