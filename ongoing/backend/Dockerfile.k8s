@@ -24,7 +24,7 @@ COPY backend/config ./config
 COPY shared ./shared
 
 # Python パス設定（重要！）
-ENV PYTHONPATH=/app:/app/shared
+ENV PYTHONPATH=/app:/app/shared:/app/fastapi_app
 
 # アップロードディレクトリとログディレクトリの作成
 RUN mkdir -p /app/uploads /app/logs /app/output/log /app/output/zip
