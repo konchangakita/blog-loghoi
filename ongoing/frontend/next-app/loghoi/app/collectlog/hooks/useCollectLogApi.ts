@@ -53,11 +53,13 @@ export const useCollectLogApi = () => {
         { cvm }
       )
       
-      if (!jobResponse || !jobResponse.data?.job_id) {
+      // executeApiCallは result.data を返すので、jobResponseは既に { job_id, status } の形式
+      if (!jobResponse || !jobResponse.job_id) {
+        console.error('ジョブレスポンス:', jobResponse)
         throw new Error('ジョブIDが取得できませんでした')
       }
       
-      const jobId = jobResponse.data.job_id
+      const jobId = jobResponse.job_id
       console.log('ログ収集ジョブ開始:', jobId)
       
       // ジョブ完了をポーリング（最大5分、5秒ごと）
@@ -71,14 +73,15 @@ export const useCollectLogApi = () => {
           { jobId }
         )
         
-        if (statusResponse?.data?.status === 'completed') {
+        // executeApiCallは result.data を返すので、statusResponseは既にジョブオブジェクト
+        if (statusResponse?.status === 'completed') {
           console.log('ログ収集完了:', jobId)
           return { message: 'finished collect log' }
-        } else if (statusResponse?.data?.status === 'failed') {
-          throw new Error(`ログ収集失敗: ${statusResponse.data.error}`)
+        } else if (statusResponse?.status === 'failed') {
+          throw new Error(`ログ収集失敗: ${statusResponse.error}`)
         }
         
-        console.log(`ジョブステータス: ${statusResponse?.data?.status} (${i + 1}/${maxAttempts})`)
+        console.log(`ジョブステータス: ${statusResponse?.status} (${i + 1}/${maxAttempts})`)
       }
       
       throw new Error('ログ収集がタイムアウトしました')
