@@ -10,6 +10,9 @@ metadata:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     # Socket.IO用の設定（リクエストバッファリング無効化）
     traefik.ingress.kubernetes.io/buffering: "false"
+    # バックエンドへのリクエストタイムアウトを10分に延長（ログ収集は時間がかかる）
+    traefik.ingress.kubernetes.io/service.serversscheme: http
+    traefik.ingress.kubernetes.io/service.passhostheader: "true"
 spec:
   ingressClassName: kommander-traefik
   rules:

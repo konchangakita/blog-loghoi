@@ -18,13 +18,13 @@ spec:
       labels:
         app: loghoi
         component: backend
-        version: v1.0.17
+        version: v1.0.18
     spec:
       securityContext:
         fsGroup: 1000
       containers:
       - name: backend
-        image: konchangakita/loghoi-backend:v1.0.17
+        image: konchangakita/loghoi-backend:v1.0.18
         imagePullPolicy: Always
         ports:
         - containerPort: 7776

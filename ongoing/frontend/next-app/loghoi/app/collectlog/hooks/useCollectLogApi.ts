@@ -42,7 +42,8 @@ export const useCollectLogApi = () => {
     try {
       validateRequiredFields({ cvm }, ['cvm'])
       
-      return await executeApiCall(
+      // ログ収集ジョブを開始
+      const jobResponse = await executeApiCall(
         () => fetch(`${getBackendUrl()}/api/col/getlogs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -51,6 +52,37 @@ export const useCollectLogApi = () => {
         'collectLogs',
         { cvm }
       )
+      
+      if (!jobResponse || !jobResponse.data?.job_id) {
+        throw new Error('ジョブIDが取得できませんでした')
+      }
+      
+      const jobId = jobResponse.data.job_id
+      console.log('ログ収集ジョブ開始:', jobId)
+      
+      // ジョブ完了をポーリング（最大5分、5秒ごと）
+      const maxAttempts = 60  // 5分 = 60 * 5秒
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(resolve => setTimeout(resolve, 5000)) // 5秒待機
+        
+        const statusResponse = await executeApiCall(
+          () => fetch(`${getBackendUrl()}/api/col/job/${jobId}`),
+          'getJobStatus',
+          { jobId }
+        )
+        
+        if (statusResponse?.data?.status === 'completed') {
+          console.log('ログ収集完了:', jobId)
+          return { message: 'finished collect log' }
+        } else if (statusResponse?.data?.status === 'failed') {
+          throw new Error(`ログ収集失敗: ${statusResponse.data.error}`)
+        }
+        
+        console.log(`ジョブステータス: ${statusResponse?.data?.status} (${i + 1}/${maxAttempts})`)
+      }
+      
+      throw new Error('ログ収集がタイムアウトしました')
+      
     } catch (error) {
       if (error instanceof APIError) {
         return null
