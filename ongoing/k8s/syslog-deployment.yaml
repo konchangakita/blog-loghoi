@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: filebeat
-        image: konchangakita/loghoi-syslog:v1.0.0
+        image: konchangakita/loghoi-syslog:v1.0.1
         imagePullPolicy: Always
         ports:
         - containerPort: 7515
@@ -85,4 +85,5 @@ spec:
     port: 5066
     targetPort: 5066
     protocol: TCP
+
 

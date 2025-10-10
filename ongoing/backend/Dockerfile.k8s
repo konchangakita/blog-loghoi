@@ -25,6 +25,8 @@ COPY shared ./shared
 
 # Python パス設定（重要！）
 ENV PYTHONPATH=/app:/app/shared:/app/fastapi_app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # アップロードディレクトリとログディレクトリの作成
 RUN mkdir -p /app/uploads /app/logs /app/output/log /app/output/zip

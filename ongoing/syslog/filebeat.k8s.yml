@@ -2,6 +2,33 @@ filebeat.inputs:
   - type: syslog
     protocol.tcp:
       host: "0.0.0.0:7515"
+    # Syslogのhostname情報をそのまま保持
+    fields_under_root: false
+    fields:
+      log_type: syslog
+
+# Syslogのhostnameを正しく抽出するプロセッサ
+processors:
+  - decode_json_fields:
+      fields: ["message"]
+      target: ""
+      overwrite_keys: false
+      add_error_key: true
+      max_depth: 1
+  # SyslogのホストフィールドをElasticsearchのhostnameフィールドにマップ
+  - rename:
+      fields:
+        - from: "host.name"
+          to: "filebeat_hostname"
+      ignore_missing: true
+      fail_on_error: false
+  # Syslogの元のhostname（log.syslog.hostname）をhost.nameに設定
+  - rename:
+      fields:
+        - from: "log.syslog.hostname"
+          to: "hostname"
+      ignore_missing: true
+      fail_on_error: false
 
 # Kubernetes環境用のElasticsearch設定
 output.elasticsearch:
@@ -20,4 +47,5 @@ http.port: 5066
 # ログレベル
 logging.level: info
 logging.to_stderr: true
+
 

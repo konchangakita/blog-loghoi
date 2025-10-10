@@ -293,6 +293,65 @@ class ElasticGateway(ElasticAPI):
         res = es.search(index="filebeat-*", query=query, size=100)
         return [s["_source"] for s in res["hits"]["hits"]]
 
+    def search_syslog_by_keyword_and_time(self, keyword, start_datetime, end_datetime):
+        """
+        クラスター名フィルタなしでSyslogを検索（暫定対応）
+        
+        Args:
+            keyword: 検索キーワード
+            start_datetime: 開始日時（ISO形式）
+            end_datetime: 終了日時（ISO形式）
+        
+        Returns:
+            list: Syslogエントリのリスト
+        """
+        es = self.es
+        search_keyword = f"*{keyword}*" if keyword else "*"
+        
+        print(f"[Syslog Search] keyword={search_keyword}, time_range={start_datetime} to {end_datetime}")
+        
+        # クエリ構築
+        query = {
+            "function_score": {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "range": {
+                                    "@timestamp": {
+                                        "gte": start_datetime,
+                                        "lte": end_datetime,
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+        
+        # キーワードが指定されている場合のみ追加
+        if keyword:
+            query["function_score"]["query"]["bool"]["must"].append({
+                "query_string": {
+                    "default_field": "message",
+                    "query": search_keyword,
+                }
+            })
+        
+        print(f"[Syslog Search] Elasticsearch query: {query}")
+        
+        try:
+            res = es.search(index="filebeat-*", query=query, size=100, sort=[{"@timestamp": {"order": "desc"}}])
+            results = [s["_source"] for s in res["hits"]["hits"]]
+            print(f"[Syslog Search] Found {len(results)} results")
+            return results
+        except Exception as e:
+            print(f"[Syslog Search] Error: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
     def put_data_uuid(self, res):
         timestamp = datetime.utcnow()
         input_size = {}

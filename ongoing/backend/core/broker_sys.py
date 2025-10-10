@@ -27,17 +27,6 @@ class SyslogGateway:
             print(f"DEBUG: cluster_name = {cluster_name}, keyword = {keyword}")
             print(f"DEBUG: start_datetime = {start_datetime}, end_datetime = {end_datetime}")
 
-            # クラスター情報を取得
-            if not cluster_name:
-                print("No cluster name provided")
-                return []
-                
-            cluster_info = es.get_cluster_document(cluster_name)
-            if not cluster_info:
-                print(f"Cluster {cluster_name} not found")
-                return []
-            block_serial_number = cluster_info[0]["block_serial_number"]
-
             # 日付変換
             if start_datetime and end_datetime:
                 # ISO形式の日付をパースしてJST形式に変換
@@ -52,12 +41,14 @@ class SyslogGateway:
                 start_datetime_utc = "2024-01-01T00:00:00"
                 end_datetime_utc = "2024-12-31T23:59:59"
 
-            # Elasticsearchで検索
-            res = es.search_syslog_document(
-                block_serial_number, keyword, start_datetime_utc, end_datetime_utc
+            # Elasticsearchで検索（クラスター名フィルタなし - 暫定対応）
+            # TODO: Syslogにクラスター識別情報を付与する仕組みが必要
+            print(f"Searching syslog: keyword={keyword}, time_range={start_datetime_utc} to {end_datetime_utc}")
+            res = es.search_syslog_by_keyword_and_time(
+                keyword, start_datetime_utc, end_datetime_utc
             )
-            data = [s["message"] for s in res]
-            print("elastic res data >>>>>>>>>>>>>", data)
+            data = [s for s in res]
+            print(f"elastic res data count: {len(data)}")
             return data
             
         except Exception as e:

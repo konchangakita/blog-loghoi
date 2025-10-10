@@ -1,28 +1,29 @@
 FROM elastic/filebeat:7.17.9
 
-# Filebeatユーザーで実行
 USER root
 
-# 必要なディレクトリを作成
+# データディレクトリの作成と権限設定
 RUN mkdir -p /usr/share/filebeat/data && \
     chown -R filebeat:filebeat /usr/share/filebeat/data
 
-# Kubernetes用のFilebeat設定ファイルをコピー
+# Kubernetes用Filebeat設定ファイルをコピー
 COPY --chown=filebeat:filebeat filebeat.k8s.yml /usr/share/filebeat/filebeat.yml
 
-# 設定ファイルのパーミッション設定
+# 設定ファイルの権限を設定
 RUN chmod go-w /usr/share/filebeat/filebeat.yml
 
-# Syslog受信ポート（TCP 7515）を公開
+# Syslog受信用ポートを公開
 EXPOSE 7515/tcp
 
-# Filebeatユーザーに切り替え
+# HTTPエンドポイント（ヘルスチェック用）
+EXPOSE 5066/tcp
+
+# filebeatユーザーに切り替え
 USER filebeat
 
-# ヘルスチェック（Filebeatのメトリクスエンドポイントを確認）
+# ヘルスチェック
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:5066/ || exit 1
+  CMD curl -f http://localhost:5066/ || exit 1
 
-# Filebeatを起動
+# Filebeat起動
 CMD ["filebeat", "-e", "-strict.perms=false"]
-
