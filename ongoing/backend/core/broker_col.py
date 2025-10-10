@@ -19,7 +19,7 @@ os.makedirs(OUTPUT_LOGDIR, exist_ok=True)
 os.makedirs(OUTPUT_ZIPDIR, exist_ok=True)
 
 class CollectLogGateway():
-    def collect_logs(self, cvm):
+    def collect_logs(self, cvm, progress_callback=None):
         # make log/download directory
         _jst_time = datetime.now().astimezone(timezone(timedelta(hours=+9)))
         folder_name = datetime.strftime(_jst_time, "loghoi_%Y%m%d_%H%M%S")
@@ -53,7 +53,18 @@ class CollectLogGateway():
 
         success_files = 0
         failed_files = 0
-        for item in logfile_list:
+        total_files = len(logfile_list)
+        
+        # 進捗コールバック: ログファイルダウンロード開始
+        if progress_callback:
+            progress_callback({
+                "stage": "logfiles",
+                "current": 0,
+                "total": total_files,
+                "message": "ログファイルのダウンロードを開始しています..."
+            })
+        
+        for i, item in enumerate(logfile_list):
             remote_path = item["src_path"]
             local_path = log_folder
             base = os.path.basename(remote_path)
@@ -71,6 +82,14 @@ class CollectLogGateway():
                         sftp.close()
                         ssh_client.close()
                         success_files += 1
+                        # 進捗更新
+                        if progress_callback:
+                            progress_callback({
+                                "stage": "logfiles",
+                                "current": i + 1,
+                                "total": total_files,
+                                "message": f"ログファイルをダウンロード中... ({i + 1}/{total_files})"
+                            })
                         continue
                     except Exception as se:
                         pass
@@ -98,6 +117,14 @@ class CollectLogGateway():
                     timeout=60,
                 )
                 success_files += 1
+                # 進捗更新
+                if progress_callback:
+                    progress_callback({
+                        "stage": "logfiles",
+                        "current": i + 1,
+                        "total": total_files,
+                        "message": f"ログファイルをダウンロード中... ({i + 1}/{total_files})"
+                    })
                 continue
             except subprocess.CalledProcessError as e:
                 pass
@@ -117,8 +144,16 @@ class CollectLogGateway():
                         with open(local_file, 'wb') as lf:
                             lf.write(content)
                         success_files += 1
-                    ssh_fallback.close()
-                    continue
+                        # 進捗更新
+                        if progress_callback:
+                            progress_callback({
+                                "stage": "logfiles",
+                                "current": i + 1,
+                                "total": total_files,
+                                "message": f"ログファイルをダウンロード中... ({i + 1}/{total_files})"
+                            })
+                        ssh_fallback.close()
+                        continue
             except Exception as fe:
                 failed_files += 1
             # 続行（他ファイルは可能な限り収集）
@@ -128,7 +163,18 @@ class CollectLogGateway():
         # Get Command result
         print(">>>>>>>> Command Execute <<<<<<<<<")
         ssh = common.connect_ssh(cvm)
-        for command_item in command_list:
+        total_commands = len(command_list)
+        
+        # 進捗コールバック: コマンド実行開始
+        if progress_callback:
+            progress_callback({
+                "stage": "commands",
+                "current": 0,
+                "total": total_commands,
+                "message": "コマンドを実行しています..."
+            })
+        
+        for cmd_idx, command_item in enumerate(command_list):
             print("command: ", command_item)
 
             try:
@@ -144,12 +190,38 @@ class CollectLogGateway():
                 # save logfile
                 with open(log_filename, "w") as f:
                     f.write(output.decode("utf-8").rstrip())
+                
+                # 進捗更新
+                if progress_callback:
+                    progress_callback({
+                        "stage": "commands",
+                        "current": cmd_idx + 1,
+                        "total": total_commands,
+                        "message": f"コマンドを実行中... ({cmd_idx + 1}/{total_commands})"
+                    })
             except Exception as e:
                 print("command error skipped: ", command_item)
+                # 進捗更新（エラー時も）
+                if progress_callback:
+                    progress_callback({
+                        "stage": "commands",
+                        "current": cmd_idx + 1,
+                        "total": total_commands,
+                        "message": f"コマンドを実行中... ({cmd_idx + 1}/{total_commands})"
+                    })
                 continue
         ssh.close()
 
         # Archive Zip（完了後に所有者をホストUID/GIDへ合わせる）
+        # 進捗コールバック: ZIP作成開始
+        if progress_callback:
+            progress_callback({
+                "stage": "zip",
+                "current": 0,
+                "total": 100,
+                "message": "ZIPファイルを作成しています..."
+            })
+        
         # archive
         zip_filename = f"{folder_name}.zip"
         zip_path = os.path.join(OUTPUT_ZIPDIR, zip_filename)
@@ -161,6 +233,15 @@ class CollectLogGateway():
                 if os.path.isfile(filepath):
                     # ZIPに追加。arcnameでZIP内のファイル名を指定
                     zf.write(filepath, arcname=filename)
+        
+        # 進捗コールバック: ZIP作成完了
+        if progress_callback:
+            progress_callback({
+                "stage": "zip",
+                "current": 100,
+                "total": 100,
+                "message": "ZIPファイルの作成が完了しました"
+            })
 
         # 所有者調整（docker-compose環境でroot実行時の権限ズレ回避）
         try:
@@ -188,6 +269,16 @@ class CollectLogGateway():
             # ASCII表示に失敗しても処理は継続する
             pass
         print(f"[collectlog] done cvm={cvm} folder={folder_name} saved={success_files} failed={failed_files} zip={zip_filename}")
+        
+        # 進捗コールバック: 完全完了
+        if progress_callback:
+            progress_callback({
+                "stage": "done",
+                "current": 100,
+                "total": 100,
+                "message": "ログ収集が完了しました"
+            })
+        
         return {"message": "finished collect log"}
     
     # Zip list 取得
