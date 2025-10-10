@@ -32,9 +32,12 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
 # 必要なファイルのコピー
-COPY --from=builder /app/public ./public
+# standalonebuildでは、public/とstatic/、app/favicon.icoを明示的にコピーする必要がある
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# App Routerのfavicon（重要！）
+COPY --from=builder --chown=nextjs:nodejs /app/app/favicon.ico ./app/favicon.ico
 
 USER nextjs
 

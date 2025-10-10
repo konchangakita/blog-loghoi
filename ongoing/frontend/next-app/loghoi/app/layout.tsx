@@ -8,9 +8,9 @@ export const metadata: Metadata = {
   title: 'Log Hoihoi',
   description: 'Nutanix Log Collection & Analysis Platform',
   icons: {
-    icon: '/hoihoi.ico',
-    shortcut: '/hoihoi.ico',
-    apple: '/hoihoi.ico',
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/favicon.ico',
   },
 }
 
