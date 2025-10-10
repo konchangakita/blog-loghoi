@@ -105,6 +105,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const [isActive, setIsActive] = useState(false)
   const [socket, setSocket] = useState<any>(null)
   const [isConnecting, setIsConnecting] = useState(false)
+  const [isDisconnecting, setIsDisconnecting] = useState(false)
   const [realtimeLogs, setRealtimeLogs] = useState<LogEntry[]>([])
 
   // 表示するログを決定（メモ化）
@@ -195,7 +196,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     
     const backendUrl = getBackendUrl()
     const newsocket = io(`${backendUrl}/`, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket'],
       upgrade: true,
       rememberUpgrade: false,
       timeout: 20000,
@@ -213,6 +214,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     setSocket(null)
     setIsActive(false)
     setIsConnecting(false)
+    setIsDisconnecting(false)
   }
 
   // tail -f開始（realtimelog用）
@@ -253,47 +255,63 @@ const LogViewer: React.FC<LogViewerProps> = ({
       return
     }
 
+    // 既存のSocket接続があれば先に切断
+    if (socket) {
+      try {
+        socket.disconnect()
+      } catch (e) {
+        console.error('Failed to disconnect old socket:', e)
+      }
+      setSocket(null)
+    }
+
     setIsConnecting(true)
+    console.log('🔌 Creating new Socket.IO connection...')
     
     const backendUrl = getBackendUrl()
     const newsocket = io(`${backendUrl}/`, {
-      transports: ['polling', 'websocket'],
-      upgrade: true,
-      rememberUpgrade: false,
+      transports: ['websocket'],
       timeout: 20000,
       forceNew: true,
-      // engine.ioのping設定は型未定義のため未設定
     })
     
-    // 接続確立後にtail -fを開始する（クリック駆動で接続→SSH開始）
+    // 接続確立後にtail -fを開始する
     newsocket.once('connect', () => {
+      console.log('🔌 Socket.IO connected, starting tail -f...')
       try {
         newsocket.emit('start_tail_f', {
           cvm_ip: cvmChecked,
           log_path: tailPath,
           log_name: tailName
         })
+        setIsConnecting(false)
       } catch (e) {
         console.error('start_tail_f emit failed:', e)
-      } finally {
         setIsConnecting(false)
       }
     })
 
-    // 既に接続済みの場合のフォールバック
-    if (newsocket.connected) {
-      try {
-        newsocket.emit('start_tail_f', {
-          cvm_ip: cvmChecked,
-          log_path: tailPath,
-          log_name: tailName
-        })
-      } catch (e) {
-        console.error('start_tail_f emit failed (already connected):', e)
-      } finally {
+    // 接続エラー時の処理
+    newsocket.once('connect_error', (error: any) => {
+      console.error('🔌 Socket.IO connection error:', error)
+      setIsConnecting(false)
+      alert('Socket.IO接続エラー: ' + error.message)
+    })
+
+    // 接続タイムアウト（25秒）
+    const connectionTimeout = setTimeout(() => {
+      if (!newsocket.connected) {
+        console.error('🔌 Socket.IO connection timeout')
         setIsConnecting(false)
+        newsocket.disconnect()
+        alert('Socket.IO接続がタイムアウトしました')
       }
-    }
+    }, 25000)
+
+    // 接続成功時にタイムアウトをクリア
+    newsocket.once('connect', () => {
+      clearTimeout(connectionTimeout)
+    })
 
     setSocket(newsocket)
   }
@@ -302,22 +320,22 @@ const LogViewer: React.FC<LogViewerProps> = ({
   const handleStopAll = () => {
     if (variant !== 'realtime') return
     
+    // 切断中状態に設定
+    setIsDisconnecting(true)
     
     if (socket && socket.connected) {
       socket.emit('stop_tail_f', {})
-    }
-    
-    if (socket) {
-      socket.disconnect()
-      setSocket(null)
-    }
-    
-    setIsActive(false)
-    setIsConnecting(false)
-    
-    const modal = document.getElementById('my-modal') as HTMLInputElement
-    if (modal) {
-      modal.checked = false
+      // tail_f_statusイベントで'stopped'を受信したら切断完了
+    } else {
+      // ソケットが接続されていない場合は即座に完了
+      setIsActive(false)
+      setIsConnecting(false)
+      setIsDisconnecting(false)
+      
+      const modal = document.getElementById('my-modal') as HTMLInputElement
+      if (modal) {
+        modal.checked = false
+      }
     }
   }
 
@@ -339,10 +357,39 @@ const LogViewer: React.FC<LogViewerProps> = ({
     socket.on('tail_f_status', (data: any) => {
       if (data.status === 'started') {
         setIsActive(true)
+        setIsDisconnecting(false)
       } else if (data.status === 'stopped') {
         setIsActive(false)
+        setIsDisconnecting(false)
+        
+        // Socket.IO切断とクリーンアップ
+        if (socket) {
+          socket.disconnect()
+          setSocket(null)
+        }
+        setIsConnecting(false)
+        
+        // モーダルを閉じる
+        const modal = document.getElementById('my-modal') as HTMLInputElement
+        if (modal) {
+          modal.checked = false
+        }
       } else if (data.status === 'error') {
         setIsActive(false)
+        setIsDisconnecting(false)
+        
+        // エラー時もクリーンアップ
+        if (socket) {
+          socket.disconnect()
+          setSocket(null)
+        }
+        setIsConnecting(false)
+        
+        // モーダルを閉じる
+        const modal = document.getElementById('my-modal') as HTMLInputElement
+        if (modal) {
+          modal.checked = false
+        }
       }
     })
 
@@ -356,6 +403,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
     socket.on('disconnect', () => {
       setIsActive(false)
       setIsConnecting(false)
+      setIsDisconnecting(false)
     })
 
     socket.on('connect_error', (error: any) => {
@@ -396,6 +444,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
         }
         setIsActive(false)
         setIsConnecting(false)
+        setIsDisconnecting(false)
       }
     }
 
@@ -574,10 +623,17 @@ const LogViewer: React.FC<LogViewerProps> = ({
           <label className='modal-box relative text-left' htmlFor=''>
             <p className='text-lg font-bold'>ログ取得停止します</p>
             <div className='modal-action'>
-              <button className='btn btn-error' onClick={handleStopAll}>
-                STOP
-              </button>
-              <label htmlFor='my-modal' className='btn'>
+              {isDisconnecting ? (
+                <button className='btn btn-error btn-disabled'>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  切断中...
+                </button>
+              ) : (
+                <button className='btn btn-error' onClick={handleStopAll}>
+                  STOP
+                </button>
+              )}
+              <label htmlFor='my-modal' className={`btn ${isDisconnecting ? 'btn-disabled' : ''}`}>
                 キャンセル
               </label>
             </div>
@@ -585,7 +641,7 @@ const LogViewer: React.FC<LogViewerProps> = ({
         </label>
       </div>
 
-      <div className='mockup-code h-[480px] text-left mx-5' ref={logViewRef}>
+      <div className='mockup-code h-[480px] overflow-auto text-left mx-5' ref={logViewRef}>
         <div className='w-[640px]'>
           {shouldUseVirtualization ? (
             <VirtualizedLogList
@@ -595,27 +651,25 @@ const LogViewer: React.FC<LogViewerProps> = ({
               overscan={10}
             />
           ) : (
-            <div className='h-full overflow-auto'>
-              <pre className='px-2'>
-                <code>
-                  {filteredLogs.map((log: LogEntry, i) => {
-                    return (
-                      <div className='text-xs m-0 flex items-start' key={i}>
-                        <span className='text-gray-500 mr-1 min-w-[40px] flex-shrink-0 text-right'>
-                          {String(i + 1).padStart(4, ' ')}
-                        </span>
-                        <span className='text-primary font-bold mr-1 min-w-[80px] flex-shrink-0'>
-                          [{log.name}]
-                        </span>
-                        <span className='text-gray-300 flex-1 break-all'>
-                          {log.line}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </code>
-              </pre>
-            </div>
+            <pre className='px-2'>
+              <code>
+                {filteredLogs.map((log: LogEntry, i) => {
+                  return (
+                    <div className='text-xs m-0 flex items-start' key={i}>
+                      <span className='text-gray-500 mr-1 min-w-[40px] flex-shrink-0 text-right'>
+                        {String(i + 1).padStart(4, ' ')}
+                      </span>
+                      <span className='text-primary font-bold mr-1 min-w-[80px] flex-shrink-0'>
+                        [{log.name}]
+                      </span>
+                      <span className='text-gray-300 flex-1 break-all'>
+                        {log.line}
+                      </span>
+                    </div>
+                  )
+                })}
+              </code>
+            </pre>
           )}
         </div>
       </div>

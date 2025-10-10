@@ -26,13 +26,13 @@ class Config:
     # ========================================
     SSH_TIMEOUT = int(os.getenv('SSH_TIMEOUT', '30'))
     SSH_MAX_RETRIES = int(os.getenv('SSH_MAX_RETRIES', '5'))
-    SSH_KEY_PATH = os.getenv('SSH_KEY_PATH', '/usr/src/config/.ssh/ntnx-lockdown')
+    SSH_KEY_PATH = os.getenv('SSH_KEY_PATH', '/app/config/.ssh/ntnx-lockdown')
     
     # ========================================
     # ログ収集設定
     # ========================================
-    OUTPUT_LOGDIR = os.getenv('OUTPUT_LOGDIR', '/usr/src/output/log')
-    OUTPUT_ZIPDIR = os.getenv('OUTPUT_ZIPDIR', '/usr/src/output/zip')
+    OUTPUT_LOGDIR = os.getenv('OUTPUT_LOGDIR', '/app/output/log')
+    OUTPUT_ZIPDIR = os.getenv('OUTPUT_ZIPDIR', '/app/output/zip')
     
     # ========================================
     # 設定ファイル

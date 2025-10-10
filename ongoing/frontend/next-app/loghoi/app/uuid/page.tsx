@@ -12,6 +12,7 @@ import Navbar from '../../components/navbar'
 import Loading from '../../components/loading'
 import UuidCollecting from './components/UuidCollecting'
 import { ErrorDisplay, SearchInput, Button } from '../../components/common'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 type FormValues = {
   searchUuid: string
@@ -42,7 +43,7 @@ export default function UuidPage() {
   const [isActive, setActive] = useState('vmlist')
   const [uuidData, setUuidData] = useState<UuidResponse | null>(null)
   const [showAuthDialog, setShowAuthDialog] = useState(false)
-  const [authData, setAuthData] = useState({})
+  const [authData, setAuthData] = useState<{username?: string, password?: string}>({ username: 'admin', password: '' })
   const [isAuthenticating, setIsAuthenticating] = useState(false)
   const [isCollecting, setIsCollecting] = useState(false)
   const [authError, setAuthError] = useState('')
@@ -107,8 +108,11 @@ export default function UuidPage() {
   }
 
   const handleAuthSubmit = async () => {
-    // SSH鍵認証の場合は、サーバー側で管理されている鍵を使用するため、
-    // フロントエンドからの入力は不要
+    // 入力チェック
+    if (!(authData as any).password) {
+      setAuthError('パスワードを入力してください')
+      return
+    }
 
     setIsAuthenticating(true)
     setAuthError('')
@@ -122,10 +126,12 @@ export default function UuidPage() {
         body: JSON.stringify({
           cluster_name: searchParams.get('cluster') || '',
           prism_ip: searchParams.get('prism') || '',
+          username: (authData as any).username || 'admin',
+          password: (authData as any).password,
         }),
       }
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:7776'
+      const backendUrl = getBackendUrl()
       const response = await fetch(`${backendUrl}/api/uuid/connect`, requestOptions)
       
       if (response.status === 200) {
@@ -351,7 +357,7 @@ export default function UuidPage() {
       {showAuthDialog && (
         <div className="modal modal-open">
           <div className="modal-box">
-            <h3 className="font-bold text-lg mb-4">認証情報入力</h3>
+            <h3 className="font-bold text-lg mb-4">Prism Element 認証情報入力</h3>
             
             {/* エラー表示 */}
             {authError && (
@@ -361,15 +367,46 @@ export default function UuidPage() {
             )}
             
             <div className="space-y-4">
-              <div className="alert alert-info">
-                <span>SSH鍵認証を使用してデータを取得します。サーバー側で管理されているSSH鍵を使用します。</span>
+              <div className="alert alert-info text-sm">
+                <span>Prism API アクセスのための認証情報を入力してください</span>
+              </div>
+              
+              {/* Username入力 */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Username</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="admin"
+                  className="input input-bordered w-full text-black"
+                  value={(authData as any).username || 'admin'}
+                  onChange={(e) => setAuthData({ ...authData, username: e.target.value })}
+                  disabled={isAuthenticating}
+                />
+              </div>
+              
+              {/* Password入力 */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Password</span>
+                </label>
+                <input
+                  type="password"
+                  placeholder="パスワードを入力"
+                  className="input input-bordered w-full text-black"
+                  value={(authData as any).password || ''}
+                  onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
+                  disabled={isAuthenticating}
+                />
               </div>
             </div>
+            
             <div className="modal-action">
               <button
                 className="btn btn-primary"
                 onClick={handleAuthSubmit}
-                disabled={isAuthenticating}
+                disabled={isAuthenticating || !(authData as any).password}
               >
                 {isAuthenticating ? '認証中...' : 'データ取得'}
               </button>

@@ -6,9 +6,9 @@ metadata:
   labels:
     app: loghoi
     component: backend
-    version: v1.0.0
+    version: v1.0.15
 spec:
-  replicas: 2
+  replicas: 1  # PersistentVolume(RWO)使用のため1に変更
   selector:
     matchLabels:
       app: loghoi
@@ -18,11 +18,13 @@ spec:
       labels:
         app: loghoi
         component: backend
-        version: v1.0.0
+        version: v1.0.18
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
       - name: backend
-        image: konchangakita/loghoi-backend:v1.0.2
+        image: konchangakita/loghoi-backend:v1.0.21
         imagePullPolicy: Always
         ports:
         - containerPort: 7776
@@ -78,17 +80,22 @@ spec:
           mountPath: /app/uploads
         - name: logs
           mountPath: /app/logs
+        - name: output
+          mountPath: /app/output
       volumes:
       - name: ssh-keys
         secret:
           secretName: loghoi-secrets
+          defaultMode: 0400
           items:
           - key: SSH_PRIVATE_KEY
             path: ntnx-lockdown
-            mode: 0400
       - name: uploads
         emptyDir: {}
       - name: logs
         emptyDir: {}
+      - name: output
+        persistentVolumeClaim:
+          claimName: loghoi-backend-output
       restartPolicy: Always
       terminationGracePeriodSeconds: 30

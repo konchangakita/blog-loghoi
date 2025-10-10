@@ -1,16 +1,19 @@
 """
 ログコレクト機能専用のAPIルーター
 """
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
+import asyncio
+import uuid
+from datetime import datetime
 
 from core.broker_col import CollectLogGateway
 from core.common import connect_ssh
-from utils.error_handler import handle_api_error, create_success_response, create_error_response
-from utils.cache import SimpleTTLCache
-from utils.structured_logger import api_logger, EventType, log_execution_time
+from fastapi_app.utils.error_handler import handle_api_error, create_success_response, create_error_response
+from fastapi_app.utils.cache import SimpleTTLCache
+from fastapi_app.utils.structured_logger import api_logger, EventType, log_execution_time
 
 # ルーターの作成
 router = APIRouter(prefix="/api/col", tags=["collect-log"])
@@ -18,6 +21,9 @@ router = APIRouter(prefix="/api/col", tags=["collect-log"])
 # Gateway インスタンス
 col = CollectLogGateway()
 cache = SimpleTTLCache()
+
+# ジョブ管理用の辞書
+collection_jobs: Dict[str, Dict[str, Any]] = {}
 
 # ========================================
 # Pydantic Models
@@ -36,41 +42,113 @@ class LogDisplayRequest(BaseModel):
 
 
 # ========================================
+# Background Task Functions
+# ========================================
+
+async def run_log_collection(job_id: str, cvm: str) -> None:
+    """バックグラウンドでログ収集を実行"""
+    try:
+        collection_jobs[job_id]["status"] = "running"
+        collection_jobs[job_id]["started_at"] = datetime.now().isoformat()
+        
+        api_logger.info(
+            "Background log collection started",
+            event_type=EventType.DATA_CREATE,
+            job_id=job_id,
+            cvm=cvm
+        )
+        
+        # 同期的な処理を別スレッドで実行（イベントループをブロックしない）
+        loop = asyncio.get_event_loop()
+        data = await loop.run_in_executor(None, col.collect_logs, cvm)
+        
+        # ログ収集完了後、Collect Log関連のキャッシュをクリア
+        cleared_count = cache.clear_by_pattern(r"^col:")
+        
+        collection_jobs[job_id]["status"] = "completed"
+        collection_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+        collection_jobs[job_id]["result"] = data
+        
+        api_logger.info(
+            "Background log collection completed",
+            event_type=EventType.DATA_CREATE,
+            job_id=job_id,
+            cvm=cvm,
+            cache_cleared=cleared_count
+        )
+        
+    except Exception as e:
+        collection_jobs[job_id]["status"] = "failed"
+        collection_jobs[job_id]["error"] = str(e)
+        collection_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+        
+        api_logger.error(
+            "Background log collection failed",
+            event_type=EventType.API_ERROR,
+            job_id=job_id,
+            cvm=cvm,
+            error=str(e)
+        )
+
+# ========================================
 # API Endpoints
 # ========================================
 
 @router.post("/getlogs", response_model=Dict[str, Any])
 @log_execution_time(api_logger)
-async def collect_logs(request: LogCollectionRequest) -> Dict[str, Any]:
-    """ログ収集API"""
+async def collect_logs(request: LogCollectionRequest, background_tasks: BackgroundTasks) -> Dict[str, Any]:
+    """ログ収集API（非同期実行）"""
     try:
+        # ジョブIDを生成
+        job_id = str(uuid.uuid4())
+        
+        # ジョブ情報を初期化
+        collection_jobs[job_id] = {
+            "status": "pending",
+            "cvm": request.cvm,
+            "created_at": datetime.now().isoformat(),
+            "started_at": None,
+            "completed_at": None,
+            "result": None,
+            "error": None
+        }
+        
         api_logger.info(
-            "Log collection started",
+            "Log collection job created",
             event_type=EventType.DATA_CREATE,
+            job_id=job_id,
             cvm=request.cvm
         )
         
-        data = col.collect_logs(request.cvm)
+        # バックグラウンドタスクとして実行
+        background_tasks.add_task(run_log_collection, job_id, request.cvm)
         
-        # ログ収集完了後、Collect Log関連のキャッシュをクリア
-        cleared_count = cache.clear_by_pattern(r"^col:")
-        
-        api_logger.info(
-            "Log collection completed",
-            event_type=EventType.DATA_CREATE,
-            cvm=request.cvm,
-            cache_cleared=cleared_count
+        return create_success_response(
+            {"job_id": job_id, "status": "pending"},
+            "ログ収集を開始しました"
         )
-        
-        return create_success_response(data, "ログ収集が完了しました")
     except Exception as e:
         api_logger.error(
-            "Log collection failed",
+            "Log collection job creation failed",
             event_type=EventType.API_ERROR,
             cvm=request.cvm,
             error=str(e)
         )
         raise handle_api_error(e, "ログ収集")
+
+@router.get("/job/{job_id}", response_model=Dict[str, Any])
+async def get_job_status(job_id: str) -> Dict[str, Any]:
+    """ログ収集ジョブのステータス確認API"""
+    try:
+        if job_id not in collection_jobs:
+            raise HTTPException(status_code=404, detail="Job not found")
+        
+        job = collection_jobs[job_id]
+        return create_success_response(job, "ジョブステータスを取得しました")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise handle_api_error(e, "ジョブステータス取得")
 
 @router.get("/ziplist", response_model=Dict[str, List[str]])
 async def get_ziplist() -> Dict[str, List[str]]:

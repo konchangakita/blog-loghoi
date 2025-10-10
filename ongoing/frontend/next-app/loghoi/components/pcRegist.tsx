@@ -1,7 +1,7 @@
 'use client'
 // React Hook Form
 import { SubmitHandler, useForm } from 'react-hook-form'
-
+import { getBackendUrl } from '../lib/getBackendUrl'
 
 //fontawesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -15,7 +15,9 @@ type FormValues = {
 }
 
 const PcRegister = () => {
-  console.log('env',process.env.NEXT_PUBLIC_BACKEND_HOST)
+  const backendUrl = getBackendUrl()
+  console.log('Backend URL:', backendUrl)
+  
   const {
     register,
     handleSubmit,
@@ -24,7 +26,7 @@ const PcRegister = () => {
 
   const onConnect: SubmitHandler<FormValues> = async (data) => {
     try {
-      const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/regist`
+      const requestUrl = `${backendUrl}/api/regist`
       console.log('request url: ', requestUrl)
       console.log('request data: ', data)
       

@@ -17,7 +17,9 @@ data:
   BACKEND_PORT: "7776"
   
   # フロントエンド設定
-  FRONTEND_PORT: "3000"
+  FRONTEND_PORT: "7777"
+  # フロントエンド用バックエンドURL（Ingress経由、空文字列で現在のホスト使用）
+  NEXT_PUBLIC_BACKEND_URL: ""
   
   # Elasticsearch設定
   ELASTICSEARCH_URL: "http://elasticsearch-service:9200"

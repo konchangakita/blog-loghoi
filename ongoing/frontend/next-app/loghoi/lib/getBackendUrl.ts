@@ -27,7 +27,7 @@ export function getBackendUrl(): string {
   if (typeof window !== 'undefined') {
     const currentProtocol = window.location.protocol
     const currentHostname = window.location.hostname
-    const url = `${currentProtocol}//${currentHostname}:${port}`
+    const url = `${currentProtocol}//${currentHostname}`
     console.log('Client-side URL:', url)
     return url
   }
@@ -59,7 +59,7 @@ export async function getBackendUrlAsync(): Promise<string> {
     const protocol = window.location.protocol
     const hostname = window.location.hostname
     const port = process.env.NEXT_PUBLIC_BACKEND_PORT || '7776'
-    return `${protocol}//${hostname}:${port}`
+    return `${protocol}//${hostname}`
   }
 
   // サーバーサイドで実行されている場合

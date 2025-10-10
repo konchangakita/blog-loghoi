@@ -8,14 +8,14 @@ import re
 from base64 import b64encode
 
 from core.ela import ElasticGateway
-from utils.common import change_timestamp
-from utils.error_handler import (
+from fastapi_app.utils.common import change_timestamp
+from fastapi_app.utils.error_handler import (
     APIError, ValidationError, AuthenticationError, NotFoundError, 
     create_success_response, create_error_response, log_error,
     validate_required_fields, validate_http_status
 )
-from utils.cache import SimpleTTLCache
-from utils.structured_logger import api_logger, EventType, log_execution_time
+from fastapi_app.utils.cache import SimpleTTLCache
+from fastapi_app.utils.structured_logger import api_logger, EventType, log_execution_time
 
 router = APIRouter(prefix="/api/uuid", tags=["uuid"])
 cache = SimpleTTLCache()
@@ -24,6 +24,8 @@ cache = SimpleTTLCache()
 class UuidConnectRequest(BaseModel):
     cluster_name: str
     prism_ip: str
+    username: str = "admin"  # デフォルト値
+    password: str  # 必須
 
 class UuidQueryRequest(BaseModel):
     pcip: str
@@ -204,56 +206,58 @@ class UuidAPI:
             raise HTTPException(status_code=408, detail="Connection timeout")
         return response
 
-    def connection_headers(self, prism_ip: str) -> Dict[str, str]:
-        """Create authentication headers using SSH key"""
+    def connection_headers(self, prism_ip: str, username: str, password: str) -> Dict[str, str]:
+        """Create authentication headers using SSH key and Prism Basic auth"""
         try:
-            # SSH鍵を使用してSSH接続をテスト
+            # SSH鍵を使用してSSH接続をテスト（接続確認のみ）
             from core.common import connect_ssh
             ssh_client = connect_ssh(prism_ip)
             if not ssh_client:
                 raise HTTPException(status_code=401, detail="SSH connection failed")
+            ssh_client.close()
+            print(f"SSH key authentication successful for cluster: {prism_ip}")
             
-            # SSH接続が成功した場合、Basic認証のヘッダーを作成
-            # SSH鍵認証が成功した場合、Basic認証を使用してPrism APIにアクセス
-            # 実際の実装では、SSH鍵を使用してSSH接続を行い、
-            # そこからAPI認証トークンを取得する必要があります
-            # ここでは簡易的にSSH鍵の存在確認のみ行います
-            
-            # 実際のNutanixクラスターの認証情報を使用
-            # SSH鍵認証が成功した場合、実際のadminパスワードを使用
-            actual_password = "nx2Tech958!"
+            # フロントエンドから受け取った認証情報でPrism APIにアクセス
             encoded_credentials = b64encode(
-                bytes(f"admin:{actual_password}", encoding="ascii")
+                bytes(f"{username}:{password}", encoding="ascii")
             ).decode("ascii")
             auth_header = f"Basic {encoded_credentials}"
             
             headers = {
                 "Accept": "application/json",
                 "Content-Type": "application/json",
-                "Authorization": f"{auth_header}",
+                "Authorization": auth_header,
                 "cache-control": "no-cache",
             }
-            ssh_client.close()
-            print(f"SSH key authentication successful for cluster: {prism_ip}")
+            print(f"Using Prism username: {username}")
             return headers
             
         except Exception as e:
             print(f"SSH key authentication failed: {e}")
             raise HTTPException(status_code=401, detail="SSH key authentication failed")
 
-    async def get_xdata(self, prism_ip: str) -> Dict[str, Any]:
+    async def get_xdata(self, prism_ip: str, username: str, password: str) -> Dict[str, Any]:
         """Get all UUID data from cluster (parallelized)"""
         import asyncio
         import aiohttp
         
         res = {}
-        headers = self.connection_headers(prism_ip)
+        headers = self.connection_headers(prism_ip, username, password)
         
         # 並列でAPI呼び出しを実行
         async def fetch_data(session, url, name):
             try:
-                async with session.get(url, headers=headers, ssl=False, timeout=30) as response:
-                    return name, await response.json(), response.status
+                async with session.get(url, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                    content_type = response.headers.get('Content-Type', '')
+                    text = await response.text()
+                    print(f"[{name}] Status: {response.status}, Content-Type: {content_type}, Response: {text[:200]}")
+                    
+                    if 'application/json' in content_type:
+                        import json
+                        return name, json.loads(text), response.status
+                    else:
+                        print(f"[{name}] Unexpected content type, returning error")
+                        return name, None, response.status
             except Exception as e:
                 print(f"Error fetching {name}: {e}")
                 return name, None, 500
@@ -267,7 +271,9 @@ class UuidAPI:
                 'vfilers': f"https://{prism_ip}:9440/PrismGateway/services/rest/v1/vfilers/"
             }
             
-            async with aiohttp.ClientSession() as session:
+            # SSL検証を無効化するためのコネクターを作成
+            connector = aiohttp.TCPConnector(ssl=False)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 tasks = [fetch_data(session, url, name) for name, url in urls.items()]
                 results = await asyncio.gather(*tasks, return_exceptions=True)
                 
@@ -282,7 +288,7 @@ class UuidAPI:
                         res[name] = {'data': None, 'status_code': status}
         
         # 非同期実行
-        asyncio.run(fetch_all_data())
+        await fetch_all_data()
         
         # vfilersの結果に基づいてsharesを取得
         if res.get('vfilers', {}).get('status_code') == 200:
@@ -306,7 +312,7 @@ class UuidAPI:
     async def connect_cluster(self, request: UuidConnectRequest) -> Dict[str, Any]:
         """Connect to cluster and store UUID data"""
         try:
-            res = await self.get_xdata(request.prism_ip)
+            res = await self.get_xdata(request.prism_ip, request.username, request.password)
             
             # Check if cluster connection is successful
             cluster_data = res.get("cluster", {})
@@ -340,7 +346,13 @@ class UuidAPI:
         """Get latest UUID dataset"""
         timeslot = es.get_timeslot(cluster_name)
         if not timeslot:
-            raise HTTPException(status_code=404, detail="No data found for cluster")
+            # データが存在しない場合は空の構造を返す（404ではなく200で返す）
+            return {
+                'list': {},
+                'cluster_name': cluster_name,
+                'timeslot': [],
+                'timestamp_list': {'local_time': 'データなし', 'utc_time': '', 'timestamp': ''}
+            }
         
         timestamp_utcstr = timeslot[0]['utc_time']
         timestamp_list = change_timestamp(timestamp_utcstr)
@@ -521,11 +533,9 @@ async def get_latest_dataset(request: UuidQueryRequest):
         def _factory():
             return uuid_api.get_latestdataset(request.cluster)
         result = cache.get_or_set(cache_key, ttl_seconds=15, factory=_factory)
-        if not result or not result.get('list'):
-            raise NotFoundError(
-                message="UUIDデータが見つかりません",
-                details={"cluster": request.cluster}
-            )
+        # データが空でも正常レスポンスとして返す（フロントエンドで「データなし」表示）
+        if not result:
+            result = {'list': {}, 'cluster_name': request.cluster, 'timeslot': [], 'timestamp_list': {'local_time': 'データなし', 'utc_time': '', 'timestamp': ''}}
         
         return create_success_response(
             data=result,

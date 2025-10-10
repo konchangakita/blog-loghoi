@@ -42,7 +42,8 @@ export const useCollectLogApi = () => {
     try {
       validateRequiredFields({ cvm }, ['cvm'])
       
-      return await executeApiCall(
+      // ログ収集ジョブを開始
+      const jobResponse = await executeApiCall(
         () => fetch(`${getBackendUrl()}/api/col/getlogs`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -51,6 +52,40 @@ export const useCollectLogApi = () => {
         'collectLogs',
         { cvm }
       )
+      
+      // executeApiCallは result.data を返すので、jobResponseは既に { job_id, status } の形式
+      if (!jobResponse || !jobResponse.job_id) {
+        console.error('ジョブレスポンス:', jobResponse)
+        throw new Error('ジョブIDが取得できませんでした')
+      }
+      
+      const jobId = jobResponse.job_id
+      console.log('ログ収集ジョブ開始:', jobId)
+      
+      // ジョブ完了をポーリング（最大5分、5秒ごと）
+      const maxAttempts = 60  // 5分 = 60 * 5秒
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(resolve => setTimeout(resolve, 5000)) // 5秒待機
+        
+        const statusResponse = await executeApiCall(
+          () => fetch(`${getBackendUrl()}/api/col/job/${jobId}`),
+          'getJobStatus',
+          { jobId }
+        )
+        
+        // executeApiCallは result.data を返すので、statusResponseは既にジョブオブジェクト
+        if (statusResponse?.status === 'completed') {
+          console.log('ログ収集完了:', jobId)
+          return { message: 'finished collect log' }
+        } else if (statusResponse?.status === 'failed') {
+          throw new Error(`ログ収集失敗: ${statusResponse.error}`)
+        }
+        
+        console.log(`ジョブステータス: ${statusResponse?.status} (${i + 1}/${maxAttempts})`)
+      }
+      
+      throw new Error('ログ収集がタイムアウトしました')
+      
     } catch (error) {
       if (error instanceof APIError) {
         return null

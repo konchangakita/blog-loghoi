@@ -42,16 +42,21 @@ http://{FRONTEND_HOST}:7777/uuid?pcip={PC_IP}&cluster={クラスタ名}&prism={�
 
 ## 認証方式
 
-### SSH鍵認証
-- **認証方法**: SSH鍵認証を使用
-- **SSH鍵の場所**: `/home/nutanix/konchangakita/blog-loghoi/ongoing/backend/config/.ssh/ntnx-lockdown`
-- **事前設定**: 公開鍵を事前にPrism Element（CVM）へ登録済み
+### ハイブリッド認証（SSH鍵 + Prism Basic認証）
+- **SSH鍵認証**: CVMへの接続確認
+  - **SSH鍵の場所**: `/app/config/.ssh/ntnx-lockdown`（Kubernetes環境）
+  - **事前設定**: 公開鍵を事前にPrism Element（CVM）へ登録済み
+- **Prism Basic認証**: Prism API アクセス用
+  - **入力方法**: データ取得ボタンクリック後のポップアップで入力
+  - **入力項目**: Username、Password
+  - **デフォルト値**: Username = "admin"
 - **認証フロー**:
-  1. バックエンドがSSH鍵を使用してCVMに接続
-  2. SSH接続成功後、Prism APIで認証
-  3. 認証成功後、UUIDデータを取得
-- **セキュリティ**: フロントエンドから認証情報を送信する必要がない
-- **他の機能との統一**: リアルタイムログとコレクトログと同様の認証方式
+  1. ユーザーが「データ取得」ボタンをクリック
+  2. 認証情報入力ポップアップ表示（Username、Password）
+  3. バックエンドがSSH鍵を使用してCVMに接続（接続確認）
+  4. 入力された認証情報でPrism APIにBasic認証でアクセス
+  5. 認証成功後、UUIDデータを取得
+- **セキュリティ**: HTTPSで通信、認証情報は保存しない
 
 ## アーキテクチャ
 

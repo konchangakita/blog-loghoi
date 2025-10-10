@@ -4,21 +4,25 @@ from elasticsearch import helpers
 from datetime import datetime
 from datetime import timezone, timedelta
 import json
+import os
 
 import common
 
-# 外部にElasticsearchを立てた時用
-try:
-    f = open("setting.json", "r")
-    setting_json = json.load(f)
-    ELASTIC_SERVER = setting_json["ELASTIC_SERVER"]
-    f.close()
+# Elasticsearch接続設定
+# 優先順位: 環境変数 > setting.json > デフォルト
+ELASTIC_SERVER = os.getenv('ELASTICSEARCH_URL')
 
-except:
-    ELASTIC_SERVER = "http://elasticsearch:9200"
+if not ELASTIC_SERVER:
+    # 外部にElasticsearchを立てた時用
+    try:
+        f = open("setting.json", "r")
+        setting_json = json.load(f)
+        ELASTIC_SERVER = setting_json["ELASTIC_SERVER"]
+        f.close()
+    except:
+        ELASTIC_SERVER = "http://elasticsearch-service:9200"
 
 print("##### ELASTIC_SERVER:", ELASTIC_SERVER, "######")
-
 
 def change_timestamp(timestamp):
     timestamp_dict = []
@@ -98,14 +102,19 @@ class ElasticGateway(ElasticAPI):
         index_name = "uuid_vms"
         query = {"function_score": {"query": {"match": {"cluster_name": cluster_name}}}}
         aggs = {"group_by_timestamp": {"terms": {"field": "timestamp", "size": 1000}}}
-        res = es.search(index=index_name, query=query, aggs=aggs)
-        _timeslot = [
-            slot["key_as_string"]
-            for slot in res["aggregations"]["group_by_timestamp"]["buckets"]
-        ]
-        timeslot = sorted(_timeslot, reverse=True)
-        timeslot_dict = common.change_timeslot(timeslot)
-        return timeslot_dict
+        try:
+            res = es.search(index=index_name, query=query, aggs=aggs)
+            _timeslot = [
+                slot["key_as_string"]
+                for slot in res["aggregations"]["group_by_timestamp"]["buckets"]
+            ]
+            timeslot = sorted(_timeslot, reverse=True)
+            timeslot_dict = common.change_timeslot(timeslot)
+            return timeslot_dict
+        except Exception as e:
+            # インデックスが存在しない場合は空リストを返す
+            print(f"[get_timeslot] インデックスが存在しないか、データがありません: {e}")
+            return []
 
     # input PC
     def put_pc(self, input_data):
@@ -284,23 +293,82 @@ class ElasticGateway(ElasticAPI):
         res = es.search(index="filebeat-*", query=query, size=100)
         return [s["_source"] for s in res["hits"]["hits"]]
 
+    def search_syslog_by_keyword_and_time(self, keyword, start_datetime, end_datetime):
+        """
+        クラスター名フィルタなしでSyslogを検索（暫定対応）
+        
+        Args:
+            keyword: 検索キーワード
+            start_datetime: 開始日時（ISO形式）
+            end_datetime: 終了日時（ISO形式）
+        
+        Returns:
+            list: Syslogエントリのリスト
+        """
+        es = self.es
+        search_keyword = f"*{keyword}*" if keyword else "*"
+        
+        print(f"[Syslog Search] keyword={search_keyword}, time_range={start_datetime} to {end_datetime}")
+        
+        # クエリ構築
+        query = {
+            "function_score": {
+                "query": {
+                    "bool": {
+                        "must": [
+                            {
+                                "range": {
+                                    "@timestamp": {
+                                        "gte": start_datetime,
+                                        "lte": end_datetime,
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+        }
+        
+        # キーワードが指定されている場合のみ追加
+        if keyword:
+            query["function_score"]["query"]["bool"]["must"].append({
+                "query_string": {
+                    "default_field": "message",
+                    "query": search_keyword,
+                }
+            })
+        
+        print(f"[Syslog Search] Elasticsearch query: {query}")
+        
+        try:
+            res = es.search(index="filebeat-*", query=query, size=100, sort=[{"@timestamp": {"order": "desc"}}])
+            results = [s["_source"] for s in res["hits"]["hits"]]
+            print(f"[Syslog Search] Found {len(results)} results")
+            return results
+        except Exception as e:
+            print(f"[Syslog Search] Error: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
     def put_data_uuid(self, res):
         timestamp = datetime.utcnow()
         input_size = {}
 
-        # cluster
-        cluster_json = res["cluster"].json()
+        # cluster (辞書形式 {'data': {...}, 'status_code': ...} から取得)
+        cluster_json = res["cluster"]["data"] if isinstance(res["cluster"], dict) else res["cluster"].json()
         cluster_name = cluster_json["name"]
         cluster_uuid = cluster_json["uuid"]
 
         # vms
-        vms_json = res["vms"].json()
+        vms_json = res["vms"]["data"] if isinstance(res["vms"], dict) else res["vms"].json()
         input_size["vms"] = self.put_rest_pe(
             vms_json, timestamp, cluster_name, cluster_uuid, index_name="uuid_vms"
         )
 
         # storage_containers
-        storage_containers_json = res["storage_containers"].json()
+        storage_containers_json = res["storage_containers"]["data"] if isinstance(res["storage_containers"], dict) else res["storage_containers"].json()
         input_size["storage_containers"] = self.put_rest_pe(
             storage_containers_json,
             timestamp,
@@ -310,7 +378,7 @@ class ElasticGateway(ElasticAPI):
         )
 
         # volume_group
-        volume_groups_json = res["volume_groups"].json()
+        volume_groups_json = res["volume_groups"]["data"] if isinstance(res["volume_groups"], dict) else res["volume_groups"].json()
         input_size["volume_groups"] = self.put_rest_pe(
             volume_groups_json,
             timestamp,
@@ -320,7 +388,7 @@ class ElasticGateway(ElasticAPI):
         )
 
         # vfilers
-        vfilers_json = res["vfilers"].json()
+        vfilers_json = res["vfilers"]["data"] if isinstance(res["vfilers"], dict) else res["vfilers"].json()
         if len(vfilers_json["entities"]):
             input_size["vfliers"] = self.put_rest_pe(
                 vfilers_json,
@@ -331,7 +399,7 @@ class ElasticGateway(ElasticAPI):
             )
 
             # shares
-            shares_json = res["shares"].json()
+            shares_json = res["shares"]["data"] if isinstance(res["shares"], dict) else res["shares"].json()
             input_size["shares"] = self.put_rest_pe(
                 shares_json,
                 timestamp,

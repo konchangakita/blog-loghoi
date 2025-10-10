@@ -1,3 +1,5 @@
+import { getBackendUrl } from '../../lib/getBackendUrl'
+
 interface dict {
   [key: string]: any
 }
@@ -8,7 +10,7 @@ type ResValues = {
 }
 
 export async function getPclist1() {
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/pclist`
+  const requestUrl = `${getBackendUrl()}/api/pclist`
 
   return requestUrl
 }

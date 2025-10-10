@@ -36,16 +36,16 @@ from core.common import connect_ssh, get_cvmlist
 from config import Config
 
 # ルーターのインポート
-from routers.collect_log import router as collect_log_router
-from routers.collect_log import cache as collect_cache
-from routers.uuid import router as uuid_router
+from fastapi_app.routers.collect_log import router as collect_log_router
+from fastapi_app.routers.collect_log import cache as collect_cache
+from fastapi_app.routers.uuid import router as uuid_router
 
 # エラーハンドリングのインポート
-from utils.error_handler import global_exception_handler, APIError, ValidationError, AuthenticationError, AuthorizationError, NotFoundError, ConflictError, ServiceUnavailableError
+from fastapi_app.utils.error_handler import global_exception_handler, APIError, ValidationError, AuthenticationError, AuthorizationError, NotFoundError, ConflictError, ServiceUnavailableError
 
 # ログミドルウェアのインポート
-from middleware.logging_middleware import LoggingMiddleware
-from utils.structured_logger import system_logger, EventType
+from fastapi_app.middleware.logging_middleware import LoggingMiddleware
+from fastapi_app.utils.structured_logger import system_logger, EventType
 
 # ========================================
 # Pydantic Models (Request/Response)
@@ -253,7 +253,7 @@ async def monitor_realtime_logs(ssh, log_path, log_name):
                         
                     except asyncio.CancelledError:
                         print("ログ監視タスクがキャンセルされました")
-                        raise
+                        return  # タスクキャンセルは正常終了として扱う
                     except Exception as e:
                         print(f"ログ読み取りエラー: {e}")
                         break
@@ -291,8 +291,8 @@ async def monitor_realtime_logs(ssh, log_path, log_name):
                     break
         
     except asyncio.CancelledError:
-        print("ログ監視タスクがキャンセルされました")
-        raise
+        print("ログ監視タスクがキャンセルされました（正常終了）")
+        # タスクキャンセルは正常終了として扱う
     except Exception as e:
         print(f"ログ監視タスクで予期しないエラー: {e}")
     finally:
