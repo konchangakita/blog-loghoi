@@ -412,9 +412,9 @@
 
 ---
 
-**バージョン**: v1.1.0  
+**バージョン**: v1.2.0  
 **作成日**: 2025-10-03  
-**更新日**: 2025-10-09
+**更新日**: 2025-10-10
 
 ---
 
@@ -508,10 +508,10 @@ const collectLogs = async (cvm: string) => {
   const jobId = jobResponse.job_id
   console.log('ログ収集ジョブ開始:', jobId)
   
-  // ジョブ完了をポーリング（最大5分、5秒ごと）
-  const maxAttempts = 60
+  // ジョブ完了をポーリング（最大5分、1秒ごと）
+  const maxAttempts = 300
   for (let i = 0; i < maxAttempts; i++) {
-    await new Promise(resolve => setTimeout(resolve, 5000))
+    await new Promise(resolve => setTimeout(resolve, 1000))
     
     const statusResponse = await fetch(`/api/col/job/${jobId}`)
     
@@ -541,8 +541,8 @@ const collectLogs = async (cvm: string) => {
 - `frontend/next-app/loghoi/app/collectlog/hooks/useCollectLogApi.ts`
 
 **イメージバージョン**:
-- バックエンド: v1.0.17 → v1.0.18
-- フロントエンド: v1.0.32 → v1.0.33
+- バックエンド: v1.0.17 → v1.0.18（非同期処理化）→ v1.0.24（進捗機能追加）
+- フロントエンド: v1.0.32 → v1.0.33（ポーリング追加）→ v1.0.44（リアルタイム進捗表示）
 
 ---
 
@@ -561,7 +561,13 @@ const collectLogs = async (cvm: string) => {
       "started_at": "2025-10-09T15:09:18.356000",
       "completed_at": "2025-10-09T15:14:32.123000",
       "result": { "message": "finished collect log" },
-      "error": null
+      "error": null,
+      "progress": {
+        "stage": "logfiles" | "commands" | "zip" | "done",
+        "current": 15,
+        "total": 26,
+        "message": "ログファイルをダウンロード中... (15/26)"
+      }
     }
   }
   ```
@@ -579,5 +585,222 @@ const collectLogs = async (cvm: string) => {
   }
   ```
 - **処理時間**: 1-2ms（即座にレスポンス）
+
+---
+
+### 13.3 リアルタイム進捗表示機能の追加（2025-10-10追加）
+
+#### 問題3: プログレスバーが100%になってから待たされる
+
+**症状**:
+- プログレスバーが100%になってから約1分20秒待たされる
+- docker-compose環境では即座に完了していた
+- ユーザーは「100%になったのに何故待つの？」と混乱
+
+**根本原因**:
+- プログレスバーが**時間ベース（30秒で100%）**で動作していた
+- 実際のログ収集は**約2分（120秒）**かかる
+- プログレスバーと実際の進捗が一致していなかった
+
+**解決方法（リアルタイム進捗表示）**:
+
+1. **バックエンド: 進捗コールバック機能を追加**
+```python
+# backend/core/broker_col.py
+
+class CollectLogGateway():
+    def collect_logs(self, cvm, progress_callback=None):
+        # ログファイルダウンロード
+        total_files = len(logfile_list)
+        if progress_callback:
+            progress_callback({
+                "stage": "logfiles",
+                "current": 0,
+                "total": total_files,
+                "message": "ログファイルのダウンロードを開始しています..."
+            })
+        
+        for i, item in enumerate(logfile_list):
+            # ダウンロード処理...
+            if progress_callback:
+                progress_callback({
+                    "stage": "logfiles",
+                    "current": i + 1,
+                    "total": total_files,
+                    "message": f"ログファイルをダウンロード中... ({i + 1}/{total_files})"
+                })
+        
+        # コマンド実行
+        total_commands = len(command_list)
+        if progress_callback:
+            progress_callback({
+                "stage": "commands",
+                "current": 0,
+                "total": total_commands,
+                "message": "コマンドを実行しています..."
+            })
+        
+        for cmd_idx, command_item in enumerate(command_list):
+            # コマンド実行...
+            if progress_callback:
+                progress_callback({
+                    "stage": "commands",
+                    "current": cmd_idx + 1,
+                    "total": total_commands,
+                    "message": f"コマンドを実行中... ({cmd_idx + 1}/{total_commands})"
+                })
+        
+        # ZIP作成
+        if progress_callback:
+            progress_callback({
+                "stage": "zip",
+                "current": 0,
+                "total": 100,
+                "message": "ZIPファイルを作成しています..."
+            })
+        
+        # ZIP作成処理...
+        
+        if progress_callback:
+            progress_callback({
+                "stage": "zip",
+                "current": 100,
+                "total": 100,
+                "message": "ZIPファイルの作成が完了しました"
+            })
+```
+
+2. **バックエンド: ジョブステータスに進捗情報を追加**
+```python
+# backend/fastapi_app/routers/collect_log.py
+
+async def run_log_collection(job_id: str, cvm: str) -> None:
+    """バックグラウンドでログ収集を実行"""
+    # 進捗情報を初期化
+    collection_jobs[job_id]["progress"] = {
+        "stage": "init",
+        "current": 0,
+        "total": 100,
+        "message": "ログ収集を開始しています..."
+    }
+    
+    # 進捗コールバック関数
+    def progress_callback(progress_info):
+        collection_jobs[job_id]["progress"] = progress_info
+        api_logger.info(
+            f"Log collection progress: {progress_info.get('message')}",
+            event_type=EventType.DATA_CREATE,
+            job_id=job_id,
+            stage=progress_info.get("stage"),
+            progress=f"{progress_info.get('current')}/{progress_info.get('total')}"
+        )
+    
+    # 同期的な処理を別スレッドで実行
+    loop = asyncio.get_event_loop()
+    data = await loop.run_in_executor(None, col.collect_logs, cvm, progress_callback)
+```
+
+3. **フロントエンド: 実際の進捗を表示**
+```typescript
+// frontend/app/collectlog/hooks/useCollectLogApi.ts
+
+const collectLogs = async (
+  cvm: string,
+  onProgress?: (progress: { stage: string; current: number; total: number; message: string }) => void
+) => {
+  const jobId = jobResponse.job_id
+  
+  // ジョブ完了をポーリング（最大5分、1秒ごと）
+  const maxAttempts = 300  // 5分 = 300 * 1秒
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(resolve => setTimeout(resolve, 1000)) // 1秒待機
+    
+    const statusResponse = await fetch(`/api/col/job/${jobId}`)
+    
+    // 進捗情報をコールバックで通知
+    const progress = statusResponse?.progress
+    if (progress && onProgress) {
+      onProgress(progress)
+    }
+  }
+}
+```
+
+4. **フロントエンド: Collectingコンポーネントを改善**
+```typescript
+// frontend/components/collecting.tsx
+
+interface CollectingProps {
+  progress?: {
+    stage: string
+    current: number
+    total: number
+    message: string
+  } | null
+}
+
+export default function Collecting({ progress: actualProgress }: CollectingProps) {
+  // 実際の進捗を計算
+  const progress = actualProgress 
+    ? (actualProgress.current / actualProgress.total) * 100
+    : fallbackProgress  // フォールバック: 120秒で100%
+  
+  return (
+    <div>
+      {/* 進捗メッセージを表示 */}
+      <span>{actualProgress?.message || 'Progress'}</span>
+      <span>{Math.round(progress)}%</span>
+      {/* プログレスバー */}
+    </div>
+  )
+}
+```
+
+5. **フロントエンド: 最新ZIP自動選択**
+```typescript
+// frontend/app/collectlog/collectlog-content.tsx
+
+const handleCollectLogs = async () => {
+  const result = await collectLogs(state.cvmChecked, (progress) => {
+    setCollectProgress(progress)  // 進捗情報を更新
+  })
+  
+  if (result) {
+    const zipList = await getZipList()
+    const sorted = [...zipList].sort(/* 降順ソート */)
+    setState(prev => ({ ...prev, zipList: sorted }))
+    
+    // 最新のZIPを自動選択
+    if (sorted.length > 0) {
+      const latestZip = sorted[0]
+      await handleZipSelect(latestZip)
+    }
+  }
+  
+  setState(prev => ({ ...prev, collecting: false }))
+}
+```
+
+**効果**:
+- ✅ プログレスバーが実際の進捗を正確に反映
+- ✅ 進捗メッセージでユーザーに何が実行されているか通知
+  - 「ログファイルをダウンロード中... (15/26)」
+  - 「コマンドを実行中... (8/13)」
+  - 「ZIPファイルを作成しています...」
+- ✅ ポーリング間隔を5秒 → 1秒に短縮し、完了を即座に検知
+- ✅ 100%完了後、1秒以内に画面切り替わり
+- ✅ 最新のZIPファイルが自動選択され、すぐにログを確認可能
+- ✅ フォールバック機能（進捗情報がない場合は120秒で100%）
+
+**修正ファイル**:
+- `backend/core/broker_col.py`
+- `backend/fastapi_app/routers/collect_log.py`
+- `frontend/app/collectlog/hooks/useCollectLogApi.ts`
+- `frontend/app/collectlog/collectlog-content.tsx`
+- `frontend/components/collecting.tsx`
+
+**イメージバージョン**:
+- バックエンド: v1.0.18 → v1.0.24
+- フロントエンド: v1.0.33 → v1.0.44
 
 ---
