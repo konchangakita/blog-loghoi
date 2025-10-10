@@ -38,7 +38,10 @@ export const useCollectLogApi = () => {
     }
   }, [executeApiCall])
 
-  const collectLogs = useCallback(async (cvm: string): Promise<LogCollectionResponse | null> => {
+  const collectLogs = useCallback(async (
+    cvm: string,
+    onProgress?: (progress: { stage: string; current: number; total: number; message: string }) => void
+  ): Promise<LogCollectionResponse | null> => {
     try {
       validateRequiredFields({ cvm }, ['cvm'])
       
@@ -62,10 +65,10 @@ export const useCollectLogApi = () => {
       const jobId = jobResponse.job_id
       console.log('ログ収集ジョブ開始:', jobId)
       
-      // ジョブ完了をポーリング（最大5分、5秒ごと）
-      const maxAttempts = 60  // 5分 = 60 * 5秒
+      // ジョブ完了をポーリング（最大5分、1秒ごと）
+      const maxAttempts = 300  // 5分 = 300 * 1秒
       for (let i = 0; i < maxAttempts; i++) {
-        await new Promise(resolve => setTimeout(resolve, 5000)) // 5秒待機
+        await new Promise(resolve => setTimeout(resolve, 1000)) // 1秒待機
         
         const statusResponse = await executeApiCall(
           () => fetch(`${getBackendUrl()}/api/col/job/${jobId}`),
@@ -76,12 +79,25 @@ export const useCollectLogApi = () => {
         // executeApiCallは result.data を返すので、statusResponseは既にジョブオブジェクト
         if (statusResponse?.status === 'completed') {
           console.log('ログ収集完了:', jobId)
+          console.log('完了時刻:', new Date().toISOString())
+          // 完了時は即座にreturn（executeApiCallの処理を完了させてから）
           return { message: 'finished collect log' }
         } else if (statusResponse?.status === 'failed') {
           throw new Error(`ログ収集失敗: ${statusResponse.error}`)
         }
         
-        console.log(`ジョブステータス: ${statusResponse?.status} (${i + 1}/${maxAttempts})`)
+        // 進捗情報をログ出力とコールバック
+        const progress = statusResponse?.progress
+        if (progress) {
+          console.log(`ジョブステータス: ${statusResponse?.status} (${i + 1}/${maxAttempts})`, 
+                      `stage: ${progress.stage}, progress: ${progress.current}/${progress.total}, message: ${progress.message}`)
+          // 進捗コールバックを呼び出す
+          if (onProgress) {
+            onProgress(progress)
+          }
+        } else {
+          console.log(`ジョブステータス: ${statusResponse?.status} (${i + 1}/${maxAttempts})`)
+        }
       }
       
       throw new Error('ログ収集がタイムアウトしました')

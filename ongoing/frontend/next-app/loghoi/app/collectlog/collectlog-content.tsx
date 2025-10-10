@@ -57,6 +57,14 @@ const CollectlogContnet = () => {
   const [hasMore, setHasMore] = useState<boolean>(false)
   const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false)
   // キャッシュ管理UIは非表示化（自動クリーンアップに移行）
+  
+  // ログ収集の進捗情報
+  const [collectProgress, setCollectProgress] = useState<{
+    stage: string
+    current: number
+    total: number
+    message: string
+  } | null>(null)
 
   // 初期化
   useEffect(() => {
@@ -96,10 +104,18 @@ const CollectlogContnet = () => {
   const handleCollectLogs = async () => {
     if (!state.cvmChecked) return
 
+    console.log('ログ収集開始時刻:', new Date().toISOString())
     setState(prev => ({ ...prev, collecting: true }))
-    const result = await collectLogs(state.cvmChecked)
+    setCollectProgress(null) // 進捗をリセット
+    
+    const result = await collectLogs(state.cvmChecked, (progress) => {
+      // 進捗情報を更新
+      setCollectProgress(progress)
+    })
+    console.log('collectLogs完了時刻:', new Date().toISOString())
     
     if (result) {
+      console.log('ZIP一覧更新開始時刻:', new Date().toISOString())
       // ZIP一覧を更新（新しい日時が上になるようソート）
       const zipList = await getZipList()
       const sorted = [...zipList].sort((a, b) => {
@@ -111,11 +127,21 @@ const CollectlogContnet = () => {
         return vb.localeCompare(va)
       })
       setState(prev => ({ ...prev, zipList: sorted }))
+      console.log('ZIP一覧更新完了時刻:', new Date().toISOString())
+      
+      // 最新のZIPを自動選択
+      if (sorted.length > 0) {
+        const latestZip = sorted[0] // 降順ソート済みなので先頭が最新
+        console.log('最新ZIPを自動選択:', latestZip)
+        await handleZipSelect(latestZip)
+      }
       
       // 自動クリーンアップ方式のためUI更新は不要
     }
     
+    console.log('collecting状態をfalseに設定時刻:', new Date().toISOString())
     setState(prev => ({ ...prev, collecting: false }))
+    setCollectProgress(null) // 進捗をリセット
   }
 
   const handleZipSelect = async (zipName: string) => {
@@ -281,7 +307,7 @@ const CollectlogContnet = () => {
 
   return (
     <>
-      {state.collecting && <Collecting />}
+      {state.collecting && <Collecting progress={collectProgress} />}
       {state.loading && <Loading />}
       
       {!!error && (

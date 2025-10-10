@@ -51,6 +51,14 @@ async def run_log_collection(job_id: str, cvm: str) -> None:
         collection_jobs[job_id]["status"] = "running"
         collection_jobs[job_id]["started_at"] = datetime.now().isoformat()
         
+        # 進捗情報を初期化
+        collection_jobs[job_id]["progress"] = {
+            "stage": "init",
+            "current": 0,
+            "total": 100,
+            "message": "ログ収集を開始しています..."
+        }
+        
         api_logger.info(
             "Background log collection started",
             event_type=EventType.DATA_CREATE,
@@ -58,9 +66,21 @@ async def run_log_collection(job_id: str, cvm: str) -> None:
             cvm=cvm
         )
         
+        # 進捗コールバック関数
+        def progress_callback(progress_info):
+            """進捗情報を更新"""
+            collection_jobs[job_id]["progress"] = progress_info
+            api_logger.info(
+                f"Log collection progress: {progress_info.get('message')}",
+                event_type=EventType.DATA_CREATE,
+                job_id=job_id,
+                stage=progress_info.get("stage"),
+                progress=f"{progress_info.get('current')}/{progress_info.get('total')}"
+            )
+        
         # 同期的な処理を別スレッドで実行（イベントループをブロックしない）
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, col.collect_logs, cvm)
+        data = await loop.run_in_executor(None, col.collect_logs, cvm, progress_callback)
         
         # ログ収集完了後、Collect Log関連のキャッシュをクリア
         cleared_count = cache.clear_by_pattern(r"^col:")

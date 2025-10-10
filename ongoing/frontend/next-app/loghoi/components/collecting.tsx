@@ -3,19 +3,29 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBug } from '@fortawesome/free-solid-svg-icons'
 import { useState, useEffect } from 'react'
 
-export default function Collecting() {
-  const [progress, setProgress] = useState(0)
+interface CollectingProps {
+  progress?: {
+    stage: string
+    current: number
+    total: number
+    message: string
+  } | null
+}
+
+export default function Collecting({ progress: actualProgress }: CollectingProps) {
+  const [fallbackProgress, setFallbackProgress] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
 
+  // フォールバック: 進捗情報がない場合は時間ベース（120秒で100%）
   useEffect(() => {
     const startTime = Date.now()
-    const duration = 30000 // 30秒
+    const duration = 120000 // 120秒
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime
       const newProgress = Math.min((elapsed / duration) * 100, 100)
       
-      setProgress(newProgress)
+      setFallbackProgress(newProgress)
       
       if (newProgress >= 100) {
         setIsComplete(true)
@@ -25,6 +35,11 @@ export default function Collecting() {
 
     return () => clearInterval(interval)
   }, [])
+  
+  // 実際の進捗を計算
+  const progress = actualProgress 
+    ? (actualProgress.current / actualProgress.total) * 100
+    : fallbackProgress
 
   const filledBlocks = Math.floor(progress / 10) // 10%ごとにブロック
   const totalBlocks = 10
@@ -42,7 +57,9 @@ export default function Collecting() {
           {/* プログレスバー */}
           <div className="w-48 mt-8">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-xs text-gray-600 font-semibold">Progress</span>
+              <span className="text-xs text-gray-600 font-semibold">
+                {actualProgress?.message || 'Progress'}
+              </span>
               <span className="text-xs text-gray-600">{Math.round(progress)}%</span>
             </div>
             <div className="flex space-x-0.5">
