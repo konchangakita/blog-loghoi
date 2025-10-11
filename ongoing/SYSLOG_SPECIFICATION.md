@@ -498,6 +498,8 @@ kubectl get service loghoi-syslog-service -n loghoi
 ```
 
 ### 2. Nutanix側のSyslog設定
+
+#### 2.1 Prism Element UIでの設定（推奨）
 1. **Prism Element UI**にログイン
 2. **Settings（⚙️アイコン）** > **Syslog Server**を選択
 3. 以下を入力：
@@ -507,6 +509,107 @@ kubectl get service loghoi-syslog-service -n loghoi
    - **Module**: すべて選択（または必要なものだけ）
 4. **+ Add**ボタンで追加
 5. **Save**ボタンで保存
+
+#### 2.2 ncliコマンドでの設定（CVM SSHアクセス）
+
+**Syslogサーバーの追加**:
+```bash
+# CVM（Controller VM）にSSH接続
+ssh nutanix@<CVM_IP>
+
+# Syslogサーバーを追加
+ncli rsyslog-config add-server \
+  name=<サーバー名> \
+  host=<Syslogサーバー_IP> \
+  port=<ポート番号> \
+  network-protocol=TCP \
+  relp-enabled=false
+
+# 例: Filebeat Syslogサーバーを追加（AOS 7.0）
+ncli rsyslog-config add-server \
+  name=elastic-filebeat \
+  host=10.55.23.42 \
+  port=7515 \
+  network-protocol=TCP \
+  relp-enabled=false
+```
+
+**出力例**:
+```
+Name                      : elastic-filebeat
+Host Address              : 10.55.23.42
+Port                      : 7515
+Protocol                  : TCP
+Relp Enabled              : false
+```
+
+**モジュールの追加**:
+```bash
+# 特定モジュールのログをSyslogサーバーに送信
+ncli rsyslog-config add-module \
+  server-name=<サーバー名> \
+  module-name=<モジュール名> \
+  level=<ログレベル> \
+  include-monitor-logs=false
+
+# 例: CASSANDRAモジュールのERRORログを送信
+ncli rsyslog-config add-module \
+  server-name=elastic-filebeat \
+  module-name=CASSANDRA \
+  level=ERROR \
+  include-monitor-logs=false
+```
+
+**出力例**:
+```
+RSyslog Servers           : elastic-filebeat
+Module Name               : CASSANDRA
+Log Level                 : ERROR
+Include Monitor Logs      : false
+```
+
+**利用可能なモジュール**:
+CASSANDRA, CEREBRO, CURATOR, GENESIS, PRISM, STARGATE, SYSLOG_MODULE, ZOOKEEPER, UHURA, LAZAN, API_AUDIT, CALM, EPSILON, ACROPOLIS, MINERVA_CVM, FLOW
+
+**ログレベル（Syslog Severity Levels）**:
+
+| Value | Severity | Keyword | Description |
+|-------|----------|---------|-------------|
+| 0 | Emergency | emerg | System is unusable. |
+| 1 | Alert | alert | Should be corrected immediately. |
+| 2 | Critical | crit | Critical conditions. |
+| 3 | Error | err | Error Conditions. |
+| 4 | Warning | warning | Indication that an error might occur if an action is not taken. |
+| 5 | Notice | notice | Events that are unusual, but not error conditions. |
+| 6 | Informational | info | Normal operational messages that require no action. |
+| 7 | Debug | debug | Information useful to developers for debugging the application. |
+
+**Syslog設定の確認**:
+```bash
+# 登録されているSyslogサーバーの一覧
+ncli rsyslog-config list
+
+# 特定サーバーの詳細確認
+ncli rsyslog-config get server-name=elastic-filebeat
+```
+
+**Syslog設定の削除**:
+```bash
+# モジュールの削除
+ncli rsyslog-config remove-module \
+  server-name=elastic-filebeat \
+  module-name=CASSANDRA
+
+# Syslogサーバーの削除
+ncli rsyslog-config remove-server \
+  name=elastic-filebeat
+```
+
+**注意事項**:
+- `host`および`port`の値は、実際のSyslogサーバー環境に合わせて変更してください
+- AOS 7.0以降の環境で動作確認済み
+- `relp-enabled`は通常`false`（RELP未使用）で問題ありません
+- 複数のモジュールを追加する場合は、各モジュールごとに`add-module`コマンドを実行します
 
 ### 3. 動作確認
 ```bash

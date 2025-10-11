@@ -84,6 +84,7 @@ class RegistGateway:
                         # fmt: on
 
                         _cvm_list = []
+                        _host_names = []  # ハイパーバイザーのhostname
                         for entity in res_cvm["entities"]:
                             # Nameのフィールドがマッチした場合のみIPを拾っていれる処理。PCについてはNameのフィールドが空になる
                             if "name" in entity["status"]:
@@ -102,6 +103,8 @@ class RegistGateway:
                                             "ip"
                                         ]
                                     )
+                                    # ハイパーバイザーのhostnameを保存（例: NTNX-61c637c0-A）
+                                    _host_names.append(entity["status"]["name"])
 
                             # prism centralのIPにマッチした場合にシリアルナンバーを取り出す
                             elif (
@@ -112,6 +115,7 @@ class RegistGateway:
                                     "resources"
                                 ]["serial_number"]
                         cluster_data["cvms_ip"] = sorted(_cvm_list)
+                        cluster_data["host_names"] = sorted(_host_names)  # ハイパーバイザーのhostname
                         input_list.append(cluster_data)
 
                 # PCかどうかの判定
