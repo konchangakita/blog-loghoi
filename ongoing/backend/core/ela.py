@@ -293,14 +293,16 @@ class ElasticGateway(ElasticAPI):
         res = es.search(index="filebeat-*", query=query, size=100)
         return [s["_source"] for s in res["hits"]["hits"]]
 
-    def search_syslog_by_keyword_and_time(self, keyword, start_datetime, end_datetime):
+    def search_syslog_by_keyword_and_time(self, keyword, start_datetime, end_datetime, hostnames=None, cluster_name=None):
         """
-        クラスター名フィルタなしでSyslogを検索（暫定対応）
+        Syslogを検索（hostname + クラスタ名ワイルドカード フィルタ対応）
         
         Args:
             keyword: 検索キーワード
             start_datetime: 開始日時（ISO形式）
             end_datetime: 終了日時（ISO形式）
+            hostnames: hostnameリスト（オプション。指定された場合はこれらのhostnameでフィルタリング）
+            cluster_name: クラスタ名（オプション。指定された場合は "クラスタ名*" でワイルドカード検索）
         
         Returns:
             list: Syslogエントリのリスト
@@ -308,7 +310,7 @@ class ElasticGateway(ElasticAPI):
         es = self.es
         search_keyword = f"*{keyword}*" if keyword else "*"
         
-        print(f"[Syslog Search] keyword={search_keyword}, time_range={start_datetime} to {end_datetime}")
+        print(f"[Syslog Search] keyword={search_keyword}, time_range={start_datetime} to {end_datetime}, hostnames={hostnames}, cluster_name={cluster_name}")
         
         # クエリ構築
         query = {
@@ -336,6 +338,40 @@ class ElasticGateway(ElasticAPI):
                 "query_string": {
                     "default_field": "message",
                     "query": search_keyword,
+                }
+            })
+        
+        # hostnameフィルタまたはクラスタ名ワイルドカードが指定されている場合
+        if (hostnames and len(hostnames) > 0) or cluster_name:
+            # should (OR条件) を構築
+            should_conditions = []
+            
+            # 選択されたhostnameリスト（各hostnameに*を追加してワイルドカード検索）
+            if hostnames and len(hostnames) > 0:
+                for hostname in hostnames:
+                    hostname_wildcard = f"{hostname}*"
+                    should_conditions.append({
+                        "wildcard": {
+                            "hostname": hostname_wildcard
+                        }
+                    })
+                print(f"[Syslog Search] Applying hostname wildcard filters: {[f'{h}*' for h in hostnames]}")
+            
+            # クラスタ名ワイルドカード（例: "DM3-POC023-CE*"）
+            if cluster_name:
+                cluster_wildcard = f"{cluster_name}*"
+                should_conditions.append({
+                    "wildcard": {
+                        "hostname": cluster_wildcard
+                    }
+                })
+                print(f"[Syslog Search] Applying cluster wildcard filter: {cluster_wildcard}")
+            
+            # should条件を追加（OR条件）
+            query["function_score"]["query"]["bool"]["must"].append({
+                "bool": {
+                    "should": should_conditions,
+                    "minimum_should_match": 1
                 }
             })
         

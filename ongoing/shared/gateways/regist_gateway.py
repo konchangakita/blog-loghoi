@@ -84,6 +84,8 @@ class RegistGateway:
                         # fmt: on
 
                         _cvm_list = []
+                        _host_names = []  # ハイパーバイザーのhostname
+                        _host_info = []  # ホスト情報（hostname, host_ip, cvm_ip）
                         for entity in res_cvm["entities"]:
                             # Nameのフィールドがマッチした場合のみIPを拾っていれる処理。PCについてはNameのフィールドが空になる
                             if "name" in entity["status"]:
@@ -97,11 +99,20 @@ class RegistGateway:
                                         "status"
                                     ]["resources"]["block"]["block_serial_number"]
                                     # クラスタ内のCVMIPのリストを入れる
-                                    _cvm_list.append(
-                                        entity["status"]["resources"]["controller_vm"][
-                                            "ip"
-                                        ]
-                                    )
+                                    cvm_ip = entity["status"]["resources"]["controller_vm"]["ip"]
+                                    _cvm_list.append(cvm_ip)
+                                    
+                                    # ハイパーバイザーのhostnameを保存（例: NTNX-61c637c0-A）
+                                    hostname = entity["status"]["name"]
+                                    _host_names.append(hostname)
+                                    
+                                    # ホスト情報（hostname, host_ip, cvm_ip）を保存
+                                    host_ip = entity["status"]["resources"]["hypervisor"]["ip"]
+                                    _host_info.append({
+                                        "hostname": hostname,
+                                        "host_ip": host_ip,
+                                        "cvm_ip": cvm_ip
+                                    })
 
                             # prism centralのIPにマッチした場合にシリアルナンバーを取り出す
                             elif (
@@ -112,6 +123,8 @@ class RegistGateway:
                                     "resources"
                                 ]["serial_number"]
                         cluster_data["cvms_ip"] = sorted(_cvm_list)
+                        cluster_data["host_names"] = sorted(_host_names)  # ハイパーバイザーのhostname
+                        cluster_data["host_info"] = sorted(_host_info, key=lambda x: x["hostname"])  # ホスト詳細情報
                         input_list.append(cluster_data)
 
                 # PCかどうかの判定

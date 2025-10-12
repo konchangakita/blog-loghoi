@@ -36,6 +36,12 @@ const SyslogContent = () => {
   const [isPageLoading, setIsPageLoading] = useState<boolean>(true)
   const [error, setError] = useState<string>('')
 
+  // hostname関連の状態
+  const [hostnames, setHostnames] = useState<string[]>([])
+  const [selectedHostnames, setSelectedHostnames] = useState<string[]>([])
+  const [isLoadingHostnames, setIsLoadingHostnames] = useState<boolean>(false)
+  const [hostnameError, setHostnameError] = useState<string>('')
+
   // react hook form
   const {
     register,
@@ -64,6 +70,45 @@ const SyslogContent = () => {
   const clearFilter = () => {
     setFilter('')
   }
+
+  // hostname一覧を取得
+  useEffect(() => {
+    const fetchHostnames = async () => {
+      if (!cluster) {
+        console.warn('cluster_name が指定されていません')
+        return
+      }
+
+      setIsLoadingHostnames(true)
+      setHostnameError('')
+
+      try {
+        const response = await fetch(`${getBackendUrl()}/api/hostnames`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cluster_name: cluster }),
+          signal: AbortSignal.timeout(30000), // 30秒タイムアウト
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`)
+        }
+
+        const data = await response.json()
+        setHostnames(data.hostnames || [])
+        // 初期状態で「すべて選択」
+        setSelectedHostnames(data.hostnames || [])
+        console.log(`取得したhostnames: ${data.hostnames}`)
+      } catch (error) {
+        console.error('❌ Hostname取得エラー:', error)
+        setHostnameError('Hostnameの取得に失敗しました')
+      } finally {
+        setIsLoadingHostnames(false)
+      }
+    }
+
+    fetchHostnames()
+  }, [cluster])
 
   // ページの初期読み込み完了時にローディング状態を解除
   useEffect(() => {
@@ -118,7 +163,8 @@ const SyslogContent = () => {
       start_datetime: formatDate(data.startDT),
       end_datetime: formatDate(data.endDT),
       serial: '', // 必要に応じて設定
-      cluster: cluster || '' // URLパラメータから取得
+      cluster: cluster || '', // URLパラメータから取得
+      hostnames: selectedHostnames // 選択されたhostnameリスト
     }
     
     const requestUrl = `${getBackendUrl()}/api/sys/search`
@@ -187,6 +233,7 @@ const SyslogContent = () => {
                 <input type='text' {...register('searchtxt')} className='textarea textarea-bordered w-full' placeholder='検索キーワードを入力' />
               </div>
               <div className='flex flex-nowrap p-1'>
+
                 <div className='p-1 '>
                   <label className='label'>
                     <span className='label-text'></span>

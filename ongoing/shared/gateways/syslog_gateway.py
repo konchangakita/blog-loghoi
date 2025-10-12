@@ -13,6 +13,9 @@ es = ela.ElasticGateway()
 class SyslogGateway:
     def search_syslog(self, search_item):
         try:
+            # hostnames変数を初期化
+            hostnames = []
+            
             # FastAPIからの直接的なデータ構造に対応
             if "query" in search_item and "data" in search_item:
                 # 古いFlask形式のデータ構造
@@ -20,13 +23,20 @@ class SyslogGateway:
                 keyword = search_item["data"]["searchtxt"]
                 start_datetime = search_item["data"]["startDT"]
                 end_datetime = search_item["data"]["endDT"]
+                hostnames = []  # 古い形式ではhostnameフィルタなし
             else:
                 # 新しいFastAPI形式のデータ構造
                 cluster_name = search_item.get("cluster", "")
                 keyword = search_item.get("keyword", "")
                 start_datetime = search_item.get("start_datetime", "")
                 end_datetime = search_item.get("end_datetime", "")
+                hostnames = search_item.get("hostnames", [])  # hostnameリストを取得
 
+            # デバッグログ: 受信データの詳細を確認
+            print(f"[SyslogGateway] Received search_item keys: {list(search_item.keys())}")
+            print(f"[SyslogGateway] Extracted hostnames: {hostnames}")
+            print(f"[SyslogGateway] Extracted cluster_name: {cluster_name}")
+            
             # 日付変換
             if start_datetime and end_datetime:
                 # ISO形式の日付をパースしてJST形式に変換
@@ -41,12 +51,16 @@ class SyslogGateway:
                 start_datetime_utc = "2024-01-01T00:00:00"
                 end_datetime_utc = "2024-12-31T23:59:59"
 
-            # Elasticsearchで検索（クラスター名フィルタなし - 暫定対応）
-            # TODO: Syslogにクラスター識別情報を付与する仕組みが必要
-            print(f"[Syslog Search] Searching without hostname filter")
+            # Elasticsearchで検索（hostnameフィルタ + クラスタ名ワイルドカード対応）
+            if hostnames and len(hostnames) > 0:
+                print(f"[Syslog Search] Searching with hostname filter: {hostnames}")
+            else:
+                print(f"[Syslog Search] Searching without hostname filter")
+            if cluster_name:
+                print(f"[Syslog Search] Cluster name wildcard: {cluster_name}*")
             print(f"[Syslog Search] keyword={keyword}, time_range={start_datetime_utc} to {end_datetime_utc}")
             res = es.search_syslog_by_keyword_and_time(
-                keyword, start_datetime_utc, end_datetime_utc
+                keyword, start_datetime_utc, end_datetime_utc, hostnames, cluster_name
             )
             
             # ログデータを構造化して返す

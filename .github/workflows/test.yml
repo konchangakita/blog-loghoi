@@ -2,18 +2,18 @@ name: LogHoi TDD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-    paths: 
-      - 'ongoing/**'
-  pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
     paths:
-      - 'ongoing/**'
+      - "ongoing/**"
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - "ongoing/**"
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    
+
     services:
       elasticsearch:
         image: elasticsearch:7.17.9
@@ -28,59 +28,59 @@ jobs:
           --health-retries 5
 
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.12'
-        
-    - name: Install dependencies
-      run: |
-        cd ongoing
-        pip install -r backend/requirements.txt
-        pip install -r tests/test_requirements.txt
-        
-    - name: Run structure tests
-      run: |
-        cd ongoing
-        python -m unittest tests.unit.test_gateways_standalone -v
-        
-    - name: Run unit tests (with dependencies)
-      run: |
-        cd ongoing  
-        python -m unittest discover tests/unit -v
-      continue-on-error: true  # 依存関係エラーは許容
-        
-    - name: Code quality checks
-      run: |
-        cd ongoing
-        # flake8 shared/ backend/flaskr/ tests/ || true
-        # black --check shared/ backend/flaskr/ tests/ || true
-        echo "Code quality checks placeholder"
-        
-    - name: Generate coverage report
-      run: |
-        cd ongoing
-        # coverage run -m unittest discover tests/
-        # coverage report
-        echo "Coverage report placeholder"
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          cd ongoing
+          pip install -r backend/requirements.txt
+          pip install -r tests/test_requirements.txt
+
+      - name: Run structure tests
+        run: |
+          cd ongoing
+          python -m unittest tests.unit.test_gateways_standalone -v
+
+      - name: Run unit tests (with dependencies)
+        run: |
+          cd ongoing  
+          python -m unittest discover tests/unit -v
+        continue-on-error: true # 依存関係エラーは許容
+
+      - name: Code quality checks
+        run: |
+          cd ongoing
+          # flake8 shared/ backend/flaskr/ tests/ || true
+          # black --check shared/ backend/flaskr/ tests/ || true
+          echo "Code quality checks placeholder"
+
+      - name: Generate coverage report
+        run: |
+          cd ongoing
+          # coverage run -m unittest discover tests/
+          # coverage report
+          echo "Coverage report placeholder"
 
   docker-test:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Build Docker images
-      run: |
-        cd ongoing
-        docker-compose -f docker-compose_refactored.yml build
-        
-    - name: Test Docker startup
-      run: |
-        cd ongoing
-        docker-compose -f docker-compose_refactored.yml up -d
-        sleep 30
-        docker-compose -f docker-compose_refactored.yml ps
-        docker-compose -f docker-compose_refactored.yml down
+      - uses: actions/checkout@v3
+
+      - name: Build Docker images
+        run: |
+          cd ongoing
+          docker compose -f docker-compose_refactored.yml build
+
+      - name: Test Docker startup
+        run: |
+          cd ongoing
+          docker compose -f docker-compose_refactored.yml up -d
+          sleep 30
+          docker compose -f docker-compose_refactored.yml ps
+          docker compose -f docker-compose_refactored.yml down

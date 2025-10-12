@@ -32,7 +32,7 @@ from shared.gateways import (
     SyslogGateway, 
     ElasticGateway
 )
-from core.common import connect_ssh, get_cvmlist
+from core.common import connect_ssh, get_cvmlist, get_cvm_hostnames
 from config import Config
 
 # ルーターのインポート
@@ -65,6 +65,7 @@ class SyslogSearchRequest(BaseModel):
     end_datetime: str
     serial: str = None
     cluster: str = None
+    hostnames: list = []  # hostname フィルタ用リスト
 
 
 class WebSocketLogMessage(BaseModel):
@@ -671,6 +672,41 @@ async def get_cvmlist_api(cluster_name: Dict[str, str]) -> Dict[str, Any]:
         print(f"❌ CVM一覧取得エラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/hostnames")
+async def get_cvm_hostnames_api(request: Dict[str, str]) -> Dict[str, Any]:
+    """
+    CVM hostname一覧取得API（共通）
+    
+    Syslog、リアルタイムログなど、各機能で使用可能。
+    指定されたクラスター名に属するCVMのhostnameリストを返す。
+    
+    Request Body:
+        {
+            "cluster_name": "DM3-POC023-CE"
+        }
+    
+    Response:
+        {
+            "hostnames": ["NTNX-5def2a70-A-CVM", "NTNX-5def2a70-B-CVM", ...],
+            "count": 4
+        }
+    """
+    try:
+        cluster_name = request.get("cluster_name", "")
+        if not cluster_name:
+            raise HTTPException(status_code=400, detail="cluster_name is required")
+        
+        # common.pyの関数を呼び出し
+        hostnames = get_cvm_hostnames(cluster_name)
+        
+        return {
+            "hostnames": hostnames,
+            "count": len(hostnames)
+        }
+    except Exception as e:
+        print(f"❌ Hostname一覧取得エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ========================================
 # Syslog Search API
 # ========================================
@@ -690,7 +726,8 @@ async def search_syslog(request: SyslogSearchRequest) -> Dict[str, Any]:
             "start_datetime": request_data.get("start_datetime", ""),
             "end_datetime": request_data.get("end_datetime", ""),
             "serial": request_data.get("serial", ""),
-            "cluster": request_data.get("cluster", "")  # クラスター名を追加
+            "cluster": request_data.get("cluster", ""),  # クラスター名を追加
+            "hostnames": request_data.get("hostnames", [])  # hostnameリストを追加
         }
         
         data = sys_gateway.search_syslog(search_data)

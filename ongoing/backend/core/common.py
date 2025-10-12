@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo  # 3.9
 
 import re
 import json
+import os
 import paramiko
 import ela
 
@@ -79,7 +80,8 @@ def change_timestamp(timestamp):
 # from _rt:get_session_rt, get_cvmlist
 def connect_ssh(hostname):
     username = "nutanix"
-    key_file = "/app/config/.ssh/ntnx-lockdown"
+    # 環境変数でSSH鍵のパスを指定（デフォルトはKubernetes用）
+    key_file = os.getenv("SSH_KEY_PATH", "/app/config/.ssh/ntnx-lockdown")
     rsa_key = paramiko.RSAKey.from_private_key_file(key_file)
 
     client = paramiko.SSHClient()
@@ -156,3 +158,33 @@ def get_cvmlist(cluster_name):
                 print(f"Error closing SSH connection: {e}")
 
     return cluster_data
+
+
+def get_cvm_hostnames(cluster_name):
+    """
+    指定されたクラスターのhostname一覧をElasticsearchから取得
+    
+    PC Registration時に保存された host_names（ハイパーバイザーのhostname）を取得。
+    Syslog検索時はワイルドカード（hostname*）で検索するため、
+    ハイパーバイザー名（例: NTNX-61c637c0-A）で十分。
+    
+    Args:
+        cluster_name (str): クラスター名（例: "DM3-POC023-CE"）
+    
+    Returns:
+        list: hostnameの配列（例: ["NTNX-61c637c0-A", "NTNX-e51b46bc-A"]）
+    """
+    # Elasticsearchからクラスター情報を取得
+    data = es.get_cvmlist_document(cluster_name)
+    if not data:
+        raise Exception(f"Cluster {cluster_name} not found")
+    
+    # host_names フィールドを取得
+    hostnames = data[0].get("host_names", [])
+    
+    if not hostnames:
+        print(f"⚠️ [get_cvm_hostnames] host_names フィールドが見つかりません。クラスターを再登録してください。")
+        raise Exception(f"No hostnames found for cluster {cluster_name}. Please re-register the cluster.")
+    
+    print(f"[get_cvm_hostnames] 取得したhostnames: {hostnames}")
+    return sorted(hostnames)
