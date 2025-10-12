@@ -10,6 +10,7 @@
 ### v1.2.0（2025-10-12）
 - **クラスター判別機能の実装**: PC Registration時にhypervisor hostnameを保存し、Syslog検索時に自動的にクラスター識別
 - **hostname自動取得**: Prism API (`/api/nutanix/v3/hosts/list`) からhypervisor hostnameを取得
+- **ホスト情報拡張**: hostname、host IP、CVM IPを一緒に保存（将来の機能拡張に対応）
 - **Elasticsearchクエリ改善**: hostnameワイルドカード検索を実装（`hostname`フィールドを使用）
 - **API追加**: `POST /api/hostnames` エンドポイントを追加（クラスター別hostname取得）
 - **UI簡素化**: hostname選択UIを削除し、自動的に全hostnameで検索
@@ -160,9 +161,26 @@ PC Registration時にPrism APIからhypervisor hostnameを取得し、Elasticsea
        "cluster_name": "DM3-POC023-CE",
        "pc_ip": "10.55.23.7",
        "prism_ip": "10.55.23.37",
-       "host_names": ["PHX-POC339-1", "PHX-POC339-2", "PHX-POC339-3", "PHX-POC339-4"]
+       "host_names": ["PHX-POC339-1", "PHX-POC339-2", "PHX-POC339-3", "PHX-POC339-4"],
+       "host_info": [
+         {
+           "hostname": "PHX-POC339-1",
+           "host_ip": "10.55.23.31",
+           "cvm_ip": "10.55.23.41"
+         },
+         {
+           "hostname": "PHX-POC339-2",
+           "host_ip": "10.55.23.32",
+           "cvm_ip": "10.55.23.42"
+         }
+       ]
      }
      ```
+
+   **v1.2.0での拡張**:
+   - `host_info`フィールドを追加（ホスト詳細情報）
+   - 各ホストの`hostname`、`host_ip`（Hypervisor IP）、`cvm_ip`（CVM IP）を保存
+   - 将来的な機能拡張（IPベースの検索、ホスト別分析等）に対応可能
 
 #### 0.3 Syslog検索時の処理
 1. **hostname取得**: `POST /api/hostnames` でクラスター別hostnameリストを取得
@@ -334,8 +352,15 @@ class SyslogSearchRequest(BaseModel):
   - 主要フィールド: `@timestamp`, `hostname`, `message`, `facility_label`, `severity_label`
 - **クラスター情報インデックス**: `cluster`（v1.2.0で拡張）
   - クラスター情報とhypervisor hostnameを格納
-  - 主要フィールド: `cluster_name`, `pc_ip`, `prism_ip`, `host_names` (配列)
-  - `host_names`フィールド例: `["PHX-POC339-1", "PHX-POC339-2", "PHX-POC339-3"]`
+  - 主要フィールド: 
+    - `cluster_name`: クラスター名
+    - `pc_ip`: Prism Central IP
+    - `prism_ip`: Prism Element IP
+    - `host_names`: ハイパーバイザーのhostname配列
+    - `host_info`: ホスト詳細情報配列（v1.2.0で追加）
+      - `hostname`: ハイパーバイザーのhostname
+      - `host_ip`: ハイパーバイザーのIPアドレス
+      - `cvm_ip`: CVMのIPアドレス
 
 #### 3.2 検索クエリ（v1.2.0）
 ```json
