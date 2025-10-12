@@ -4,9 +4,15 @@
 LogHoiアプリケーションがNutanix CVMに接続するためのSSH鍵を自動生成・管理する仕組みです。Kubernetes本番環境とdocker-compose開発環境の両方に対応します。
 
 ## バージョン
-1.1.0（最終更新: 2025-10-12）
+1.2.0（最終更新: 2025-10-12）
 
 ## 変更履歴
+### v1.2.0（2025-10-12）
+- 画面上部にAPIErrorメッセージを表示（リアルタイムログ・コレクトログ）
+- エラーメッセージのデザインをDaisyUIで統一
+- 閉じるボタンを削除（エラーは解決するまで表示）
+- コレクトログページでもモーダル自動表示に対応
+
 ### v1.1.0（2025-10-12）
 - SSH認証エラー時のモーダル自動表示機能を追加
 - HTTPエラーレスポンスの詳細取得を改善
@@ -839,6 +845,9 @@ useEffect(() => {
 **ファイル**: `frontend/next-app/loghoi/app/realtimelog/realtimelog-content.tsx`
 
 ```typescript
+// エラーステートの追加
+const [apiError, setApiError] = useState<string | null>(null)
+
 .then(async (res) => {
   if (!res.ok) {
     // エラーレスポンスのボディを取得
@@ -850,6 +859,9 @@ useEffect(() => {
 })
 .catch((error) => {
   const errorMsg = error.message || error.toString()
+  
+  // エラーメッセージを画面上部に表示
+  setApiError(errorMsg)
   
   // SSH鍵認証エラーまたはSSH鍵ファイル不在の場合
   if (errorMsg.includes('SSH_AUTH_ERROR') || 
@@ -868,45 +880,63 @@ useEffect(() => {
 })
 ```
 
-### ユーザー体験
+#### 4. エラーメッセージUI表示
 
-#### エラー発生時の画面遷移
+**ファイル**: `frontend/next-app/loghoi/app/realtimelog/realtimelog-content.tsx`
 
-1. **リアルタイムログページを開く**
-   - CVMリスト取得APIを呼び出し
+```tsx
+return (
+  <>
+    {isLoading && <Loading />}
+    {apiError && (
+      <div className="alert alert-error mb-4">
+        <span>APIError: {apiError}</span>
+      </div>
+    )}
+    {/* メインコンテンツ */}
+  </>
+)
+```
 
-2. **SSH認証エラー発生**
-   - バックエンドでSSH接続失敗を検出
-   - `SSH_AUTH_ERROR`を含むエラーメッセージを返却
+**ファイル**: `frontend/next-app/loghoi/app/collectlog/collectlog-content.tsx`
 
-3. **アラート表示**
-   ```
-   🚨 SSH接続が失敗しています！
-   
-   ssh key を Prism Element の Cluster Lockdown で設定してください。
-   
-   SSH公開鍵を表示します。
-   ```
+```tsx
+// SSH認証エラーの監視
+useEffect(() => {
+  if (error) {
+    const errorMsg = error.message || ''
+    console.log('Error detected:', errorMsg)
+    
+    if (errorMsg.includes('SSH_AUTH_ERROR') || 
+        errorMsg.includes('SSH公開鍵') || 
+        errorMsg.includes('SSH秘密鍵が見つかりません')) {
+      alert(
+        '🚨 SSH接続が失敗しています！\n\n' +
+        'ssh key を Prism Element の Cluster Lockdown で設定してください。\n\n' +
+        'SSH公開鍵を表示します。'
+      )
+      openSshKeyModal()
+    }
+  }
+}, [error])
 
-4. **モーダル自動表示**
-   - OKをクリック後、自動的にSSH Keyモーダルが開く
-   - SSH公開鍵が表示される
-   - ローディング中は「SSH公開鍵を取得中...」を表示
+return (
+  <>
+    {!!error && (
+      <div className="alert alert-error mb-4">
+        <span>APIError: {String(error)}</span>
+      </div>
+    )}
+    {/* メインコンテンツ */}
+  </>
+)
+```
 
-5. **公開鍵のコピー**
-   - モーダル内の公開鍵をクリック
-   - または「キーをコピー」ボタンをクリック
-   - クリップボードにコピー完了
-
-6. **Nutanix Prismで登録**
-   - Prism Element > Settings > Cluster Lockdown
-   - 「Add Public Key」で公開鍵を貼り付け
-   - 保存
-
-7. **ページリロード**
-   - ブラウザをリロード
-   - SSH接続成功
-   - ログ表示開始
+**デザイン仕様**:
+- DaisyUI `alert alert-error`クラスを使用
+- 赤色の背景で警告を強調
+- 閉じるボタンなし（エラーは解決するまで表示）
+- 両ページで完全に統一されたデザイン
 
 ### API仕様
 
@@ -969,9 +999,9 @@ def connect_ssh(hostname):
         return False
 ```
 
-#### フロントエンド（realtimelog-content.tsx）
+#### フロントエンド - HTTPエラーレスポンスの取得
 
-HTTPエラーレスポンスの`detail`を正しく取得：
+**リアルタイムログページ（realtimelog-content.tsx）**:
 
 ```typescript
 .then(async (res) => {
@@ -983,6 +1013,37 @@ HTTPエラーレスポンスの`detail`を正しく取得：
   }
   return res.json()
 })
+```
+
+**コレクトログページ（useApiError.ts）**:
+
+```typescript
+const executeApiCall = useCallback(async (
+  apiCall: () => Promise<Response>,
+  operation: string,
+  context?: Record<string, any>
+): Promise<T | null> => {
+  try {
+    const response = await apiCall()
+    
+    if (!response.ok) {
+      // エラーレスポンスのボディを取得
+      const errorData = await response.json().catch(() => ({}))
+      const errorDetail = errorData.detail || `HTTP error! status: ${response.status}`
+      
+      const error = new APIError(
+        errorDetail,  // ✅ detailを使用
+        response.status,
+        'HTTP_ERROR',
+        undefined,
+        operation
+      )
+      handleError(error, { operation, responseStatus: response.status, ...context })
+      return null
+    }
+    // ...
+  }
+}, [handleError, clearError, handleApiResponse, handleFetchError])
 ```
 
 ### トラブルシューティング
