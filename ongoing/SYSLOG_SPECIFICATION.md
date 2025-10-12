@@ -4,15 +4,24 @@
 シスログ機能は、NutanixクラスターのシステムログをElasticsearchから検索・表示する機能です。キーワード、日時範囲を指定してログを検索し、結果を構造化して表示できます。
 
 ## バージョン
-1.1.0（最終更新: 2025-10-10）
+1.2.0（最終更新: 2025-10-12）
 
 ## 変更履歴
+### v1.2.0（2025-10-12）
+- **クラスター判別機能の実装**: PC Registration時にhypervisor hostnameを保存し、Syslog検索時に自動的にクラスター識別
+- **hostname自動取得**: Prism API (`/api/nutanix/v3/hosts/list`) からhypervisor hostnameを取得
+- **Elasticsearchクエリ改善**: hostnameワイルドカード検索を実装（`hostname`フィールドを使用）
+- **API追加**: `POST /api/hostnames` エンドポイントを追加（クラスター別hostname取得）
+- **UI簡素化**: hostname選択UIを削除し、自動的に全hostnameで検索
+- **docker-compose対応**: SSH鍵パスの環境変数設定を追加
+- **クラスター識別の解決**: v1.1.0で課題だったクラスター識別を実現
+
 ### v1.1.0（2025-10-10）
 - **Kubernetes化**: SyslogサーバーをKubernetesにデプロイ（Filebeat）
 - **hostname仕様変更**: Nutanixから送信されるSyslogのhostnameが`NTNX-<UUID>-<ノード名>-CVM`形式に変更
 - **検索仕様変更**: クラスター名フィルタを削除（hostnameにクラスター名が含まれないため）
 - **検索条件**: 日時範囲とキーワードのみで検索（ホストフィルタなし）
-- **TODO**: クラスター識別の仕組みが必要（Filebeat側でタグ付与など）
+- **TODO**: クラスター識別の仕組みが必要（Filebeat側でタグ付与など） → v1.2.0で解決
 
 ### v1.0.0（2025-10-09）
 - 初版リリース
@@ -68,20 +77,21 @@ graph LR
 
 ### 主要機能
 1. **ログ検索**: 日時範囲とキーワードによるログ検索
-2. **結果表示**: 構造化されたログデータの表示（タイムスタンプ、ホスト名、メッセージ）
-3. **フィルタリング**: 検索結果のリアルタイムフィルタリング
-4. **ダウンロード**: 検索結果のテキストファイルダウンロード
-5. **日時選択**: カレンダーUIによる日時範囲指定
+2. **クラスター判別**: PC Registration時に保存したhostnameでクラスター別にフィルタリング（v1.2.0）
+3. **結果表示**: 構造化されたログデータの表示（タイムスタンプ、ホスト名、メッセージ）
+4. **フィルタリング**: 検索結果のリアルタイムフィルタリング
+5. **ダウンロード**: 検索結果のテキストファイルダウンロード
+6. **日時選択**: カレンダーUIによる日時範囲指定
+7. **自動hostname取得**: Prism APIからhypervisor hostnameを自動取得（v1.2.0）
 
 ### 現在の制限事項
-- **クラスターフィルタなし**: 全クラスターのSyslogが混在して表示される
 - **hostname形式**: Nutanix CVMのホスト名（`NTNX-<UUID>-<ノード名>-CVM`）で表示
-- **クラスター識別不可**: Syslogメッセージ自体にクラスター名情報が含まれない
+- **ワイルドカード検索**: hostnameの前方一致検索を使用（完全一致ではない）
 
-### 将来の改善案
-1. **Filebeat側でタグ付与**: 送信元IPアドレスからクラスターを識別してカスタムフィールドを追加
-2. **複数Syslogサーバー**: クラスターごとに異なるポートでSyslogを受信
-3. **Elasticsearch後処理**: hostnameからクラスター情報を推定してフィールドを追加
+### 実装済みの改善（v1.2.0）
+1. ✅ **クラスター識別の実現**: PC Registration時にPrism APIからhypervisor hostnameを取得・保存
+2. ✅ **hostname自動フィルタリング**: Syslog検索時に自動的にクラスター別hostnameで絞り込み
+3. ✅ **Elasticsearchクエリ改善**: hostnameワイルドカード検索で効率的なフィルタリング
 
 ### アクセス方法
 - **URL**: `http://10.38.113.49:7777/syslog?pcip=*PC_IP*&cluster=*クラスタ名*&prism=*クラスタIP*`
@@ -120,14 +130,54 @@ graph LR
 4. **パース処理**: Filebeatがsyslogメッセージをパース（タイムスタンプ、ホスト名、ファシリティ、重要度、メッセージ）
 5. **Elasticsearch転送**: FilebeatがElasticsearchの`filebeat-*`インデックスに保存
 
-#### ログ検索フロー（アプリケーション）
-1. フロントエンドで検索条件を入力（クラスター名、キーワード、日時範囲）
-2. FastAPIの`/api/sys/search`エンドポイントにPOSTリクエスト
-3. `SyslogGateway`がElasticsearchからログを検索
-4. 構造化されたログデータをフロントエンドに返却
-5. フロントエンドでログを表示・フィルタリング・ダウンロード
+#### ログ検索フロー（アプリケーション、v1.2.0対応）
+1. **ページ読み込み時**: `/api/hostnames`でクラスター別hostnameリストを取得（v1.2.0で追加）
+2. フロントエンドで検索条件を入力（キーワード、日時範囲）
+3. FastAPIの`/api/sys/search`エンドポイントにPOSTリクエスト（hostnameリスト含む）
+4. `SyslogGateway`がElasticsearchからログを検索（hostnameワイルドカード検索）
+5. 構造化されたログデータをフロントエンドに返却
+6. フロントエンドでログを表示・フィルタリング・ダウンロード
 
 ## 詳細仕様
+
+### 0. クラスター判別機能（v1.2.0で追加）
+
+#### 0.1 概要
+PC Registration時にPrism APIからhypervisor hostnameを取得し、Elasticsearchの`cluster`インデックスに保存することで、Syslog検索時にクラスター別の絞り込みを実現します。
+
+#### 0.2 PC Registration時の処理
+1. **Prism APIでhostname取得**:
+   - エンドポイント: `POST https://<PC_IP>:9440/api/nutanix/v3/hosts/list`
+   - レスポンスから`entity["status"]["name"]`を抽出
+   - 各ホストのhypervisor hostnameを取得（例：`PHX-POC339-1`, `PHX-POC339-2`）
+
+2. **Elasticsearchに保存**:
+   - インデックス: `cluster`
+   - ドキュメントID: `<cluster_name>`
+   - フィールド:
+     ```json
+     {
+       "cluster_name": "DM3-POC023-CE",
+       "pc_ip": "10.55.23.7",
+       "prism_ip": "10.55.23.37",
+       "host_names": ["PHX-POC339-1", "PHX-POC339-2", "PHX-POC339-3", "PHX-POC339-4"]
+     }
+     ```
+
+#### 0.3 Syslog検索時の処理
+1. **hostname取得**: `POST /api/hostnames` でクラスター別hostnameリストを取得
+2. **検索条件生成**: 各hostnameに対してワイルドカード検索を設定
+3. **Elasticsearchクエリ**: `should`句で複数hostnameのOR検索を実行
+4. **結果返却**: クラスター別に絞り込まれたSyslogメッセージを返却
+
+#### 0.4 技術的な実装
+- **バックエンドファイル**:
+  - `backend/shared/gateways/regist_gateway.py`: PC Registration処理（hostname保存）
+  - `backend/core/common.py`: hostname取得関数
+  - `backend/core/ela.py`: Elasticsearchクエリ（ワイルドカード検索）
+  - `backend/fastapi_app/app_fastapi.py`: `/api/hostnames` エンドポイント
+- **フロントエンドファイル**:
+  - `frontend/next-app/loghoi/app/syslog/syslog-content.tsx`: hostname自動取得と検索
 
 ### 1. フロントエンド仕様
 
@@ -181,7 +231,32 @@ graph LR
 
 #### 2.1 APIエンドポイント
 
+##### POST /api/hostnames（v1.2.0で追加）
+- **概要**: 指定されたクラスターのhypervisor hostnameリストを取得
+- **リクエストボディ**:
+  ```json
+  {
+    "cluster_name": "string"
+  }
+  ```
+
+- **レスポンス**:
+  ```json
+  {
+    "status": "success",
+    "data": {
+      "hostnames": ["PHX-POC339-1", "PHX-POC339-2", "PHX-POC339-3", "PHX-POC339-4"]
+    }
+  }
+  ```
+
+- **処理フロー**:
+  1. Elasticsearchの`cluster`インデックスから`cluster_name`で検索
+  2. `host_names`フィールドからhypervisor hostname配列を取得
+  3. hostnameリストを返却
+
 ##### POST /api/sys/search
+- **概要**: クラスター別Syslogメッセージ検索（v1.2.0でhostnameフィルタ追加）
 - **リクエストボディ**:
   ```json
   {
@@ -189,7 +264,8 @@ graph LR
     "start_datetime": "string (ISO形式)",
     "end_datetime": "string (ISO形式)",
     "serial": "string (オプション)",
-    "cluster": "string"
+    "cluster": "string",
+    "hostnames": ["string"] (オプション、v1.2.0で追加)
   }
   ```
 
@@ -209,6 +285,10 @@ graph LR
     "count": "number"
   }
   ```
+
+- **v1.2.0での変更点**:
+  - `hostnames`パラメータを追加（クラスター別フィルタリング）
+  - Elasticsearchクエリでhostnameワイルドカード検索を実行
 
 #### 2.2 データモデル
 
@@ -250,9 +330,14 @@ class SyslogSearchRequest(BaseModel):
 
 #### 3.1 インデックス
 - **メインインデックス**: `filebeat-*`
-- **クラスター情報インデックス**: `cluster`
+  - Syslogメッセージを格納
+  - 主要フィールド: `@timestamp`, `hostname`, `message`, `facility_label`, `severity_label`
+- **クラスター情報インデックス**: `cluster`（v1.2.0で拡張）
+  - クラスター情報とhypervisor hostnameを格納
+  - 主要フィールド: `cluster_name`, `pc_ip`, `prism_ip`, `host_names` (配列)
+  - `host_names`フィールド例: `["PHX-POC339-1", "PHX-POC339-2", "PHX-POC339-3"]`
 
-#### 3.2 検索クエリ（v1.1.0）
+#### 3.2 検索クエリ（v1.2.0）
 ```json
 {
   "function_score": {
@@ -273,7 +358,25 @@ class SyslogSearchRequest(BaseModel):
               "query": "<keyword>"
             }
           }
-        ]
+        ],
+        "should": [
+          {
+            "wildcard": {
+              "hostname": "PHX-POC339-1*"
+            }
+          },
+          {
+            "wildcard": {
+              "hostname": "PHX-POC339-2*"
+            }
+          },
+          {
+            "wildcard": {
+              "hostname": "DM3-POC023-CE*"
+            }
+          }
+        ],
+        "minimum_should_match": 1
       }
     }
   }
@@ -285,7 +388,12 @@ class SyslogSearchRequest(BaseModel):
 - `<end_datetime>`: フロントエンドから送信された終了日時（例：`2025-10-09T23:59:59`）
 - `<keyword>`: 検索キーワード（ワイルドカード付き。例：`*ERROR*`）
 
-**注**: hostnameフィルタは削除されました（v1.1.0）
+**v1.2.0での追加**:
+- `should`句でhostnameワイルドカード検索を実装
+  - 各hostnameに対して`wildcard`クエリを生成（例：`PHX-POC339-1*`）
+  - クラスター名でも検索（例：`DM3-POC023-CE*`）
+  - `minimum_should_match: 1`でOR条件を実現
+- クラスター別にSyslogメッセージを絞り込み可能
 
 #### 3.3 データ構造（v1.1.0）
 ```json
