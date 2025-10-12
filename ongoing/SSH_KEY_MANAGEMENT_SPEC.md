@@ -4,9 +4,14 @@
 LogHoiアプリケーションがNutanix CVMに接続するためのSSH鍵を自動生成・管理する仕組みです。Kubernetes本番環境とdocker-compose開発環境の両方に対応します。
 
 ## バージョン
-1.0.0（最終更新: 2025-10-12）
+1.1.0（最終更新: 2025-10-12）
 
 ## 変更履歴
+### v1.1.0（2025-10-12）
+- SSH認証エラー時のモーダル自動表示機能を追加
+- HTTPエラーレスポンスの詳細取得を改善
+- カスタムイベントによるコンポーネント間通信を実装
+
 ### v1.0.0（2025-10-12）
 - 初版リリース
 - SSH鍵自動生成機能の実装
@@ -747,6 +752,277 @@ environment:
   - SSH_KEY_PATH=/app/config/.ssh/loghoi-key
   - SSH_PUBLIC_KEY_PATH=/app/config/.ssh/loghoi-key.pub
 ```
+
+## SSH認証エラー時の自動対応機能
+
+### 概要
+SSH鍵認証エラーが発生した場合、ユーザーに対して自動的にSSH公開鍵を表示し、Nutanix Prismへの登録を促す機能です。
+
+### エラー検出
+以下のエラータイプを自動検出します：
+
+| エラータイプ | 検出キーワード | バックエンドログ |
+|---|---|---|
+| **SSH鍵認証失敗** | `SSH_AUTH_ERROR` | `Authentication (publickey) failed.` |
+| **SSH鍵認証失敗** | `SSH公開鍵` | `SSH公開鍵がNutanix Prismに登録されていない` |
+| **SSH鍵ファイル不在** | `SSH秘密鍵が見つかりません` | `FileNotFoundError: SSH秘密鍵が見つかりません` |
+
+### 動作フロー
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant Frontend as フロントエンド
+    participant Backend as バックエンド
+    participant CVM as Nutanix CVM
+    
+    User->>Frontend: リアルタイムログページを開く
+    Frontend->>Backend: POST /api/cvmlist
+    Backend->>CVM: SSH接続試行
+    CVM-->>Backend: Authentication failed
+    Backend->>Backend: SSH_AUTH_ERROR検出
+    Backend-->>Frontend: 500 Error (detail: SSH_AUTH_ERROR)
+    Frontend->>Frontend: エラーメッセージ解析
+    Frontend->>User: アラート表示
+    User->>Frontend: OKをクリック
+    Frontend->>Frontend: openSshKeyModal()
+    Frontend->>User: モーダル自動表示
+    Frontend->>Backend: GET /api/sshkey
+    Backend-->>Frontend: 公開鍵返却
+    Frontend->>User: 公開鍵表示
+    User->>User: 公開鍵をコピー
+    User->>CVM: Prism Elementで公開鍵登録
+    User->>Frontend: ページリロード
+    Frontend->>Backend: POST /api/cvmlist
+    Backend->>CVM: SSH接続試行
+    CVM-->>Backend: Authentication successful
+    Backend-->>Frontend: CVM情報返却
+```
+
+### 技術実装
+
+#### 1. カスタムイベントシステム
+
+**ファイル**: `frontend/next-app/loghoi/lib/sshKeyModal.ts`
+
+```typescript
+// SSH Keyモーダルを外部から制御するためのイベント管理
+export const SSH_KEY_MODAL_EVENT = 'open-ssh-key-modal'
+
+export const openSshKeyModal = () => {
+  const event = new CustomEvent(SSH_KEY_MODAL_EVENT)
+  window.dispatchEvent(event)
+}
+```
+
+#### 2. Navbarでイベントリッスン
+
+**ファイル**: `frontend/next-app/loghoi/components/navbar.tsx`
+
+```typescript
+// 外部からモーダルを開くイベントをリッスン
+useEffect(() => {
+  const handleOpenModal = () => {
+    setIsOpen(true)  // モーダルを開く
+  }
+  
+  window.addEventListener(SSH_KEY_MODAL_EVENT, handleOpenModal)
+  
+  return () => {
+    window.removeEventListener(SSH_KEY_MODAL_EVENT, handleOpenModal)
+  }
+}, [])
+```
+
+#### 3. エラー発生時にモーダル起動
+
+**ファイル**: `frontend/next-app/loghoi/app/realtimelog/realtimelog-content.tsx`
+
+```typescript
+.then(async (res) => {
+  if (!res.ok) {
+    // エラーレスポンスのボディを取得
+    const errorData = await res.json().catch(() => ({}))
+    const errorDetail = errorData.detail || `HTTP error! status: ${res.status}`
+    throw new Error(errorDetail)
+  }
+  return res.json()
+})
+.catch((error) => {
+  const errorMsg = error.message || error.toString()
+  
+  // SSH鍵認証エラーまたはSSH鍵ファイル不在の場合
+  if (errorMsg.includes('SSH_AUTH_ERROR') || 
+      errorMsg.includes('SSH公開鍵') || 
+      errorMsg.includes('SSH秘密鍵が見つかりません')) {
+    alert(
+      '🚨 SSH接続が失敗しています！\n\n' +
+      'ssh key を Prism Element の Cluster Lockdown で設定してください。\n\n' +
+      'SSH公開鍵を表示します。'
+    )
+    // モーダルを自動表示
+    openSshKeyModal()
+  } else {
+    alert('CVM情報の取得に失敗しました: ' + errorMsg)
+  }
+})
+```
+
+### ユーザー体験
+
+#### エラー発生時の画面遷移
+
+1. **リアルタイムログページを開く**
+   - CVMリスト取得APIを呼び出し
+
+2. **SSH認証エラー発生**
+   - バックエンドでSSH接続失敗を検出
+   - `SSH_AUTH_ERROR`を含むエラーメッセージを返却
+
+3. **アラート表示**
+   ```
+   🚨 SSH接続が失敗しています！
+   
+   ssh key を Prism Element の Cluster Lockdown で設定してください。
+   
+   SSH公開鍵を表示します。
+   ```
+
+4. **モーダル自動表示**
+   - OKをクリック後、自動的にSSH Keyモーダルが開く
+   - SSH公開鍵が表示される
+   - ローディング中は「SSH公開鍵を取得中...」を表示
+
+5. **公開鍵のコピー**
+   - モーダル内の公開鍵をクリック
+   - または「キーをコピー」ボタンをクリック
+   - クリップボードにコピー完了
+
+6. **Nutanix Prismで登録**
+   - Prism Element > Settings > Cluster Lockdown
+   - 「Add Public Key」で公開鍵を貼り付け
+   - 保存
+
+7. **ページリロード**
+   - ブラウザをリロード
+   - SSH接続成功
+   - ログ表示開始
+
+### API仕様
+
+#### GET /api/sshkey
+
+SSH公開鍵を取得するAPI
+
+**リクエスト**
+```http
+GET /api/sshkey HTTP/1.1
+Host: localhost:7776
+```
+
+**レスポンス（成功）**
+```json
+{
+  "status": "success",
+  "data": {
+    "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ... loghoi@docker-compose"
+  }
+}
+```
+
+**レスポンス（エラー）**
+```json
+{
+  "status": "error",
+  "message": "SSH公開鍵ファイルが見つかりません: /app/config/.ssh/loghoi-key.pub"
+}
+```
+
+### エラーハンドリング
+
+#### バックエンド（common.py）
+
+```python
+def connect_ssh(hostname):
+    """SSH接続を確立（詳細なエラーメッセージ付き）"""
+    username = "nutanix"
+    key_file = os.getenv("SSH_KEY_PATH", "/app/config/.ssh/loghoi-key")
+    
+    try:
+        rsa_key = paramiko.RSAKey.from_private_key_file(key_file)
+    except FileNotFoundError:
+        error_msg = (
+            f"❌ SSH秘密鍵が見つかりません: {key_file}\n"
+            f"デプロイスクリプトを実行してSSH鍵を生成してください。"
+        )
+        print(error_msg)
+        return False
+    
+    try:
+        client.connect(hostname=hostname, username=username, pkey=rsa_key, timeout=10)
+    except paramiko.ssh_exception.AuthenticationException:
+        error_msg = (
+            f"❌ SSH認証エラー: {hostname}\n"
+            f"原因: SSH公開鍵がNutanix Prismに登録されていない可能性があります"
+        )
+        print(error_msg)
+        return False
+```
+
+#### フロントエンド（realtimelog-content.tsx）
+
+HTTPエラーレスポンスの`detail`を正しく取得：
+
+```typescript
+.then(async (res) => {
+  if (!res.ok) {
+    // エラーレスポンスのボディを取得
+    const errorData = await res.json().catch(() => ({}))
+    const errorDetail = errorData.detail || `HTTP error! status: ${res.status}`
+    throw new Error(errorDetail)
+  }
+  return res.json()
+})
+```
+
+### トラブルシューティング
+
+#### モーダルが表示されない場合
+
+1. **ブラウザコンソールを確認**
+   ```javascript
+   // エラーメッセージを確認
+   console.error('CVM API error:', error)
+   ```
+
+2. **エラーメッセージに`SSH_AUTH_ERROR`が含まれているか確認**
+   - 含まれていない場合、バックエンドのエラーメッセージを確認
+
+3. **カスタムイベントが発火しているか確認**
+   ```javascript
+   // ブラウザコンソールで確認
+   window.addEventListener('open-ssh-key-modal', () => {
+     console.log('Modal event received!')
+   })
+   ```
+
+#### 公開鍵が表示されない場合
+
+1. **`/api/sshkey`エンドポイントを確認**
+   ```bash
+   curl http://localhost:7776/api/sshkey
+   ```
+
+2. **SSH公開鍵ファイルの存在確認**
+   ```bash
+   ls -la ongoing/config/.ssh/loghoi-key.pub
+   ```
+
+3. **環境変数の確認**
+   ```bash
+   # コンテナ内で確認
+   docker exec loghoi-backend-fastapi env | grep SSH
+   ```
 
 ## セキュリティベストプラクティス
 
