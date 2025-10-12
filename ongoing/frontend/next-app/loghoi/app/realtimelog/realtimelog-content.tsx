@@ -103,9 +103,12 @@ const RealtimelogContent = () => {
 
   useEffect(() => {
     fetch(requestUrl, requestOptions)
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`)
+          // エラーレスポンスのボディを取得
+          const errorData = await res.json().catch(() => ({}))
+          const errorDetail = errorData.detail || `HTTP error! status: ${res.status}`
+          throw new Error(errorDetail)
         }
         return res.json()
       })
