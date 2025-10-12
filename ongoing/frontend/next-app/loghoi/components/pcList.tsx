@@ -25,7 +25,14 @@ const DisplayCluster = ({ clusterList }: any) => {
         <tr className='' key={idx + 1}>
           <td className='whitespace-normal pl-16 md:pl-24 lg:pl-40 text-left'>
             <div className='inline-flex items-center'>
-              <Image src={icon} width={30} height={30} alt={''} className='inline' />
+              <Image 
+                src={icon} 
+                width={30} 
+                height={30} 
+                alt={val.hypervisor} 
+                className='inline'
+                style={{ width: 'auto', height: 'auto' }}
+              />
               <div className='inline px-2'>
                 {val.name} {val.prism_ip}
               </div>
