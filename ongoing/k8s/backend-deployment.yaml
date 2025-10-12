@@ -43,6 +43,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: status.podIP
+        - name: SSH_KEY_PATH
+          value: "/app/config/.ssh/ntnx-lockdown"
+        - name: SSH_PUBLIC_KEY_PATH
+          value: "/app/config/.ssh/ntnx-lockdown.pub"
         envFrom:
         - configMapRef:
             name: loghoi-config
@@ -86,10 +90,13 @@ spec:
       - name: ssh-keys
         secret:
           secretName: loghoi-secrets
-          defaultMode: 0400
           items:
           - key: SSH_PRIVATE_KEY
             path: ntnx-lockdown
+            mode: 0600
+          - key: SSH_PUBLIC_KEY
+            path: ntnx-lockdown.pub
+            mode: 0644
       - name: uploads
         emptyDir: {}
       - name: logs

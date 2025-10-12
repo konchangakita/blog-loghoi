@@ -672,6 +672,44 @@ async def get_cvmlist_api(cluster_name: Dict[str, str]) -> Dict[str, Any]:
         print(f"❌ CVM一覧取得エラー: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/sshkey")
+async def get_ssh_public_key() -> Dict[str, Any]:
+    """
+    SSH公開鍵取得API
+    
+    UIの「Open SSH KEY」ボタンで表示する公開鍵を取得します。
+    
+    Response:
+        {
+            "status": "success",
+            "data": {
+                "public_key": "ssh-rsa AAAAB3..."
+            }
+        }
+    """
+    try:
+        from shared.gateways.regist_gateway import RegistGateway
+        reg = RegistGateway()
+        sshkey = reg.get_sshkey()
+        
+        # エラーの場合はJSON文字列で返ってくる
+        if sshkey.startswith('{'):
+            import json
+            error_data = json.loads(sshkey)
+            raise HTTPException(status_code=404, detail=error_data.get("error", "SSH key not found"))
+        
+        return {
+            "status": "success",
+            "data": {
+                "public_key": sshkey.strip()
+            }
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ SSH公開鍵取得エラー: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/hostnames")
 async def get_cvm_hostnames_api(request: Dict[str, str]) -> Dict[str, Any]:
     """

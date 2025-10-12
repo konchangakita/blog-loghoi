@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getBackendUrl } from '../../lib/getBackendUrl'
+import { openSshKeyModal } from '../../lib/sshKeyModal'
 
 // Lib
 //import { LogFiles } from '@/lib/rt-logs'
@@ -89,6 +90,7 @@ const RealtimelogContent = () => {
   const ClusterName = searchParams.get('cluster')
   const [isLoading, setLoading] = useState(true)
   const [data, setData] = useState<ResValues>()
+  const [apiError, setApiError] = useState<string | null>(null)
 
   const [prismLeader, setprismLeader] = useState<string>('')
   const [cvmChecked, setcvmChecked] = useState<string>('')
@@ -102,9 +104,12 @@ const RealtimelogContent = () => {
 
   useEffect(() => {
     fetch(requestUrl, requestOptions)
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`)
+          // エラーレスポンスのボディを取得
+          const errorData = await res.json().catch(() => ({}))
+          const errorDetail = errorData.detail || `HTTP error! status: ${res.status}`
+          throw new Error(errorDetail)
         }
         return res.json()
       })
@@ -134,7 +139,25 @@ const RealtimelogContent = () => {
       .catch((error) => {
         console.error('CVM API error:', error)
         setLoading(false)
-        alert('CVM情報の取得に失敗しました: ' + error.message)
+        
+        // エラーメッセージの解析
+        const errorMsg = error.message || error.toString()
+        
+        // エラーメッセージを画面上部に表示
+        setApiError(errorMsg)
+        
+        // SSH鍵認証エラーまたはSSH鍵ファイル不在の場合
+        if (errorMsg.includes('SSH_AUTH_ERROR') || errorMsg.includes('SSH公開鍵') || errorMsg.includes('SSH秘密鍵が見つかりません')) {
+          alert(
+            '🚨 SSH接続が失敗しています！\n\n' +
+            'ssh key を Prism Element の Cluster Lockdown で設定してください。\n\n' +
+            'SSH公開鍵を表示します。'
+          )
+          // モーダルを自動表示
+          openSshKeyModal()
+        } else {
+          alert('CVM情報の取得に失敗しました: ' + errorMsg)
+        }
       })
 
     console.log('cluster data get', prismLeader, cvmChecked)
@@ -204,6 +227,11 @@ const RealtimelogContent = () => {
   return (
     <>
       {isLoading && <Loading />}
+      {apiError && (
+        <div className="alert alert-error mb-4">
+          <span>APIError: {apiError}</span>
+        </div>
+      )}
       <div className='p-1 flex justify-center'>
         <div className='m-1 relative  w-[480px] '>
           <input

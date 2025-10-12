@@ -161,8 +161,12 @@ export const useApiCall = <T = any>() => {
       const response = await apiCall()
       
       if (!response.ok) {
+        // エラーレスポンスのボディを取得
+        const errorData = await response.json().catch(() => ({}))
+        const errorDetail = errorData.detail || `HTTP error! status: ${response.status}`
+        
         const error = new APIError(
-          `HTTP error! status: ${response.status}`,
+          errorDetail,
           response.status,
           'HTTP_ERROR',
           undefined,

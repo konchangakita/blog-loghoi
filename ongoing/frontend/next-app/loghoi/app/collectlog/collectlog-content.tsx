@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { openSshKeyModal } from '../../lib/sshKeyModal'
 
 // components
 import Loading from '@/components/loading'
@@ -95,6 +96,25 @@ const CollectlogContnet = () => {
 
     initializeData()
   }, [ClusterName, PrismIp, getCvmList])
+
+  // SSH認証エラーの監視
+  useEffect(() => {
+    if (error) {
+      const errorMsg = error.message || ''
+      console.log('Error detected:', errorMsg)
+      
+      if (errorMsg.includes('SSH_AUTH_ERROR') || 
+          errorMsg.includes('SSH公開鍵') || 
+          errorMsg.includes('SSH秘密鍵が見つかりません')) {
+        alert(
+          '🚨 SSH接続が失敗しています！\n\n' +
+          'ssh key を Prism Element の Cluster Lockdown で設定してください。\n\n' +
+          'SSH公開鍵を表示します。'
+        )
+        openSshKeyModal()
+      }
+    }
+  }, [error])
 
   // イベントハンドラー
   const handleCvmChange = (cvm: string) => {
@@ -312,8 +332,7 @@ const CollectlogContnet = () => {
       
       {!!error && (
         <div className="alert alert-error mb-4">
-          <span>{String(error)}</span>
-          <button className="btn btn-sm" onClick={clearError}>×</button>
+          <span>APIError: {String(error)}</span>
         </div>
       )}
 

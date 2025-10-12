@@ -79,20 +79,51 @@ def change_timestamp(timestamp):
 
 # from _rt:get_session_rt, get_cvmlist
 def connect_ssh(hostname):
+    """SSH接続を確立（詳細なエラーメッセージ付き）"""
     username = "nutanix"
-    # 環境変数でSSH鍵のパスを指定（デフォルトはKubernetes用）
-    key_file = os.getenv("SSH_KEY_PATH", "/app/config/.ssh/ntnx-lockdown")
-    rsa_key = paramiko.RSAKey.from_private_key_file(key_file)
+    # 環境変数でSSH鍵のパスを指定
+    key_file = os.getenv("SSH_KEY_PATH", "/app/config/.ssh/loghoi-key")
+    
+    try:
+        rsa_key = paramiko.RSAKey.from_private_key_file(key_file)
+    except FileNotFoundError:
+        error_msg = (
+            f"❌ SSH秘密鍵が見つかりません: {key_file}\n"
+            f"デプロイスクリプトを実行してSSH鍵を生成してください。\n"
+            f"Kubernetes: cd k8s && ./deploy.sh\n"
+            f"docker-compose: cd ongoing && ./scripts/init-ssh-keys.sh"
+        )
+        print(error_msg)
+        return False
+    except Exception as e:
+        print(f"❌ SSH鍵の読み込みエラー: {e}")
+        return False
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     try:
         # タイムアウトを10秒に設定
         client.connect(hostname=hostname, username=username, pkey=rsa_key, timeout=10)
-        print(">>>>>>>> parmiko connecting success <<<<<<<<<")
+        print(f">>>>>>>> SSH connecting success to {hostname} <<<<<<<<<")
 
+    except paramiko.ssh_exception.AuthenticationException as e:
+        error_msg = (
+            f"❌ SSH認証エラー: {hostname}\n"
+            f"原因: SSH公開鍵がNutanix Prismに登録されていない可能性があります\n"
+            f"\n"
+            f"対処方法:\n"
+            f"  1. UIの「Open SSH KEY」ボタンをクリック\n"
+            f"  2. 表示された公開鍵をコピー\n"
+            f"  3. Prism Element > Settings > Cluster Lockdown\n"
+            f"  4. 「Add Public Key」で公開鍵を登録\n"
+            f"\n"
+            f"公開鍵ファイル: {key_file}.pub"
+        )
+        print(error_msg)
+        return False
+        
     except Exception as e:
-        print(f">>>>>>>> parmiko connecting failed: {e} <<<<<<<<<")
+        print(f">>>>>>>> SSH connecting failed to {hostname}: {e} <<<<<<<<<")
         return False
 
     return client
@@ -125,8 +156,14 @@ def get_cvmlist(cluster_name):
     print(f"Attempting SSH connection to CVM: {cvm}")
     
     ssh = None
+    ssh_error = None
     try:
         ssh = connect_ssh(cvm)
+        
+        # SSH接続失敗の場合
+        if not ssh:
+            ssh_error = "SSH_AUTH_ERROR"
+            print(f"⚠️ SSH接続に失敗しました（認証エラーの可能性）")
         
         # Determine ssh is complete
         if ssh:
@@ -145,17 +182,19 @@ def get_cvmlist(cluster_name):
                 # SSH接続は成功したが、Prism Leaderの取得に失敗した場合
     except Exception as e:
         print(f"SSH connection failed: {e}")
-        # SSH接続に失敗した場合、デフォルトで最初のCVMをPrism Leaderとして設定
-        cluster_data["prism_leader"] = cvm
-        print(f"Setting default prism leader to first CVM: {cvm}")
-    finally:
-        # SSH接続を必ず閉じる
-        if ssh:
-            try:
-                ssh.close()
-                print(f">>>>>>>> parmiko close  <<<<<<<<<")
-            except Exception as e:
-                print(f"Error closing SSH connection: {e}")
+        ssh_error = "SSH_CONNECTION_ERROR"
+    
+    # SSH接続失敗時にエラー情報を追加
+    if ssh_error:
+        raise Exception(f"{ssh_error}: SSH公開鍵がNutanix Prismに登録されていない可能性があります。UIの「Open SSH KEY」ボタンから公開鍵を確認し、Prism Element > Settings > Cluster Lockdownで登録してください。")
+    
+    # SSH接続を閉じる
+    if ssh:
+        try:
+            ssh.close()
+            print(f">>>>>>>> parmiko close  <<<<<<<<<")
+        except Exception as e:
+            print(f"Error closing SSH connection: {e}")
 
     return cluster_data
 
