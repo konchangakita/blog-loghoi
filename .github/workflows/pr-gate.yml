@@ -20,11 +20,12 @@ jobs:
       - name: Check PR title format
         run: |
           PR_TITLE="${{ github.event.pull_request.title }}"
-          if ! echo "$PR_TITLE" | grep -E "^(feat|fix|docs|refactor|chore|test|style|perf)(\(.+\))?: .+"; then
+          if ! echo "$PR_TITLE" | grep -E "^(\[#[a-zA-Z0-9_-]+\] )?(feat|fix|docs|refactor|chore|test|style|perf)(\(.+\))?: .+"; then
             echo "❌ PR title must follow Conventional Commits format"
             echo "Examples:"
             echo "  feat: add new feature"
-            echo "  fix: resolve bug in login"
+            echo "  [#123] feat: add new feature"
+            echo "  fix(auth): resolve bug in login"
             echo "  docs: update README"
             exit 1
           fi

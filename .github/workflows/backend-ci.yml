@@ -117,7 +117,7 @@ jobs:
       - name: Start services with Docker Compose
         run: |
           cd ongoing
-          docker-compose -f docker-compose_fastapi.yml up -d
+          docker compose -f docker-compose_fastapi.yml up -d
           sleep 15
       
       - name: Wait for services to be ready
@@ -143,13 +143,13 @@ jobs:
         if: failure()
         run: |
           cd ongoing
-          docker-compose -f docker-compose_fastapi.yml logs backend-fastapi
+          docker compose -f docker-compose_fastapi.yml logs backend-fastapi
       
       - name: Stop services
         if: always()
         run: |
           cd ongoing
-          docker-compose -f docker-compose_fastapi.yml down
+          docker compose -f docker-compose_fastapi.yml down
 
   security-scan:
     name: Security Scan

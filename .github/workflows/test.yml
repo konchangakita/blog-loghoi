@@ -75,12 +75,12 @@ jobs:
     - name: Build Docker images
       run: |
         cd ongoing
-        docker-compose -f docker-compose_refactored.yml build
+        docker compose -f docker-compose_refactored.yml build
         
     - name: Test Docker startup
       run: |
         cd ongoing
-        docker-compose -f docker-compose_refactored.yml up -d
+        docker compose -f docker-compose_refactored.yml up -d
         sleep 30
-        docker-compose -f docker-compose_refactored.yml ps
-        docker-compose -f docker-compose_refactored.yml down
+        docker compose -f docker-compose_refactored.yml ps
+        docker compose -f docker-compose_refactored.yml down
