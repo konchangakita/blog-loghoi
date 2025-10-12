@@ -2,6 +2,7 @@
 // React Hook Form
 import { SubmitHandler, useForm } from 'react-hook-form'
 import { getBackendUrl } from '../lib/getBackendUrl'
+import { useState } from 'react'
 
 //fontawesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -18,6 +19,8 @@ const PcRegister = () => {
   const backendUrl = getBackendUrl()
   console.log('Backend URL:', backendUrl)
   
+  const [isRegistering, setIsRegistering] = useState(false)
+  
   const {
     register,
     handleSubmit,
@@ -25,6 +28,7 @@ const PcRegister = () => {
   } = useForm<FormValues>()
 
   const onConnect: SubmitHandler<FormValues> = async (data) => {
+    setIsRegistering(true)
     try {
       const requestUrl = `${backendUrl}/api/regist`
       console.log('request url: ', requestUrl)
@@ -54,17 +58,19 @@ const PcRegister = () => {
         const errorText = await response.text()
         console.error('API Error:', response.status, errorText)
         alert(`❌ API接続エラー (${response.status}): ${errorText}`)
+        setIsRegistering(false)
       }
     } catch (error) {
       console.error('Network Error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
       alert(`❌ ネットワークエラー: ${errorMessage}`)
+      setIsRegistering(false)
     }
   }
 
   return (
     <>
-      <div className='w-1/2 bg-primary h-screen flex justify-center items-center flex flex-col'>
+      <div className='w-1/2 bg-primary h-screen flex justify-center items-center flex flex-col relative'>
         <div className='text-3xl text-white'>PC Registration</div>
         <div className='form-control'>
           <form onSubmit={handleSubmit(onConnect)}>
@@ -74,18 +80,46 @@ const PcRegister = () => {
                 type='text'
                 placeholder='Cluster IP'
                 className='input input-info input-bordered m-1 w-64 text-lg'
+                disabled={isRegistering}
               />
               {errors.prism_ip && <p className='text-red-600'>required.</p>}
-              <input {...register('prism_user')} type='text' placeholder='username' className='input input-info input-bordered m-1 w-64 text-lg' />
+              <input 
+                {...register('prism_user')} 
+                type='text' 
+                placeholder='username' 
+                className='input input-info input-bordered m-1 w-64 text-lg'
+                disabled={isRegistering}
+              />
               <div className='m-1 relative'>
-                <input {...register('prism_pass')} type='password' placeholder='Password' className='input input-info input-bordered w-64 text-lg' />
-                <button type='submit' className='absolute inset-y-2 right-2 opacity-20 hover:opacity-100'>
+                <input 
+                  {...register('prism_pass')} 
+                  type='password' 
+                  placeholder='Password' 
+                  className='input input-info input-bordered w-64 text-lg'
+                  disabled={isRegistering}
+                />
+                <button 
+                  type='submit' 
+                  className='absolute inset-y-2 right-2 opacity-20 hover:opacity-100'
+                  disabled={isRegistering}
+                >
                   <FontAwesomeIcon icon={faArrowCircleRight} size='2x' />
                 </button>
               </div>
             </div>
           </form>
         </div>
+
+        {/* ローディングオーバーレイ */}
+        {isRegistering && (
+          <div className='absolute inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50'>
+            <div className='bg-white rounded-lg p-8 flex flex-col items-center shadow-xl'>
+              <span className='loading loading-spinner loading-lg text-primary'></span>
+              <p className='mt-4 text-lg font-semibold text-gray-700'>PC登録中...</p>
+              <p className='mt-2 text-sm text-gray-500'>しばらくお待ちください</p>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
