@@ -230,7 +230,6 @@ const RealtimelogContent = () => {
       {apiError && (
         <div className="alert alert-error mb-4">
           <span>APIError: {apiError}</span>
-          <button className="btn btn-sm" onClick={() => setApiError(null)}>×</button>
         </div>
       )}
       <div className='p-1 flex justify-center'>

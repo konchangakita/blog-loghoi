@@ -332,8 +332,7 @@ const CollectlogContnet = () => {
       
       {!!error && (
         <div className="alert alert-error mb-4">
-          <span>{String(error)}</span>
-          <button className="btn btn-sm" onClick={clearError}>×</button>
+          <span>APIError: {String(error)}</span>
         </div>
       )}
 
