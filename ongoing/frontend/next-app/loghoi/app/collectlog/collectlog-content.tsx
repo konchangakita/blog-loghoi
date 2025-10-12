@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { openSshKeyModal } from '../../lib/sshKeyModal'
 
 // components
 import Loading from '@/components/loading'
@@ -88,6 +89,21 @@ const CollectlogContnet = () => {
         }
       } else {
         setState(prev => ({ ...prev, loading: false }))
+        
+        // SSH認証エラーの場合、モーダルを自動表示
+        if (error && error.error) {
+          const errorMsg = error.error.message || ''
+          if (errorMsg.includes('SSH_AUTH_ERROR') || 
+              errorMsg.includes('SSH公開鍵') || 
+              errorMsg.includes('SSH秘密鍵が見つかりません')) {
+            alert(
+              '🚨 SSH接続が失敗しています！\n\n' +
+              'ssh key を Prism Element の Cluster Lockdown で設定してください。\n\n' +
+              'SSH公開鍵を表示します。'
+            )
+            openSshKeyModal()
+          }
+        }
       }
       
       // 自動クリーンアップ方式のためUI更新は不要
