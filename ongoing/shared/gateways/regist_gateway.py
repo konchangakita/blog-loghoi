@@ -182,10 +182,25 @@ class RegistGateway:
         return data
 
     def get_sshkey(self):
-        file_path = "./.ssh/ntnx-lockdown.pub"
+        """SSH公開鍵を取得（環境変数対応）"""
+        # 環境変数から公開鍵パスを取得
+        file_path = os.getenv(
+            "SSH_PUBLIC_KEY_PATH",
+            "/app/config/.ssh/loghoi-key.pub"
+        )
+        
         try:
             with open(file_path, "r") as file:
                 content = file.read()
             return content
+        except FileNotFoundError:
+            error_msg = (
+                f"SSH公開鍵が見つかりません: {file_path}\n"
+                f"デプロイスクリプトを実行してSSH鍵を生成してください。\n"
+                f"Kubernetes: ./k8s/deploy.sh\n"
+                f"docker-compose: ./scripts/init-ssh-keys.sh"
+            )
+            print(f"❌ {error_msg}")
+            return json.dumps({"error": error_msg})
         except Exception as e:
             return json.dumps({"error": str(e)})

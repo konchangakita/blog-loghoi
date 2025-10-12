@@ -175,3 +175,12 @@ next2023
 
 # backend log dir
 output
+
+# SSH Keys（機密情報）
+ongoing/config/.ssh/loghoi-key
+ongoing/config/.ssh/loghoi-key.pub
+ongoing/config/.ssh/*.pem
+ongoing/config/.ssh/id_*
+ongoing/config/.ssh/known_hosts
+# SSH鍵ディレクトリのREADMEは保持
+!ongoing/config/.ssh/README.md

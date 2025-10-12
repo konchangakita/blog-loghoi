@@ -43,7 +43,20 @@ services:
       - ./backend/config:/usr/src/config:z
       - ./backend/output:/usr/src/output:z
       - ./shared:/usr/src/shared:z # 共通ライブラリをマウント
+      - ./config/.ssh:/app/config/.ssh:z # SSH鍵ディレクトリ
+      - ./backend/docker-entrypoint.sh:/app/docker-entrypoint.sh:z # entrypointスクリプト
     working_dir: /usr/src/fastapi_app
+    entrypoint: ["/app/docker-entrypoint.sh"]
+    command:
+      [
+        "uvicorn",
+        "app_fastapi:app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "7776",
+      ]
     environment:
       - PYTHONPATH=/usr/src:/usr/src/shared # Python パス設定
       - ELASTICSEARCH_URL=http://elasticsearch:9200
@@ -52,7 +65,8 @@ services:
       - DEBUG=false
       - HOST_UID=1000
       - HOST_GID=1000
-      - SSH_KEY_PATH=/usr/src/config/.ssh/ntnx-lockdown # docker-compose用のSSH鍵パス
+      - SSH_KEY_PATH=/app/config/.ssh/loghoi-key
+      - SSH_PUBLIC_KEY_PATH=/app/config/.ssh/loghoi-key.pub
     depends_on:
       - elasticsearch
     networks:

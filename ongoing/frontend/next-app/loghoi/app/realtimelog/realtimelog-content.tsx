@@ -134,7 +134,27 @@ const RealtimelogContent = () => {
       .catch((error) => {
         console.error('CVM API error:', error)
         setLoading(false)
-        alert('CVM情報の取得に失敗しました: ' + error.message)
+        
+        // エラーメッセージの解析
+        const errorMsg = error.message || error.toString()
+        
+        if (errorMsg.includes('SSH_AUTH_ERROR') || errorMsg.includes('SSH公開鍵')) {
+          alert(
+            '🚨🚨🚨 SSH接続が失敗しています！ 🚨🚨🚨\n\n' +
+            '⚠️ ssh key を Prism Element の Cluster Lockdown で設定してください！\n\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '📋 設定手順:\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+            '1️⃣ 画面右上の「Open SSH KEY」ボタンをクリック\n' +
+            '2️⃣ 表示された公開鍵をコピー\n' +
+            '3️⃣ Prism Element > Settings > Cluster Lockdown\n' +
+            '4️⃣ 「Add Public Key」で公開鍵を登録\n' +
+            '5️⃣ ページをリロード\n' +
+            '━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+          )
+        } else {
+          alert('CVM情報の取得に失敗しました: ' + errorMsg)
+        }
       })
 
     console.log('cluster data get', prismLeader, cvmChecked)
