@@ -21,6 +21,8 @@
 |---|---|---|
 | `LIVE_TEST_RESULTS.md` | 本番環境テスト結果 | 2025-10-03 |
 | `TEST_README.md` | テストガイド | 2025-10-03 |
+| `tests/` | 過去のテストコード（unit/integration） | 2025-10-03 |
+| `pytest.ini` | pytest設定ファイル | 2025-10-03 |
 
 ## 📌 アーカイブ理由
 
@@ -31,9 +33,19 @@
 - **リファクタリング**: 主要なリファクタリング作業完了
 - **UUID Explorer開発**: 機能実装完了
 
+### 🧪 テストコードについて
+- **tests/**: 2025-10-03以降更新されていない古いテストコード
+- **現在の実装と乖離**: SSH鍵管理、Syslog等の最新機能に対応していない
+- **CIでの状態**: `continue-on-error: true`で実質的に無視されている
+- **CI統合**: GitHub Actions（`.github/workflows/`）で現在のテストが実行中
+  - API Integration Tests（docker-compose使用）
+  - Security Scan（Bandit, Safety）
+  - Lint and Format Check
+
 ### 📝 現在の仕様書に統合
 - 最新の機能仕様は各機能の`*_SPECIFICATION.md`に記載
 - テスト方法は各仕様書のテストセクションに記載
+- CI/CDはGitHub Actionsで自動化
 
 ## 🔍 参照方法
 
