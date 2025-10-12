@@ -25,6 +25,9 @@ git checkout -b feature/log-collection-improvement
 - 小さなコミット単位で作業
 - 各コミットはConventional Commits形式で記述
 - 機能ごとにテストを追加
+- **🚨 重要**: 動作確認前にcommit、PRを作成しない
+  - 必ずローカル環境またはKubernetes環境で動作確認を実施
+  - 動作確認完了後にcommit、PRを作成
 
 ### 3. PR作成（自動化推奨）
 ```bash
@@ -241,6 +244,33 @@ git commit -m "fix: Elasticsearch接続エラーの修正"
 git commit -m "docs: READMEの更新"
 git commit -m "refactor: データベース接続処理を共通化"
 ```
+
+### commit/PR作成のタイミング制限
+```bash
+# ❌ 禁止: 動作確認前にcommit、PR作成
+# 実装完了 → すぐにcommit → PR作成 （NG！）
+
+# ✅ 正しい: 動作確認後にcommit、PR作成
+# 1. 実装完了
+# 2. ローカル環境で動作確認
+# 3. Kubernetes環境で動作確認（必要に応じて）
+# 4. 動作確認OK → commit
+# 5. PR作成
+
+# 例: Syslog機能の場合
+# 1. コード実装
+# 2. docker-compose up で動作確認
+# 3. 実際にSyslog検索をテスト
+# 4. 期待通りの動作を確認
+# 5. git commit -m "feat: Syslogクラスタ判別機能の実装"
+# 6. git push & PR作成
+```
+
+**理由**: 
+- 動作しないコードがPRに含まれることを防ぐ
+- CIの無駄な実行を削減
+- レビュアーの時間を節約
+- 品質の高いPRを維持
 
 ### 開発作業の制限
 ```bash
