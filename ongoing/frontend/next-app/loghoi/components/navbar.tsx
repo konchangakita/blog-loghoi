@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { getBackendUrl } from '../lib/getBackendUrl'
+import { SSH_KEY_MODAL_EVENT } from '../lib/sshKeyModal'
 
 // fontアイコンの読み込み
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -23,6 +24,19 @@ const Navbar = () => {
   const [showCopied, setShowCopied] = useState(false)
   const [sshKey, setSshKey] = useState<string>('')
   const [isLoadingKey, setIsLoadingKey] = useState(false)
+
+  // 外部からモーダルを開くイベントをリッスン
+  useEffect(() => {
+    const handleOpenModal = () => {
+      setIsOpen(true)
+    }
+    
+    window.addEventListener(SSH_KEY_MODAL_EVENT, handleOpenModal)
+    
+    return () => {
+      window.removeEventListener(SSH_KEY_MODAL_EVENT, handleOpenModal)
+    }
+  }, [])
 
   // クリップボードにコピーする関数（フォールバック対応）
   const copyToClipboard = async (text: string) => {

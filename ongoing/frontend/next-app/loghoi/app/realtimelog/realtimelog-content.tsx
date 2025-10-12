@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { getBackendUrl } from '../../lib/getBackendUrl'
+import { openSshKeyModal } from '../../lib/sshKeyModal'
 
 // Lib
 //import { LogFiles } from '@/lib/rt-logs'
@@ -138,20 +139,15 @@ const RealtimelogContent = () => {
         // エラーメッセージの解析
         const errorMsg = error.message || error.toString()
         
-        if (errorMsg.includes('SSH_AUTH_ERROR') || errorMsg.includes('SSH公開鍵')) {
+        // SSH鍵認証エラーまたはSSH鍵ファイル不在の場合
+        if (errorMsg.includes('SSH_AUTH_ERROR') || errorMsg.includes('SSH公開鍵') || errorMsg.includes('SSH秘密鍵が見つかりません')) {
           alert(
-            '🚨🚨🚨 SSH接続が失敗しています！ 🚨🚨🚨\n\n' +
-            '⚠️ ssh key を Prism Element の Cluster Lockdown で設定してください！\n\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-            '📋 設定手順:\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
-            '1️⃣ 画面右上の「Open SSH KEY」ボタンをクリック\n' +
-            '2️⃣ 表示された公開鍵をコピー\n' +
-            '3️⃣ Prism Element > Settings > Cluster Lockdown\n' +
-            '4️⃣ 「Add Public Key」で公開鍵を登録\n' +
-            '5️⃣ ページをリロード\n' +
-            '━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+            '🚨 SSH接続が失敗しています！\n\n' +
+            'ssh key を Prism Element の Cluster Lockdown で設定してください。\n\n' +
+            'SSH公開鍵を表示します。'
           )
+          // モーダルを自動表示
+          openSshKeyModal()
         } else {
           alert('CVM情報の取得に失敗しました: ' + errorMsg)
         }
