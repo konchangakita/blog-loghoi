@@ -155,6 +155,9 @@ class ConnectionManager:
             # 過去のログを取得
             await self._get_historical_logs(sid, log_path)
             
+            # チャンネルが完全に閉じるまで待機
+            await asyncio.sleep(0.5)
+            
             # リアルタイム監視タスクを開始
             print(f"リアルタイム監視を開始: {log_path} (SID: {sid})")
             monitoring_task = asyncio.create_task(
