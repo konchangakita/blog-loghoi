@@ -193,40 +193,62 @@ echo -e "${GREEN}======================================${NC}"
 echo ""
 
 # 1. ConfigMap
-echo -e "${YELLOW}[1/7] Deploying ConfigMap...${NC}"
+echo -e "${YELLOW}[1/9] Deploying ConfigMap...${NC}"
 ${K} apply -f configmap.yaml
 echo -e "${GREEN}✓ ConfigMap deployed${NC}"
 echo ""
 
+# 2. Nginx ConfigMap
+echo -e "${YELLOW}[2/9] Deploying Nginx ConfigMap...${NC}"
+${K} apply -f nginx-config.yaml
+echo -e "${GREEN}✓ Nginx ConfigMap deployed${NC}"
+echo ""
+
 # 3. Elasticsearch PVC
-echo -e "${YELLOW}[3/7] Deploying Elasticsearch PVC...${NC}"
+echo -e "${YELLOW}[3/9] Deploying Elasticsearch PVC...${NC}"
 ${K} apply -f elasticsearch-pvc.yaml
 echo -e "${GREEN}✓ Elasticsearch PVC deployed${NC}"
 echo ""
 
-# 4. Elasticsearch
-echo -e "${YELLOW}[4/7] Deploying Elasticsearch...${NC}"
+# 4. Backend Output PVC
+echo -e "${YELLOW}[4/9] Deploying Backend Output PVC...${NC}"
+${K} apply -f backend-output-pvc.yaml
+echo -e "${GREEN}✓ Backend Output PVC deployed${NC}"
+echo ""
+
+# 5. Elasticsearch
+echo -e "${YELLOW}[5/9] Deploying Elasticsearch...${NC}"
 ${K} apply -f elasticsearch-deployment.yaml
 echo -e "${GREEN}✓ Elasticsearch deployed${NC}"
 echo ""
 
-# 5. Services
-echo -e "${YELLOW}[5/7] Deploying Services...${NC}"
+# 6. Services
+echo -e "${YELLOW}[6/9] Deploying Services...${NC}"
 ${K} apply -f services.yaml
 echo -e "${GREEN}✓ Services deployed${NC}"
 echo ""
 
-# 6. Backend & Frontend
-echo -e "${YELLOW}[6/7] Deploying Backend and Frontend...${NC}"
+# 7. Backend & Frontend
+echo -e "${YELLOW}[7/9] Deploying Backend and Frontend...${NC}"
 ${K} apply -f backend-deployment.yaml
 ${K} apply -f frontend-deployment.yaml
 echo -e "${GREEN}✓ Backend and Frontend deployed${NC}"
 echo ""
 
-# 7. Ingress
-echo -e "${YELLOW}[7/7] Deploying Ingress...${NC}"
+# 8. Ingress
+echo -e "${YELLOW}[8/9] Deploying Ingress...${NC}"
 ${K} apply -f ingress.yaml
 echo -e "${GREEN}✓ Ingress deployed${NC}"
+echo ""
+
+# 9. Syslog (Optional)
+echo -e "${YELLOW}[9/9] Deploying Syslog (Optional)...${NC}"
+if [ -f "syslog-deployment.yaml" ]; then
+    ${K} apply -f syslog-deployment.yaml
+    echo -e "${GREEN}✓ Syslog deployed${NC}"
+else
+    echo -e "${YELLOW}⚠ Syslog deployment skipped (file not found)${NC}"
+fi
 echo ""
 
 # デプロイ状態確認
