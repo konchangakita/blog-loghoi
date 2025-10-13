@@ -50,7 +50,7 @@ services:
     command:
       [
         "uvicorn",
-        "app_fastapi:app",
+        "app_fastapi:socket_app",
         "--reload",
         "--host",
         "0.0.0.0",
