@@ -124,7 +124,7 @@ if [ "$KEYS_GENERATED" = true ]; then
     fi
 else
     echo -e "${BLUE}ℹ️  既存のSSH鍵を使用します${NC}"
-    echo -e "   公開鍵がNutanix Prismに登録済みか確認してください"
+    echo -e "   公開鍵をNutanix Prismに登録してください"
 fi
 
 # Kubernetes Secret の作成または確認
