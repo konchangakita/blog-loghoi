@@ -37,7 +37,7 @@ if [ -f "${SSH_PRIVATE_KEY}" ] && [ -f "${SSH_PUBLIC_KEY}" ]; then
     KEYS_GENERATED=false
 else
     echo -e "${YELLOW}Generating new SSH key pair...${NC}"
-    ssh-keygen -t rsa -b 3072 \
+    ssh-keygen -t rsa -b 4096 \
         -f "${SSH_PRIVATE_KEY}" \
         -N "" \
         -C "loghoi@docker-compose" \
