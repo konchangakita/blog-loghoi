@@ -25,6 +25,8 @@ cd ongoing/k8s
 # Ingress経由でアクセス（環境に応じて設定）
 ```
 
+詳細なデプロイ手順は **[Kubernetesデプロイメントガイド](./k8s/DEPLOYMENT_GUIDE.md)** を参照してください。
+
 ## 📚 ドキュメント
 
 ### 機能仕様書
@@ -38,6 +40,12 @@ cd ongoing/k8s
 | [SYSLOG_SPECIFICATION.md](./SYSLOG_SPECIFICATION.md) | **Syslog機能**<br>Nutanix SyslogをElasticsearchで検索<br>- クラスター判別機能<br>- hostname自動取得<br>- 高度な検索クエリ | v1.2.0 | 2025-10-12 |
 | [SSH_KEY_MANAGEMENT_SPEC.md](./SSH_KEY_MANAGEMENT_SPEC.md) | **SSH鍵管理機能**<br>SSH鍵の自動生成・管理<br>- 自動生成と永続化<br>- エラー時のモーダル自動表示<br>- Kubernetes/docker-compose対応 | v1.2.0 | 2025-10-13 |
 | [UUID_EXPLORER_SPECIFICATION.md](./UUID_EXPLORER_SPECIFICATION.md) | **UUID Explorer機能**<br>Nutanix UUIDの検索・分析<br>- UUID検索<br>- 関連エンティティ表示<br>- 履歴管理 | v1.0.0 | 2025-10-10 |
+
+### デプロイメントガイド
+
+| ドキュメント | 説明 |
+|---|---|
+| [Kubernetesデプロイメントガイド](./k8s/DEPLOYMENT_GUIDE.md) | **本番環境デプロイ手順**<br>- クイックスタート<br>- 詳細な手動デプロイ手順<br>- トラブルシューティング<br>- 環境別設定 |
 
 ### アーカイブドキュメント
 

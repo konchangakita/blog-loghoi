@@ -13,7 +13,7 @@
   - Worker: 4ノード
   - Kubernetes: v1.32.3
 - ✅ MetalLB IPアドレスプール拡張: `10.55.23.41-10.55.23.43`
-- ✅ Namespace作成: `loghoi`
+- ✅ Namespace作成: `loghoihoi`
 - ✅ SSH秘密鍵Secret作成: `loghoi-secrets`
 
 ### 2. **Dockerイメージ**
@@ -117,7 +117,7 @@ PUSH_IMAGES=true DOCKER_REGISTRY=registry.loghoi.local DOCKER_NAMESPACE=loghoi .
 ### **ステップ4: 再デプロイ**
 ```bash
 # 既存リソースを削除
-kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" delete deployment -n loghoi --all
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" delete deployment -n loghoihoi --all
 
 # 再デプロイ
 cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
@@ -127,10 +127,10 @@ cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
 ### **ステップ5: 動作確認**
 ```bash
 # Pod状態確認
-kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" get pods -n loghoi -w
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" get pods -n loghoihoi -w
 
 # Ingress IP確認
-kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" get ingress -n loghoi
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" get ingress -n loghoihoi
 
 # アプリケーションアクセス
 curl http://<INGRESS_IP>
@@ -142,31 +142,31 @@ curl http://<INGRESS_IP>
 
 ```bash
 # Namespace
-kubectl get namespace loghoi
+kubectl get namespace loghoihoi
 # STATUS: Active
 
 # ConfigMap
-kubectl get configmap loghoi-config -n loghoi
+kubectl get configmap loghoi-config -n loghoihoi
 # STATUS: Created
 
 # Secret
-kubectl get secret loghoi-secrets -n loghoi
+kubectl get secret loghoi-secrets -n loghoihoi
 # STATUS: Created (SSH_PRIVATE_KEY含む)
 
 # PVC
-kubectl get pvc elasticsearch-data -n loghoi
+kubectl get pvc elasticsearch-data -n loghoihoi
 # STATUS: Pending (Podがないため)
 
 # Services
-kubectl get svc -n loghoi
+kubectl get svc -n loghoihoi
 # STATUS: Created (3つ)
 
 # Ingress
-kubectl get ingress -n loghoi
+kubectl get ingress -n loghoihoi
 # STATUS: Created (ADDRESS: 10.55.23.41)
 
 # Deployments
-kubectl get deployment -n loghoi
+kubectl get deployment -n loghoihoi
 # STATUS: Deleted (イメージ配布問題のため)
 ```
 

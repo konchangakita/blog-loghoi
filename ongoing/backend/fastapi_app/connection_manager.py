@@ -155,6 +155,9 @@ class ConnectionManager:
             # 過去のログを取得
             await self._get_historical_logs(sid, log_path)
             
+            # チャンネルが完全に閉じるまで待機
+            await asyncio.sleep(0.5)
+            
             # リアルタイム監視タスクを開始
             print(f"リアルタイム監視を開始: {log_path} (SID: {sid})")
             monitoring_task = asyncio.create_task(
@@ -235,18 +238,16 @@ class ConnectionManager:
         print(f"過去のログを取得中: {log_path} (SID: {sid})")
         
         try:
-            # 過去ログ用の別SSH接続を使用
-            from common import connect_ssh
-            ssh_history = connect_ssh("10.38.113.32")  # 固定IPを使用
+            # 既存のSSH接続を再利用
+            ssh_history = self.ssh_connections[sid]
             if ssh_history:
                 stdin, stdout, stderr = ssh_history.exec_command(f"tail -n 20 {log_path}")
                 
-                # 逐次行の出力は抑制（要点ログのみ残す）
-                for line in stdout:
-                    pass
+                # 完全に読み切ってからチャンネルを解放
+                lines = stdout.readlines()
+                stdout.channel.close()  # チャンネルを明示的に閉じる
                 
-                ssh_history.close()
-                print(f"過去のログ取得完了: {sid}")
+                print(f"過去のログ取得完了: {sid} ({len(lines)}行)")
         except Exception as e:
             print(f"過去ログ取得エラー: {e}")
     
@@ -262,15 +263,13 @@ class ConnectionManager:
                 print(f"[RTLOG] 接続が非アクティブです: {sid}")
                 return
             
-            # リアルタイムログ用の新しいSSH接続を作成
-            from common import connect_ssh
-            cvm_ip = "10.38.113.32"  # 固定IPを使用
-            print(f"[RTLOG] リアルタイムログ用SSH接続を作成: {cvm_ip} (SID: {sid})")
-            ssh_connection = await self._connect_ssh_with_retry(cvm_ip)
-            
-            if not ssh_connection:
-                print(f"[RTLOG] SSH接続に失敗: {cvm_ip}")
+            # 既存のSSH接続を再利用
+            if sid not in self.ssh_connections:
+                print(f"[RTLOG] SSH接続がありません: {sid}")
                 return
+            
+            ssh_connection = self.ssh_connections[sid]
+            print(f"[RTLOG] 既存のSSH接続を使用してリアルタイム監視を開始 (SID: {sid})")
             
             print(f"[RTLOG] tail -fコマンドを実行: {log_path} (SID: {sid})")
             stdin, stdout, stderr = ssh_connection.exec_command(f"tail -f {log_path}")

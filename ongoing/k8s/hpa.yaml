@@ -2,7 +2,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: loghoi-backend-hpa
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: backend
@@ -49,7 +49,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: loghoi-frontend-hpa
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: frontend

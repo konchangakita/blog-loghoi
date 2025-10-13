@@ -35,7 +35,7 @@ Traefik Ingress (kommander-traefik)
 
 ### Namespace
 
-- **本番環境**: `loghoi`
+- **本番環境**: `loghoihoi`
 - **理由**: 既存の `hoihoi` namespace (Prometheus/Grafana等) とリソース分離
 
 ---
@@ -132,17 +132,21 @@ VERSION=v1.0.1 ./build-and-push.sh
 
 ### StorageClass
 
-- **名前**: `nutanix-volume` (default)
-- **Provisioner**: `csi.nutanix.com`
-- **ReclaimPolicy**: Delete
-- **VolumeBindingMode**: WaitForFirstConsumer
-- **AllowVolumeExpansion**: true
+- **使用方法**: Default StorageClass を使用（環境依存）
+- **NKP環境での例**:
+  - 名前: `nutanix-volume` (default)
+  - Provisioner: `csi.nutanix.com`
+  - ReclaimPolicy: Delete
+  - VolumeBindingMode: WaitForFirstConsumer
+  - AllowVolumeExpansion: true
+- **他環境**: その環境のdefault StorageClass が自動的に使用される
 
 ### Persistent Volumes
 
-| PVC | サイズ | マウント先 | 用途 |
-|-----|--------|----------|------|
-| elasticsearch-data | 10Gi | /usr/share/elasticsearch/data | Elasticsearchデータ永続化 |
+| PVC | サイズ | StorageClass | マウント先 | 用途 |
+|-----|--------|--------------|----------|------|
+| elasticsearch-data | 10Gi | default | /usr/share/elasticsearch/data | Elasticsearchデータ永続化 |
+| loghoi-backend-output | 10Gi | default | /usr/src/output | バックエンドログファイル保存 |
 
 ---
 
@@ -196,7 +200,7 @@ TIMEOUT: "30"
 
 ```bash
 kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic loghoi-secrets \
-  --namespace=loghoi \
+  --namespace=loghoihoi \
   --from-file=SSH_PRIVATE_KEY=/path/to/ssh/private/key
 ```
 
@@ -387,7 +391,7 @@ readinessProbe:
 3. **SSH秘密鍵のSecret作成**
    ```bash
    kubectl create secret generic loghoi-secrets \
-     --namespace=loghoi \
+     --namespace=loghoihoi \
      --from-file=SSH_PRIVATE_KEY=/path/to/ssh/key
    ```
 
@@ -435,42 +439,42 @@ kubectl apply -f hpa.yaml
 
 ```bash
 # Pods
-kubectl get pods -n loghoi
+kubectl get pods -n loghoihoihoi
 
 # Services
-kubectl get svc -n loghoi
+kubectl get svc -n loghoihoi
 
 # Ingress
-kubectl get ingress -n loghoi
+kubectl get ingress -n loghoihoi
 
 # PVC
-kubectl get pvc -n loghoi
+kubectl get pvc -n loghoihoi
 ```
 
 ### ログ確認
 
 ```bash
 # Backend
-kubectl logs -n loghoi -l app=loghoi,component=backend -f
+kubectl logs -n loghoihoi -l app=loghoi,component=backend -f
 
 # Frontend
-kubectl logs -n loghoi -l app=loghoi,component=frontend -f
+kubectl logs -n loghoihoi -l app=loghoi,component=frontend -f
 
 # Elasticsearch
-kubectl logs -n loghoi -l app=elasticsearch -f
+kubectl logs -n loghoihoi -l app=elasticsearch -f
 
 # Kibana
-kubectl logs -n loghoi -l app=kibana,component=kibana -f
+kubectl logs -n loghoihoi -l app=kibana,component=kibana -f
 ```
 
 ### スケーリング
 
 ```bash
 # 手動スケーリング
-kubectl scale deployment loghoi-backend -n loghoi --replicas=3
+kubectl scale deployment loghoi-backend -n loghoihoi --replicas=3
 
 # HPA確認
-kubectl get hpa -n loghoi
+kubectl get hpa -n loghoihoi
 ```
 
 ---
@@ -501,7 +505,7 @@ kubectl get hpa -n loghoi
 
 ### 2. namespace
 
-- `loghoi`: Log Hoihoiアプリケーション専用
+- `loghoihoi`: Log Hoihoiアプリケーション専用
 - `hoihoi`: 既存のモニタリングツール（触らない）
 
 ### 3. Secret管理
@@ -522,47 +526,47 @@ kubectl get hpa -n loghoi
 
 ```bash
 # イベント確認
-kubectl describe pod <pod-name> -n loghoi
+kubectl describe pod <pod-name> -n loghoihoi
 
 # ログ確認
-kubectl logs <pod-name> -n loghoi
+kubectl logs <pod-name> -n loghoihoi
 ```
 
 ### Ingressに接続できない
 
 ```bash
 # Ingress確認
-kubectl get ingress -n loghoi -o yaml
+kubectl get ingress -n loghoihoi -o yaml
 
 # Service確認
-kubectl get svc -n loghoi
+kubectl get svc -n loghoihoi
 ```
 
 ### Elasticsearchが起動しない
 
 ```bash
 # PVC確認
-kubectl get pvc -n loghoi
+kubectl get pvc -n loghoihoi
 
 # リソース確認
-kubectl top pods -n loghoi
+kubectl top pods -n loghoihoi
 
 # 権限エラーの場合
 # initContainerでボリューム権限を修正する設定を確認
-kubectl describe pod -n loghoi -l app=elasticsearch
+kubectl describe pod -n loghoihoi -l app=elasticsearch
 ```
 
 ### Kibanaが起動しない
 
 ```bash
 # Elasticsearchの接続確認
-kubectl exec -it <kibana-pod> -n loghoi -- curl http://elasticsearch-service:9200
+kubectl exec -it <kibana-pod> -n loghoihoi -- curl http://elasticsearch-service:9200
 
 # Kibanaログ確認
-kubectl logs -n loghoi -l component=kibana --tail=100
+kubectl logs -n loghoihoi -l component=kibana --tail=100
 
 # 環境変数確認
-kubectl describe pod -n loghoi -l component=kibana
+kubectl describe pod -n loghoihoi -l component=kibana
 ```
 
 ---

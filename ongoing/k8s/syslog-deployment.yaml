@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: loghoi-syslog
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: syslog
@@ -67,7 +67,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loghoi-syslog-service
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: syslog

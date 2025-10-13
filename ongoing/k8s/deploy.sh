@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 
 # 設定
 KUBECONFIG_PATH="${KUBECONFIG:-/home/nutanix/nkp/kon-hoihoi.conf}"
-NAMESPACE="loghoi"
+NAMESPACE="loghoihoi"
 
 echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}   Log Hoihoi Kubernetes Deployment  ${NC}"
@@ -124,8 +124,52 @@ if [ "$KEYS_GENERATED" = true ]; then
     fi
 else
     echo -e "${BLUE}ℹ️  既存のSSH鍵を使用します${NC}"
-    echo -e "   公開鍵がNutanix Prismに登録済みか確認してください"
+    echo -e "   公開鍵をNutanix Prismに登録してください"
 fi
+
+# SSH鍵ファイルの読み取り権限チェック
+echo ""
+echo -e "${BLUE}Checking SSH key permissions...${NC}"
+CURRENT_USER=$(whoami)
+
+# 秘密鍵の読み取りテスト
+if ! cat "${SSH_PRIVATE_KEY}" >/dev/null 2>&1; then
+    echo -e "${RED}⚠️  警告: SSH秘密鍵を読み取れません${NC}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}問題: 現在のユーザー (${CURRENT_USER}) が秘密鍵を読み取れません${NC}"
+    echo -e ""
+    echo -e "${YELLOW}ファイル情報:${NC}"
+    ls -l "${SSH_PRIVATE_KEY}"
+    echo -e ""
+    echo -e "${YELLOW}対処方法（以下のいずれかを実行）:${NC}"
+    echo -e ""
+    echo -e "${GREEN}方法1: ファイル所有者を現在のユーザーに変更${NC}"
+    echo -e "  sudo chown ${CURRENT_USER}:${CURRENT_USER} ${SSH_PRIVATE_KEY} ${SSH_PUBLIC_KEY}"
+    echo -e ""
+    echo -e "${GREEN}方法2: 一時的にsudoで実行${NC}"
+    echo -e "  sudo KUBECONFIG=${KUBECONFIG_PATH} ./deploy.sh"
+    echo -e ""
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    exit 1
+fi
+
+# 公開鍵の読み取りテスト
+if ! cat "${SSH_PUBLIC_KEY}" >/dev/null 2>&1; then
+    echo -e "${RED}⚠️  警告: SSH公開鍵を読み取れません${NC}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}問題: 現在のユーザー (${CURRENT_USER}) が公開鍵を読み取れません${NC}"
+    echo -e ""
+    echo -e "${YELLOW}ファイル情報:${NC}"
+    ls -l "${SSH_PUBLIC_KEY}"
+    echo -e ""
+    echo -e "${YELLOW}対処方法:${NC}"
+    echo -e "  sudo chown ${CURRENT_USER}:${CURRENT_USER} ${SSH_PRIVATE_KEY} ${SSH_PUBLIC_KEY}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ SSH keys are readable${NC}"
+echo ""
 
 # Kubernetes Secret の作成または確認
 echo -e "${YELLOW}[2/7] Creating or checking Secret...${NC}"
@@ -149,40 +193,62 @@ echo -e "${GREEN}======================================${NC}"
 echo ""
 
 # 1. ConfigMap
-echo -e "${YELLOW}[1/7] Deploying ConfigMap...${NC}"
+echo -e "${YELLOW}[1/9] Deploying ConfigMap...${NC}"
 ${K} apply -f configmap.yaml
 echo -e "${GREEN}✓ ConfigMap deployed${NC}"
 echo ""
 
+# 2. Nginx ConfigMap
+echo -e "${YELLOW}[2/9] Deploying Nginx ConfigMap...${NC}"
+${K} apply -f nginx-config.yaml
+echo -e "${GREEN}✓ Nginx ConfigMap deployed${NC}"
+echo ""
+
 # 3. Elasticsearch PVC
-echo -e "${YELLOW}[3/7] Deploying Elasticsearch PVC...${NC}"
+echo -e "${YELLOW}[3/9] Deploying Elasticsearch PVC...${NC}"
 ${K} apply -f elasticsearch-pvc.yaml
 echo -e "${GREEN}✓ Elasticsearch PVC deployed${NC}"
 echo ""
 
-# 4. Elasticsearch
-echo -e "${YELLOW}[4/7] Deploying Elasticsearch...${NC}"
+# 4. Backend Output PVC
+echo -e "${YELLOW}[4/9] Deploying Backend Output PVC...${NC}"
+${K} apply -f backend-output-pvc.yaml
+echo -e "${GREEN}✓ Backend Output PVC deployed${NC}"
+echo ""
+
+# 5. Elasticsearch
+echo -e "${YELLOW}[5/9] Deploying Elasticsearch...${NC}"
 ${K} apply -f elasticsearch-deployment.yaml
 echo -e "${GREEN}✓ Elasticsearch deployed${NC}"
 echo ""
 
-# 5. Services
-echo -e "${YELLOW}[5/7] Deploying Services...${NC}"
+# 6. Services
+echo -e "${YELLOW}[6/9] Deploying Services...${NC}"
 ${K} apply -f services.yaml
 echo -e "${GREEN}✓ Services deployed${NC}"
 echo ""
 
-# 6. Backend & Frontend
-echo -e "${YELLOW}[6/7] Deploying Backend and Frontend...${NC}"
+# 7. Backend & Frontend
+echo -e "${YELLOW}[7/9] Deploying Backend and Frontend...${NC}"
 ${K} apply -f backend-deployment.yaml
 ${K} apply -f frontend-deployment.yaml
 echo -e "${GREEN}✓ Backend and Frontend deployed${NC}"
 echo ""
 
-# 7. Ingress
-echo -e "${YELLOW}[7/7] Deploying Ingress...${NC}"
+# 8. Ingress
+echo -e "${YELLOW}[8/9] Deploying Ingress...${NC}"
 ${K} apply -f ingress.yaml
 echo -e "${GREEN}✓ Ingress deployed${NC}"
+echo ""
+
+# 9. Syslog (Optional)
+echo -e "${YELLOW}[9/9] Deploying Syslog (Optional)...${NC}"
+if [ -f "syslog-deployment.yaml" ]; then
+    ${K} apply -f syslog-deployment.yaml
+    echo -e "${GREEN}✓ Syslog deployed${NC}"
+else
+    echo -e "${YELLOW}⚠ Syslog deployment skipped (file not found)${NC}"
+fi
 echo ""
 
 # デプロイ状態確認

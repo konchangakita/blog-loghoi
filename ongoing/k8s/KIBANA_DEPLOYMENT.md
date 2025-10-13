@@ -30,17 +30,17 @@
 
 ### 1. Kibanaデプロイメントの作成
 ```bash
-kubectl apply -f kibana-deployment.yaml -n loghoi
+kubectl apply -f kibana-deployment.yaml -n loghoihoi
 ```
 
 ### 2. Kibanaサービスの作成
 ```bash
-kubectl apply -f services.yaml -n loghoi
+kubectl apply -f services.yaml -n loghoihoi
 ```
 
 ### 3. Ingressの更新
 ```bash
-kubectl apply -f ingress.yaml -n loghoi
+kubectl apply -f ingress.yaml -n loghoihoi
 ```
 
 ## アクセス方法
@@ -59,7 +59,7 @@ http://kibana-service:5601
 
 ### 1. Podの状態確認
 ```bash
-kubectl get pods -n loghoi -l component=kibana
+kubectl get pods -n loghoihoi -l component=kibana
 ```
 
 期待される出力：
@@ -70,7 +70,7 @@ kibana-xxxx-xxxx          1/1     Running   0          Xm
 
 ### 2. サービスの確認
 ```bash
-kubectl get svc kibana-service -n loghoi
+kubectl get svc kibana-service -n loghoihoi
 ```
 
 期待される出力：
@@ -81,7 +81,7 @@ kibana-service   ClusterIP   10.103.236.239   <none>        5601/TCP   Xm
 
 ### 3. ログの確認
 ```bash
-kubectl logs -n loghoi -l component=kibana --tail=50
+kubectl logs -n loghoihoi -l component=kibana --tail=50
 ```
 
 正常な起動時には以下のようなメッセージが表示されます：
@@ -92,7 +92,7 @@ kubectl logs -n loghoi -l component=kibana --tail=50
 ### 4. Elasticsearchとの接続確認
 Pod内から確認：
 ```bash
-kubectl exec -it <kibana-pod-name> -n loghoi -- curl -s http://elasticsearch-service:9200
+kubectl exec -it <kibana-pod-name> -n loghoihoi -- curl -s http://elasticsearch-service:9200
 ```
 
 ## トラブルシューティング
@@ -101,18 +101,18 @@ kubectl exec -it <kibana-pod-name> -n loghoi -- curl -s http://elasticsearch-ser
 
 1. **Elasticsearchの状態確認**
 ```bash
-kubectl get pods -n loghoi -l app=elasticsearch
-kubectl logs -n loghoi -l app=elasticsearch
+kubectl get pods -n loghoihoi -l app=elasticsearch
+kubectl logs -n loghoihoi -l app=elasticsearch
 ```
 
 2. **Kibanaのログ確認**
 ```bash
-kubectl logs -n loghoi -l component=kibana --tail=100
+kubectl logs -n loghoihoi -l component=kibana --tail=100
 ```
 
 3. **環境変数の確認**
 ```bash
-kubectl describe pod -n loghoi -l component=kibana
+kubectl describe pod -n loghoihoi -l component=kibana
 ```
 
 ### よくある問題
@@ -135,28 +135,28 @@ kubectl describe pod -n loghoi -l component=kibana
 ### バージョンアップ
 ```bash
 # イメージバージョンを変更
-kubectl set image deployment/kibana kibana=docker.elastic.co/kibana/kibana:8.12.0 -n loghoi
+kubectl set image deployment/kibana kibana=docker.elastic.co/kibana/kibana:8.12.0 -n loghoihoi
 
 # または、マニフェストファイルを編集してapply
-kubectl apply -f kibana-deployment.yaml -n loghoi
+kubectl apply -f kibana-deployment.yaml -n loghoihoi
 ```
 
 ### ログの確認
 ```bash
 # リアルタイムでログを確認
-kubectl logs -f -n loghoi -l component=kibana
+kubectl logs -f -n loghoihoi -l component=kibana
 
 # 最新100行のログを表示
-kubectl logs -n loghoi -l component=kibana --tail=100
+kubectl logs -n loghoihoi -l component=kibana --tail=100
 ```
 
 ### 再起動
 ```bash
 # Podを削除して再作成
-kubectl delete pod -n loghoi -l component=kibana
+kubectl delete pod -n loghoihoi -l component=kibana
 
 # またはデプロイメントのロールアウト再起動
-kubectl rollout restart deployment/kibana -n loghoi
+kubectl rollout restart deployment/kibana -n loghoihoi
 ```
 
 ## セキュリティに関する注意事項

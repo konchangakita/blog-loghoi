@@ -182,9 +182,9 @@ class ElasticGateway(ElasticAPI):
     def get_cvmlist_document(self, cluster_name):
         es = self.es
         # fmt: off
-        query = {"function_score": {"query": {"bool": {"must": [
-                            {"match": {"name": cluster_name}},
-        ]}}}}
+        query = {"bool": {"must": [
+            {"term": {"name.keyword": cluster_name}}  # 完全一致検索に変更
+        ]}}
         sort = {"timestamp": {"order": "desc"}}  # latest
         res = es.search(index="cluster", query=query, sort=sort, size=1)
         # fmt: on
@@ -195,9 +195,9 @@ class ElasticGateway(ElasticAPI):
     def get_cluster_document(self, cluster_name):
         es = self.es
         # fmt: off
-        query = {"function_score": {"query": {"bool": {"must": [
-                            {"match": {"name": cluster_name}},
-        ]}}}}
+        query = {"bool": {"must": [
+            {"term": {"name.keyword": cluster_name}}  # 完全一致検索に変更
+        ]}}
         sort = {"timestamp": {"order": "desc"}}  # latest
         res = es.search(index="cluster", query=query, sort=sort, size=1)
         # fmt: on

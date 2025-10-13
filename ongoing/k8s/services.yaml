@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loghoi-backend-service
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: backend
@@ -22,7 +22,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: loghoi-frontend-service
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: frontend
@@ -42,7 +42,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: elasticsearch-service
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: elasticsearch
@@ -61,7 +61,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kibana-service
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: kibana
