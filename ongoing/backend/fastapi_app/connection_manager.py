@@ -240,11 +240,11 @@ class ConnectionManager:
             if ssh_history:
                 stdin, stdout, stderr = ssh_history.exec_command(f"tail -n 20 {log_path}")
                 
-                # 逐次行の出力は抑制（要点ログのみ残す）
-                for line in stdout:
-                    pass
+                # 完全に読み切ってからチャンネルを解放
+                lines = stdout.readlines()
+                stdout.channel.close()  # チャンネルを明示的に閉じる
                 
-                print(f"過去のログ取得完了: {sid}")
+                print(f"過去のログ取得完了: {sid} ({len(lines)}行)")
         except Exception as e:
             print(f"過去ログ取得エラー: {e}")
     
