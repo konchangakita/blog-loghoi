@@ -6,6 +6,10 @@
 - `loghoi-key`: SSH秘密鍵（自動生成、Gitには含めない）
 - `loghoi-key.pub`: SSH公開鍵（自動生成、Gitには含めない）
 
+## 重要な仕様
+- **鍵のタイプ**: RSA 3072bit
+- **理由**: Nutanix Cluster Lockdownは4096bit RSA鍵をサポートしていないため、3072bitを使用
+
 ## 鍵の生成方法
 
 ### Kubernetes環境
