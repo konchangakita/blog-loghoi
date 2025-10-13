@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kibana
-  namespace: loghoi
+  namespace: loghoihoi
   labels:
     app: loghoi
     component: kibana

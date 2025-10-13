@@ -155,16 +155,16 @@ cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
 ./deploy.sh
 
 # Pod 状態確認
-kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" get pods -n loghoi -w
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" get pods -n loghoihoi -w
 
 # ログ確認
-kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" logs -n loghoi -l app=loghoi,component=backend --tail=50
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" logs -n loghoihoi -l app=loghoi,component=backend --tail=50
 ```
 
 ### **Phase 4: 動作確認**
 ```bash
 # Ingress IP確認
-kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" get ingress -n loghoi
+kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" get ingress -n loghoihoi
 
 # アプリケーションアクセス
 curl http://10.55.23.41/api/health
@@ -250,7 +250,7 @@ konchangakita/loghoi-backend:v1.0.3  # 約 400MB（shared追加で+14MB程度）
 konchangakita/loghoi-frontend:v1.0.0 # 238MB（変更なし）
 
 # デプロイ後
-kubectl get pods -n loghoi
+kubectl get pods -n loghoihoi
 # NAME                               READY   STATUS    RESTARTS   AGE
 # elasticsearch-xxx                  1/1     Running   0          10m
 # loghoi-backend-xxx                 2/2     Running   0          5m  ← ✅ 成功

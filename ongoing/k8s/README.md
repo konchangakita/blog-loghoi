@@ -16,7 +16,7 @@
 - Kubernetes 1.24以上 (本環境: v1.32.3)
 - kubectl CLI
 - Kubeconfig: `/home/nutanix/nkp/kon-hoihoi.conf`
-- Namespace: `loghoi` (新規作成)
+- Namespace: `loghoihoi` (新規作成)
 - StorageClass: `nutanix-volume` (既存)
 - IngressClass: `kommander-traefik` (既存)
 - MetalLB: IPアドレスプール 10.55.23.41-10.55.23.43
@@ -27,7 +27,7 @@
 ```bash
 # SSH秘密鍵を指定してSecretを作成
 kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic loghoi-secrets \
-  --namespace=loghoi \
+  --namespace=loghoihoi \
   --from-file=SSH_PRIVATE_KEY=/path/to/your/ssh/private/key
 ```
 
@@ -48,7 +48,7 @@ kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" apply -f configmap.yaml
 ```bash
 # secret-template.yamlを参照してSecretを作成
 kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic loghoi-secrets \
-  --namespace=loghoi \
+  --namespace=loghoihoi \
   --from-file=SSH_PRIVATE_KEY=/path/to/ssh/key
 ```
 
@@ -210,8 +210,8 @@ kubectl apply -f frontend-deployment.yaml
 kubectl apply -f services.yaml
 
 # 4. 動作確認
-kubectl get pods -n loghoi
-kubectl logs -f -n loghoi -l component=backend
+kubectl get pods -n loghoihoi
+kubectl logs -f -n loghoihoi -l component=backend
 ```
 
 ### 本番環境
@@ -236,45 +236,45 @@ kubectl apply -f hpa.yaml
 ### スケーリング
 ```bash
 # 手動スケーリング
-kubectl scale deployment loghoi-backend -n loghoi --replicas=5
+kubectl scale deployment loghoi-backend -n loghoihoi --replicas=5
 
 # HPA状態確認
-kubectl get hpa -n loghoi
-kubectl describe hpa loghoi-backend-hpa -n loghoi
+kubectl get hpa -n loghoihoi
+kubectl describe hpa loghoi-backend-hpa -n loghoihoi
 ```
 
 ### ログ確認
 ```bash
 # 全Podのログ
-kubectl logs -f -n loghoi -l app=loghoi
+kubectl logs -f -n loghoihoi -l app=loghoi
 
 # Backend Podのログ
-kubectl logs -f -n loghoi -l component=backend
+kubectl logs -f -n loghoihoi -l component=backend
 
 # 構造化ログの検索（jqを使用）
-kubectl logs -n loghoi -l component=backend | grep "^{" | jq '.'
-kubectl logs -n loghoi -l component=backend | grep "^{" | jq 'select(.correlation_id)'
+kubectl logs -n loghoihoi -l component=backend | grep "^{" | jq '.'
+kubectl logs -n loghoihoi -l component=backend | grep "^{" | jq 'select(.correlation_id)'
 ```
 
 ### ヘルスチェック
 ```bash
 # Liveness Probe
-kubectl exec -n loghoi deployment/loghoi-backend -- curl -s http://localhost:7776/health
+kubectl exec -n loghoihoi deployment/loghoi-backend -- curl -s http://localhost:7776/health
 
 # Readiness Probe
-kubectl exec -n loghoi deployment/loghoi-backend -- curl -s http://localhost:7776/ready
+kubectl exec -n loghoihoi deployment/loghoi-backend -- curl -s http://localhost:7776/ready
 ```
 
 ### ローリングアップデート
 ```bash
 # イメージ更新
-kubectl set image deployment/loghoi-backend backend=loghoi/backend:v2.0.0 -n loghoi
+kubectl set image deployment/loghoi-backend backend=loghoi/backend:v2.0.0 -n loghoihoi
 
 # ロールアウト状態確認
-kubectl rollout status deployment/loghoi-backend -n loghoi
+kubectl rollout status deployment/loghoi-backend -n loghoihoi
 
 # ロールバック
-kubectl rollout undo deployment/loghoi-backend -n loghoi
+kubectl rollout undo deployment/loghoi-backend -n loghoihoi
 ```
 
 ## トラブルシューティング
@@ -282,23 +282,23 @@ kubectl rollout undo deployment/loghoi-backend -n loghoi
 ### Podが起動しない
 ```bash
 # Pod状態確認
-kubectl get pods -n loghoi
-kubectl describe pod <pod-name> -n loghoi
+kubectl get pods -n loghoihoi
+kubectl describe pod <pod-name> -n loghoihoi
 
 # イベント確認
-kubectl get events -n loghoi --sort-by='.lastTimestamp'
+kubectl get events -n loghoihoi --sort-by='.lastTimestamp'
 
 # ログ確認
-kubectl logs <pod-name> -n loghoi
+kubectl logs <pod-name> -n loghoihoi
 ```
 
 ### Readiness Probeが失敗する
 ```bash
 # Readinessエンドポイントを直接確認
-kubectl exec -n loghoi <pod-name> -- curl -v http://localhost:7776/ready
+kubectl exec -n loghoihoi <pod-name> -- curl -v http://localhost:7776/ready
 
 # Elasticsearch接続確認
-kubectl exec -n loghoi <pod-name> -- curl -v http://elasticsearch:9200
+kubectl exec -n loghoihoi <pod-name> -- curl -v http://elasticsearch:9200
 ```
 
 ### HPAが動作しない
@@ -307,11 +307,11 @@ kubectl exec -n loghoi <pod-name> -- curl -v http://elasticsearch:9200
 kubectl get apiservice v1beta1.metrics.k8s.io
 
 # メトリクス確認
-kubectl top pods -n loghoi
+kubectl top pods -n loghoihoi
 kubectl top nodes
 
 # HPA詳細
-kubectl describe hpa loghoi-backend-hpa -n loghoi
+kubectl describe hpa loghoi-backend-hpa -n loghoihoi
 ```
 
 ## セキュリティ
@@ -321,23 +321,23 @@ kubectl describe hpa loghoi-backend-hpa -n loghoi
 # Secretの作成（SSH鍵）
 kubectl create secret generic loghoi-secrets \
   --from-file=SSH_PRIVATE_KEY=./path/to/private_key \
-  -n loghoi
+  -n loghoihoi
 
 # Secretの確認
-kubectl get secrets -n loghoi
-kubectl describe secret loghoi-secrets -n loghoi
+kubectl get secrets -n loghoihoi
+kubectl describe secret loghoi-secrets -n loghoihoi
 ```
 
 ### RBAC設定
 ```bash
 # ServiceAccountの作成
-kubectl create serviceaccount loghoi-sa -n loghoi
+kubectl create serviceaccount loghoi-sa -n loghoihoi
 
 # RoleBindingの設定
 kubectl create rolebinding loghoi-rb \
   --role=loghoi-role \
   --serviceaccount=loghoi:loghoi-sa \
-  -n loghoi
+  -n loghoihoi
 ```
 
 ## モニタリング
