@@ -8,9 +8,9 @@ metadata:
     component: backend-storage
 spec:
   accessModes:
-    - ReadWriteOnce  # Nutanix VolumeはRWOのみサポート
+    - ReadWriteOnce  # Most CSI drivers support RWO
+  # storageClassName not specified - uses default StorageClass
   resources:
     requests:
       storage: 10Gi  # ログファイル保存用に10GB
-  storageClassName: nutanix-volume
 

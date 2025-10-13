@@ -132,17 +132,21 @@ VERSION=v1.0.1 ./build-and-push.sh
 
 ### StorageClass
 
-- **名前**: `nutanix-volume` (default)
-- **Provisioner**: `csi.nutanix.com`
-- **ReclaimPolicy**: Delete
-- **VolumeBindingMode**: WaitForFirstConsumer
-- **AllowVolumeExpansion**: true
+- **使用方法**: Default StorageClass を使用（環境依存）
+- **NKP環境での例**:
+  - 名前: `nutanix-volume` (default)
+  - Provisioner: `csi.nutanix.com`
+  - ReclaimPolicy: Delete
+  - VolumeBindingMode: WaitForFirstConsumer
+  - AllowVolumeExpansion: true
+- **他環境**: その環境のdefault StorageClass が自動的に使用される
 
 ### Persistent Volumes
 
-| PVC | サイズ | マウント先 | 用途 |
-|-----|--------|----------|------|
-| elasticsearch-data | 10Gi | /usr/share/elasticsearch/data | Elasticsearchデータ永続化 |
+| PVC | サイズ | StorageClass | マウント先 | 用途 |
+|-----|--------|--------------|----------|------|
+| elasticsearch-data | 10Gi | default | /usr/share/elasticsearch/data | Elasticsearchデータ永続化 |
+| loghoi-backend-output | 10Gi | default | /usr/src/output | バックエンドログファイル保存 |
 
 ---
 

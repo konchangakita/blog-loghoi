@@ -17,7 +17,7 @@
 - kubectl CLI
 - Kubeconfig: `/home/nutanix/nkp/kon-hoihoi.conf`
 - Namespace: `loghoihoi` (新規作成)
-- StorageClass: `nutanix-volume` (既存)
+- StorageClass: default (環境のdefault StorageClassを使用)
 - IngressClass: `kommander-traefik` (既存)
 - MetalLB: IPアドレスプール 10.55.23.41-10.55.23.43
 

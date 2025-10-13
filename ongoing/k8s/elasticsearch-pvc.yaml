@@ -9,7 +9,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: nutanix-volume
+  # storageClassName not specified - uses default StorageClass
   resources:
     requests:
       storage: 10Gi
