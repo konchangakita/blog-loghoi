@@ -127,6 +127,50 @@ else
     echo -e "   公開鍵をNutanix Prismに登録してください"
 fi
 
+# SSH鍵ファイルの読み取り権限チェック
+echo ""
+echo -e "${BLUE}Checking SSH key permissions...${NC}"
+CURRENT_USER=$(whoami)
+
+# 秘密鍵の読み取りテスト
+if ! cat "${SSH_PRIVATE_KEY}" >/dev/null 2>&1; then
+    echo -e "${RED}⚠️  警告: SSH秘密鍵を読み取れません${NC}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}問題: 現在のユーザー (${CURRENT_USER}) が秘密鍵を読み取れません${NC}"
+    echo -e ""
+    echo -e "${YELLOW}ファイル情報:${NC}"
+    ls -l "${SSH_PRIVATE_KEY}"
+    echo -e ""
+    echo -e "${YELLOW}対処方法（以下のいずれかを実行）:${NC}"
+    echo -e ""
+    echo -e "${GREEN}方法1: ファイル所有者を現在のユーザーに変更${NC}"
+    echo -e "  sudo chown ${CURRENT_USER}:${CURRENT_USER} ${SSH_PRIVATE_KEY} ${SSH_PUBLIC_KEY}"
+    echo -e ""
+    echo -e "${GREEN}方法2: 一時的にsudoで実行${NC}"
+    echo -e "  sudo KUBECONFIG=${KUBECONFIG_PATH} ./deploy.sh"
+    echo -e ""
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    exit 1
+fi
+
+# 公開鍵の読み取りテスト
+if ! cat "${SSH_PUBLIC_KEY}" >/dev/null 2>&1; then
+    echo -e "${RED}⚠️  警告: SSH公開鍵を読み取れません${NC}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${YELLOW}問題: 現在のユーザー (${CURRENT_USER}) が公開鍵を読み取れません${NC}"
+    echo -e ""
+    echo -e "${YELLOW}ファイル情報:${NC}"
+    ls -l "${SSH_PUBLIC_KEY}"
+    echo -e ""
+    echo -e "${YELLOW}対処方法:${NC}"
+    echo -e "  sudo chown ${CURRENT_USER}:${CURRENT_USER} ${SSH_PRIVATE_KEY} ${SSH_PUBLIC_KEY}"
+    echo -e "${YELLOW}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}✓ SSH keys are readable${NC}"
+echo ""
+
 # Kubernetes Secret の作成または確認
 echo -e "${YELLOW}[2/7] Creating or checking Secret...${NC}"
 if ${K} get secret loghoi-secrets -n ${NAMESPACE} &>/dev/null; then
