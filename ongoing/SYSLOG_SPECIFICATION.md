@@ -4,9 +4,19 @@
 シスログ機能は、NutanixクラスターのシステムログをElasticsearchから検索・表示する機能です。キーワード、日時範囲を指定してログを検索し、結果を構造化して表示できます。
 
 ## バージョン
-1.2.0（最終更新: 2025-10-12）
+1.3.0（最終更新: 2025-10-14）
 
 ## 変更履歴
+### v1.3.0（2025-10-14）
+- **Syslog検索改善**: `block_serial_number`をOR条件に追加
+  - 問題: hostname取得APIが返す値（例: `DM3-POC011-1`）と実際のSyslogデータのhostname（例: `NTNX-18SM6H160088-A-CVM`）が一致せず、検索結果が0件になる問題を解決
+  - 修正: クラスタの`block_serial_number`をElasticsearchから取得し、`*block_serial*`ワイルドカードをOR条件に追加
+  - 検索条件: `hostname* OR cluster_name* OR *block_serial*` の3つのOR条件で検索
+  - 実装場所: `shared/gateways/syslog_gateway.py`
+- **Kubernetes対応**: Dockerイメージタグを`latest`に変更（backend, frontend）
+- **UI改善**: トップページのクラスタアイコンサイズを修正（巨大化バグ）
+- **UI改善**: Gatekeeperページの背景画像レイアウトを修正（縦スクロール時の白背景問題解決）
+
 ### v1.2.0（2025-10-12）
 - **クラスター判別機能の実装**: PC Registration時にhypervisor hostnameを保存し、Syslog検索時に自動的にクラスター識別
 - **hostname自動取得**: Prism API (`/api/nutanix/v3/hosts/list`) からhypervisor hostnameを取得
@@ -328,19 +338,32 @@ class SyslogSearchRequest(BaseModel):
 - **主要メソッド**:
   - `search_syslog(search_item)`: ログ検索の実行
 
-##### 検索フロー（v1.1.0）
-1. リクエストデータをパース（keyword, start_datetime, end_datetime）
+##### 検索フロー（v1.3.0）
+1. リクエストデータをパース（keyword, start_datetime, end_datetime, cluster, hostnames）
 2. 日時をISO形式からJST形式に変換
-3. `ElasticGateway.search_syslog_by_keyword_and_time()`を呼び出し
-   - **hostnameフィルタなし**（クラスター名情報が利用不可のため）
-   - 時間範囲 + キーワードのみで検索
-4. 結果を構造化して返却（100件まで）
+3. **block_serial_numberを取得**（v1.3.0で追加）:
+   - クラスタ名でElasticsearch `cluster`インデックスを検索
+   - `block_serial_number`フィールドを取得（例: "18SM6H160088"）
+4. `ElasticGateway.search_syslog_by_keyword_and_time()`を呼び出し
+   - パラメータ: `keyword`, `start_datetime`, `end_datetime`, `hostnames`, `cluster_name`, `block_serial`
+5. 結果を構造化して返却（100件まで）
 
 ##### ElasticGateway.search_syslog_by_keyword_and_time()
 - **ファイルパス**: `core/ela.py`
+- **パラメータ**（v1.3.0で`block_serial`追加）:
+  - `keyword`: 検索キーワード
+  - `start_datetime`, `end_datetime`: 時間範囲
+  - `hostnames`: hostname配列（例: ["DM3-POC011-1", "DM3-POC011-2"]）
+  - `cluster_name`: クラスタ名（例: "DM3-POC011"）
+  - `block_serial`: ブロックシリアル番号（例: "18SM6H160088"） ← **v1.3.0で追加**
 - **クエリ構築**:
   - `@timestamp`の範囲検索
   - キーワードがある場合は`message`フィールドで検索（`query_string`）
+  - **hostnameフィルタ（OR条件）**:
+    1. `hostname*` ワイルドカード（例: `DM3-POC011-1*`）
+    2. `cluster_name*` ワイルドカード（例: `DM3-POC011*`）
+    3. `*block_serial*` ワイルドカード（例: `*18SM6H160088*`） ← **v1.3.0で追加**
+  - 上記3つの条件のいずれか1つに一致（`minimum_should_match: 1`）
   - `size=100`、タイムスタンプ降順でソート
 - **返却データ**: Elasticsearch `_source`の配列
 
@@ -362,7 +385,7 @@ class SyslogSearchRequest(BaseModel):
       - `host_ip`: ハイパーバイザーのIPアドレス
       - `cvm_ip`: CVMのIPアドレス
 
-#### 3.2 検索クエリ（v1.2.0）
+#### 3.2 検索クエリ（v1.3.0）
 ```json
 {
   "function_score": {
@@ -378,30 +401,33 @@ class SyslogSearchRequest(BaseModel):
             }
           },
           {
-            "query_string": {
-              "default_field": "message",
-              "query": "<keyword>"
+            "bool": {
+              "should": [
+                {
+                  "wildcard": {
+                    "hostname": "DM3-POC011-1*"
+                  }
+                },
+                {
+                  "wildcard": {
+                    "hostname": "DM3-POC011-2*"
+                  }
+                },
+                {
+                  "wildcard": {
+                    "hostname": "DM3-POC011*"
+                  }
+                },
+                {
+                  "wildcard": {
+                    "hostname": "*18SM6H160088*"
+                  }
+                }
+              ],
+              "minimum_should_match": 1
             }
           }
-        ],
-        "should": [
-          {
-            "wildcard": {
-              "hostname": "PHX-POC339-1*"
-            }
-          },
-          {
-            "wildcard": {
-              "hostname": "PHX-POC339-2*"
-            }
-          },
-          {
-            "wildcard": {
-              "hostname": "DM3-POC023-CE*"
-            }
-          }
-        ],
-        "minimum_should_match": 1
+        ]
       }
     }
   }
@@ -413,12 +439,16 @@ class SyslogSearchRequest(BaseModel):
 - `<end_datetime>`: フロントエンドから送信された終了日時（例：`2025-10-09T23:59:59`）
 - `<keyword>`: 検索キーワード（ワイルドカード付き。例：`*ERROR*`）
 
-**v1.2.0での追加**:
-- `should`句でhostnameワイルドカード検索を実装
-  - 各hostnameに対して`wildcard`クエリを生成（例：`PHX-POC339-1*`）
-  - クラスター名でも検索（例：`DM3-POC023-CE*`）
-  - `minimum_should_match: 1`でOR条件を実現
-- クラスター別にSyslogメッセージを絞り込み可能
+**v1.3.0での重要な改善**:
+- **block_serial_numberによる検索を追加**:
+  - 問題: hostname APIが返す値（`DM3-POC011-1`）と実際のSyslogのhostname（`NTNX-18SM6H160088-A-CVM`）が一致しない
+  - 解決: クラスタの`block_serial_number`を取得し、`*18SM6H160088*`形式でワイルドカード検索
+  - これにより、hostname形式に関係なく確実にクラスタのSyslogを検索可能
+- **検索条件（OR）**:
+  1. `hostname*` - APIから取得したhostname（例: `DM3-POC011-1*`）
+  2. `cluster_name*` - クラスタ名（例: `DM3-POC011*`）
+  3. `*block_serial*` - シリアル番号（例: `*18SM6H160088*`）← **NEW!**
+- 上記3つの条件のいずれか1つに一致すればヒット（`minimum_should_match: 1`）
 
 #### 3.3 データ構造（v1.1.0）
 ```json
@@ -659,18 +689,13 @@ ncli rsyslog-config add-server \
   relp-enabled=false
 
 # 例: Filebeat Syslogサーバーを追加（AOS 7.0）
-ncli rsyslog-config add-server \
-  name=elastic-filebeat \
-  host=10.55.23.42 \
-  port=7515 \
-  network-protocol=TCP \
-  relp-enabled=false
+ncli rsyslog-config add-server name=elastic-filebeat host=10.55.11.47 port=7515 network-protocol=TCP relp-enabled=false
 ```
 
 **出力例**:
 ```
 Name                      : elastic-filebeat
-Host Address              : 10.55.23.42
+Host Address              : 10.55.11.47
 Port                      : 7515
 Protocol                  : TCP
 Relp Enabled              : false
@@ -679,18 +704,10 @@ Relp Enabled              : false
 **モジュールの追加**:
 ```bash
 # 特定モジュールのログをSyslogサーバーに送信
-ncli rsyslog-config add-module \
-  server-name=<サーバー名> \
-  module-name=<モジュール名> \
-  level=<ログレベル> \
-  include-monitor-logs=false
+ncli rsyslog-config add-module  server-name=<サーバー名>  module-name=<モジュール名> level=<ログレベル> include-monitor-logs=false
 
 # 例: CASSANDRAモジュールのERRORログを送信
-ncli rsyslog-config add-module \
-  server-name=elastic-filebeat \
-  module-name=CASSANDRA \
-  level=ERROR \
-  include-monitor-logs=false
+ncli rsyslog-config add-module server-name=elastic-filebeat module-name=CASSANDRA level=ERROR include-monitor-logs=false
 ```
 
 **出力例**:

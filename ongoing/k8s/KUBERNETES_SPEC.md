@@ -66,12 +66,11 @@ frontend/next-app/loghoi/
 
 - **レジストリ**: `docker.io` (Docker Hub)
 - **Namespace**: `konchangakita`
-- **現在のバージョン**: v1.0.12
-- **イメージ**:
-  - `konchangakita/loghoi-backend:v1.0.12` - バックエンド（現行）
-  - `konchangakita/loghoi-backend:latest` - バックエンド（最新）
-  - `konchangakita/loghoi-frontend:v1.0.12` - フロントエンド（現行）
-  - `konchangakita/loghoi-frontend:latest` - フロントエンド（最新）
+- **イメージタグ戦略**（2025-10-14更新）:
+  - **Backend**: `konchangakita/loghoi-backend:latest` - 常に最新版を使用
+  - **Frontend**: `konchangakita/loghoi-frontend:latest` - 常に最新版を使用
+  - **Syslog**: `konchangakita/loghoi-syslog:v1.0.1` - 安定版を使用（頻繁に更新されないため固定）
+- **注意**: `latest`タグは開発イテレーション高速化のため。本番環境では特定バージョンタグの使用を推奨
 - **公式イメージ**:
   - `docker.elastic.co/elasticsearch/elasticsearch:8.11.0` - Elasticsearch
   - `docker.elastic.co/kibana/kibana:8.11.0` - Kibana
