@@ -566,42 +566,7 @@ kubectl get pods -n kommander | grep traefik
 kubectl get pods -n metallb-system
 ```
 
-### 5. Elasticsearchが再起動を繰り返す
-
-**症状**: 
-```bash
-kubectl get pods -n loghoihoi
-# NAME                               READY   STATUS             RESTARTS
-# elasticsearch-xxxxxxxxx-xxxxx      0/1     CrashLoopBackOff   5
-# elasticsearch-yyyyyyyyy-yyyyy      1/1     Running            0
-```
-
-複数のReplicaSetが同時に起動し、片方がCrashする
-
-**原因**: HostPath(ReadWriteOnce)使用時のRollingUpdate競合
-```bash
-# エラーログ
-kubectl logs -n loghoihoi -l app=elasticsearch | grep -i lock
-# LockObtainFailedException: Lock held by another program: 
-# /usr/share/elasticsearch/data/node.lock
-```
-
-**解決方法**:
-- ✅ **すでに修正済み**: `strategy: type: Recreate`が設定済み
-- 古いPodを完全停止してから新Podを起動
-- ReplicaSetが1つのみ稼働することを確認
-
-```bash
-# ReplicaSet確認（1つのみが正常）
-kubectl get rs -n loghoihoi | grep elasticsearch
-# elasticsearch-xxxxxxxxx   1   1   1   # ← 1つのみ
-# elasticsearch-yyyyyyyyy   0   0   0   # ← 古いRSは0
-
-# 古いReplicaSetの削除（必要に応じて）
-kubectl delete rs <old-replicaset-name> -n loghoihoi
-```
-
-### 6. Elasticsearch接続エラー
+### 5. Elasticsearch接続エラー
 
 ```bash
 # Elasticsearchの状態確認
@@ -624,12 +589,25 @@ kubectl exec -n loghoihoi deployment/loghoi-backend -- curl -s http://elasticsea
 
 ### 手動スケーリング
 
-```bash
-# Backend を3レプリカにスケール
-kubectl scale deployment loghoi-backend -n loghoihoi --replicas=3
+#### Frontend（スケール可能）
 
-# Frontend を2レプリカにスケール
-kubectl scale deployment loghoi-frontend -n loghoihoi --replicas=2
+```bash
+# Frontend を3レプリカにスケール
+kubectl scale deployment loghoi-frontend -n loghoihoi --replicas=3
+```
+
+#### Backend/Elasticsearch（HostPath使用時は不可）
+
+**⚠️ 注意**: HostPath(ReadWriteOnce)使用時は、BackendとElasticsearchのスケールは**不可**です。
+
+- BackendとElasticsearchはPVC(ReadWriteOnce)を使用
+- 複数レプリカは同じPVCに同時アクセス不可
+- スケールするには、ReadWriteMany対応のStorageClassが必要
+
+**カスタムStorageClass使用時のみスケール可能**:
+```bash
+# ReadWriteMany対応StorageClassでデプロイした場合のみ
+kubectl scale deployment loghoi-backend -n loghoihoi --replicas=3
 ```
 
 ### HPA（Horizontal Pod Autoscaler）
