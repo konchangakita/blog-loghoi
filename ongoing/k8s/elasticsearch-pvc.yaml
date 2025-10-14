@@ -1,3 +1,11 @@
+# ⚠️ このファイルは参照用です
+# 実際のPVCは deploy.sh で環境変数 STORAGE_CLASS を使用して動的生成されます
+#
+# デフォルト: STORAGE_CLASS=manual (HostPath)
+# カスタム: STORAGE_CLASS=your-storage-class
+#
+# 以下は参考用のマニフェスト定義です
+
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -9,7 +17,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  # storageClassName not specified - uses default StorageClass
+  # storageClassName は deploy.sh で自動設定されます
   resources:
     requests:
       storage: 10Gi
