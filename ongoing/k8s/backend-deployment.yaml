@@ -22,6 +22,20 @@ spec:
     spec:
       securityContext:
         fsGroup: 1000
+      initContainers:
+      - name: prepare-output-dirs
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          # 出力ディレクトリの作成と権限設定
+          mkdir -p /app/output/log /app/output/zip
+          chmod -R 777 /app/output
+          echo "✓ Output directories prepared"
+        volumeMounts:
+        - name: output
+          mountPath: /app/output
       containers:
       - name: backend
         image: konchangakita/loghoi-backend:v1.0.21
