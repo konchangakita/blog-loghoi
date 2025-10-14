@@ -250,7 +250,9 @@ kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic l
 ### Backend
 
 ```yaml
-replicas: 2
+replicas: 1  # HostPath(RWO)使用のため1に制限
+strategy:
+  type: Recreate  # HostPath(RWO)使用時は必須
 resources:
   requests:
     cpu: 250m
@@ -277,6 +279,8 @@ resources:
 
 ```yaml
 replicas: 1
+strategy:
+  type: Recreate  # HostPath(RWO)使用時は必須
 resources:
   requests:
     cpu: 500m
@@ -595,6 +599,34 @@ kubectl top pods -n loghoihoi
 kubectl describe pod -n loghoihoi -l app=elasticsearch
 ```
 
+### Elasticsearchが再起動を繰り返す
+
+**症状**: CrashLoopBackOff、複数のReplicaSetが同時に起動
+
+**原因**: HostPath(ReadWriteOnce)使用時のRollingUpdate競合
+- RollingUpdate戦略により新旧Pod両方が起動
+- 同じPVCに複数Podがアクセス
+- Elasticsearchのnode.lockファイルが競合
+- `LockObtainFailedException: Lock held by another program`
+
+**解決方法**:
+```yaml
+# elasticsearch-deployment.yaml
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # HostPath使用時は必須
+```
+
+**確認コマンド**:
+```bash
+# ReplicaSet数を確認（1つのみが正常）
+kubectl get rs -n loghoihoi | grep elasticsearch
+
+# Podログでロック競合を確認
+kubectl logs -n loghoihoi -l app=elasticsearch | grep -i lock
+```
+
 ### Kibanaが起動しない
 
 ```bash
@@ -631,9 +663,18 @@ kubectl describe pod -n loghoihoi -l component=kibana
 - ✅ **HostPath自動構成**
   - PV自動生成機能追加（`manual` StorageClass使用時）
   - nodeSelector自動設定（単一ノード環境対応）
+  - initContainerで権限問題を解決（Backend）
+- 🔧 **Recreate戦略導入**
+  - ElasticsearchとBackendにRecreate戦略を適用
+  - HostPath(RWO)使用時のRollingUpdate競合を解消
+  - ロックファイル競合問題を解決
+- 📊 **Kibana自動デプロイ**
+  - deploy.shにKibanaデプロイステップを追加
+  - Elasticsearchデータの可視化が可能に
 - 📚 **ドキュメント強化**
   - DEPLOYMENT_GUIDE.md更新（StorageClass設定手順追加）
   - 環境別設定例追加（NKP, GKE, EKS, AKS）
+  - トラブルシューティング更新（RollingUpdate競合対策追加）
 
 ### v1.0.12 (2025-10-09)
 - ✅ Kibanaデプロイメントを追加

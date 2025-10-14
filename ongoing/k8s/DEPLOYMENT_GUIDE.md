@@ -37,12 +37,16 @@ Internet/LAN
 
 ### 主要コンポーネント
 
-| コンポーネント | 説明 | レプリカ数 |
-|---|---|---|
-| **Frontend** | Next.js アプリケーション | 1 |
-| **Backend** | FastAPI + Socket.IO | 1 |
-| **Elasticsearch** | ログデータストア | 1 |
-| **Ingress** | Traefik Ingress Controller | - |
+| コンポーネント | 説明 | レプリカ数 | デプロイ戦略 |
+|---|---|---|---|
+| **Frontend** | Next.js アプリケーション | 2 | RollingUpdate |
+| **Backend** | FastAPI + Socket.IO | 1 | **Recreate** (HostPath使用) |
+| **Elasticsearch** | ログデータストア | 1 | **Recreate** (HostPath使用) |
+| **Kibana** | Elasticsearchデータ可視化 | 1 | RollingUpdate |
+| **Syslog** | Syslogサーバー | 1 | RollingUpdate |
+| **Ingress** | Traefik Ingress Controller | - | - |
+
+**注意**: HostPath(ReadWriteOnce)使用時は、Recreate戦略が必須（ロックファイル競合防止）
 
 ---
 
@@ -562,7 +566,42 @@ kubectl get pods -n kommander | grep traefik
 kubectl get pods -n metallb-system
 ```
 
-### 5. Elasticsearch接続エラー
+### 5. Elasticsearchが再起動を繰り返す
+
+**症状**: 
+```bash
+kubectl get pods -n loghoihoi
+# NAME                               READY   STATUS             RESTARTS
+# elasticsearch-xxxxxxxxx-xxxxx      0/1     CrashLoopBackOff   5
+# elasticsearch-yyyyyyyyy-yyyyy      1/1     Running            0
+```
+
+複数のReplicaSetが同時に起動し、片方がCrashする
+
+**原因**: HostPath(ReadWriteOnce)使用時のRollingUpdate競合
+```bash
+# エラーログ
+kubectl logs -n loghoihoi -l app=elasticsearch | grep -i lock
+# LockObtainFailedException: Lock held by another program: 
+# /usr/share/elasticsearch/data/node.lock
+```
+
+**解決方法**:
+- ✅ **すでに修正済み**: `strategy: type: Recreate`が設定済み
+- 古いPodを完全停止してから新Podを起動
+- ReplicaSetが1つのみ稼働することを確認
+
+```bash
+# ReplicaSet確認（1つのみが正常）
+kubectl get rs -n loghoihoi | grep elasticsearch
+# elasticsearch-xxxxxxxxx   1   1   1   # ← 1つのみ
+# elasticsearch-yyyyyyyyy   0   0   0   # ← 古いRSは0
+
+# 古いReplicaSetの削除（必要に応じて）
+kubectl delete rs <old-replicaset-name> -n loghoihoi
+```
+
+### 6. Elasticsearch接続エラー
 
 ```bash
 # Elasticsearchの状態確認
