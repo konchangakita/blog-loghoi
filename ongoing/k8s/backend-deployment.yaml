@@ -9,6 +9,8 @@ metadata:
     version: v1.0.15
 spec:
   replicas: 1  # PersistentVolume(RWO)使用のため1に変更
+  strategy:
+    type: Recreate  # HostPath(RWO)使用時はRecreate必須（RollingUpdateだとロック競合）
   selector:
     matchLabels:
       app: loghoi
