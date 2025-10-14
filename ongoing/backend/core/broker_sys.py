@@ -47,13 +47,21 @@ class SyslogGateway:
             # block_serial_numberを取得
             block_serial = None
             if cluster_name:
+                print(f"[SyslogGateway] Attempting to get block_serial_number for cluster: {cluster_name}")
                 try:
                     cluster_data = es.get_cvmlist_document(cluster_name)
+                    print(f"[SyslogGateway] cluster_data retrieved: {cluster_data is not None}, count: {len(cluster_data) if cluster_data else 0}")
                     if cluster_data and len(cluster_data) > 0:
                         block_serial = cluster_data[0].get("block_serial_number", "")
                         print(f"[SyslogGateway] block_serial_number: {block_serial}")
+                    else:
+                        print(f"⚠️ [SyslogGateway] No cluster_data found for: {cluster_name}")
                 except Exception as e:
                     print(f"⚠️ [SyslogGateway] Failed to get block_serial_number: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"⚠️ [SyslogGateway] cluster_name is empty, skipping block_serial retrieval")
 
             # Elasticsearchで検索（hostname, cluster_name, block_serial_numberでフィルタ）
             print(f"Searching syslog: keyword={keyword}, time_range={start_datetime_utc} to {end_datetime_utc}")
