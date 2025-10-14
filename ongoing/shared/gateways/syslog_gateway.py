@@ -51,16 +51,37 @@ class SyslogGateway:
                 start_datetime_utc = "2024-01-01T00:00:00"
                 end_datetime_utc = "2024-12-31T23:59:59"
 
-            # Elasticsearchで検索（hostnameフィルタ + クラスタ名ワイルドカード対応）
+            # block_serial_numberを取得
+            block_serial = None
+            if cluster_name:
+                print(f"[SyslogGateway] Attempting to get block_serial_number for cluster: {cluster_name}")
+                try:
+                    cluster_data = es.get_cvmlist_document(cluster_name)
+                    print(f"[SyslogGateway] cluster_data retrieved: {cluster_data is not None}, count: {len(cluster_data) if cluster_data else 0}")
+                    if cluster_data and len(cluster_data) > 0:
+                        block_serial = cluster_data[0].get("block_serial_number", "")
+                        print(f"[SyslogGateway] block_serial_number: {block_serial}")
+                    else:
+                        print(f"⚠️ [SyslogGateway] No cluster_data found for: {cluster_name}")
+                except Exception as e:
+                    print(f"⚠️ [SyslogGateway] Failed to get block_serial_number: {e}")
+                    import traceback
+                    traceback.print_exc()
+            else:
+                print(f"⚠️ [SyslogGateway] cluster_name is empty, skipping block_serial retrieval")
+
+            # Elasticsearchで検索（hostnameフィルタ + クラスタ名ワイルドカード + block_serial対応）
             if hostnames and len(hostnames) > 0:
                 print(f"[Syslog Search] Searching with hostname filter: {hostnames}")
             else:
                 print(f"[Syslog Search] Searching without hostname filter")
             if cluster_name:
                 print(f"[Syslog Search] Cluster name wildcard: {cluster_name}*")
+            if block_serial:
+                print(f"[Syslog Search] Block serial wildcard: *{block_serial}*")
             print(f"[Syslog Search] keyword={keyword}, time_range={start_datetime_utc} to {end_datetime_utc}")
             res = es.search_syslog_by_keyword_and_time(
-                keyword, start_datetime_utc, end_datetime_utc, hostnames, cluster_name
+                keyword, start_datetime_utc, end_datetime_utc, hostnames, cluster_name, block_serial
             )
             
             # ログデータを構造化して返す
