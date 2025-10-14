@@ -32,11 +32,6 @@ class SyslogGateway:
                 end_datetime = search_item.get("end_datetime", "")
                 hostnames = search_item.get("hostnames", [])  # hostnameリストを取得
 
-            # デバッグログ: 受信データの詳細を確認
-            print(f"[SyslogGateway] Received search_item keys: {list(search_item.keys())}")
-            print(f"[SyslogGateway] Extracted hostnames: {hostnames}")
-            print(f"[SyslogGateway] Extracted cluster_name: {cluster_name}")
-            
             # 日付変換
             if start_datetime and end_datetime:
                 # ISO形式の日付をパースしてJST形式に変換
@@ -51,16 +46,19 @@ class SyslogGateway:
                 start_datetime_utc = "2024-01-01T00:00:00"
                 end_datetime_utc = "2024-12-31T23:59:59"
 
-            # Elasticsearchで検索（hostnameフィルタ + クラスタ名ワイルドカード対応）
-            if hostnames and len(hostnames) > 0:
-                print(f"[Syslog Search] Searching with hostname filter: {hostnames}")
-            else:
-                print(f"[Syslog Search] Searching without hostname filter")
+            # block_serial_numberを取得
+            block_serial = None
             if cluster_name:
-                print(f"[Syslog Search] Cluster name wildcard: {cluster_name}*")
-            print(f"[Syslog Search] keyword={keyword}, time_range={start_datetime_utc} to {end_datetime_utc}")
+                try:
+                    cluster_data = es.get_cvmlist_document(cluster_name)
+                    if cluster_data and len(cluster_data) > 0:
+                        block_serial = cluster_data[0].get("block_serial_number", "")
+                except Exception as e:
+                    print(f"⚠️ [SyslogGateway] Failed to get block_serial_number: {e}")
+
+            # Elasticsearchで検索（hostnameフィルタ + クラスタ名ワイルドカード + block_serial対応）
             res = es.search_syslog_by_keyword_and_time(
-                keyword, start_datetime_utc, end_datetime_utc, hostnames, cluster_name
+                keyword, start_datetime_utc, end_datetime_utc, hostnames, cluster_name, block_serial
             )
             
             # ログデータを構造化して返す

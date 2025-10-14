@@ -31,7 +31,6 @@ const DisplayCluster = ({ clusterList }: any) => {
                 height={30} 
                 alt={val.hypervisor} 
                 className='inline'
-                style={{ width: 'auto', height: 'auto' }}
               />
               <div className='inline px-2'>
                 {val.name} {val.prism_ip}

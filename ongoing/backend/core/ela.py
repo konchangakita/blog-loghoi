@@ -293,9 +293,9 @@ class ElasticGateway(ElasticAPI):
         res = es.search(index="filebeat-*", query=query, size=100)
         return [s["_source"] for s in res["hits"]["hits"]]
 
-    def search_syslog_by_keyword_and_time(self, keyword, start_datetime, end_datetime, hostnames=None, cluster_name=None):
+    def search_syslog_by_keyword_and_time(self, keyword, start_datetime, end_datetime, hostnames=None, cluster_name=None, block_serial=None):
         """
-        Syslogを検索（hostname + クラスタ名ワイルドカード フィルタ対応）
+        Syslogを検索（hostname + クラスタ名 + シリアル番号ワイルドカード フィルタ対応）
         
         Args:
             keyword: 検索キーワード
@@ -303,6 +303,7 @@ class ElasticGateway(ElasticAPI):
             end_datetime: 終了日時（ISO形式）
             hostnames: hostnameリスト（オプション。指定された場合はこれらのhostnameでフィルタリング）
             cluster_name: クラスタ名（オプション。指定された場合は "クラスタ名*" でワイルドカード検索）
+            block_serial: ブロックシリアル番号（オプション。指定された場合は "*シリアル番号*" でワイルドカード検索）
         
         Returns:
             list: Syslogエントリのリスト
@@ -310,7 +311,7 @@ class ElasticGateway(ElasticAPI):
         es = self.es
         search_keyword = f"*{keyword}*" if keyword else "*"
         
-        print(f"[Syslog Search] keyword={search_keyword}, time_range={start_datetime} to {end_datetime}, hostnames={hostnames}, cluster_name={cluster_name}")
+        print(f"[Syslog Search] keyword={search_keyword}, time_range={start_datetime} to {end_datetime}, hostnames={hostnames}, cluster_name={cluster_name}, block_serial={block_serial}")
         
         # クエリ構築
         query = {
@@ -342,7 +343,7 @@ class ElasticGateway(ElasticAPI):
             })
         
         # hostnameフィルタまたはクラスタ名ワイルドカードが指定されている場合
-        if (hostnames and len(hostnames) > 0) or cluster_name:
+        if (hostnames and len(hostnames) > 0) or cluster_name or block_serial:
             # should (OR条件) を構築
             should_conditions = []
             
@@ -366,6 +367,16 @@ class ElasticGateway(ElasticAPI):
                     }
                 })
                 print(f"[Syslog Search] Applying cluster wildcard filter: {cluster_wildcard}")
+            
+            # ブロックシリアル番号ワイルドカード（例: "*18SM6H160088*"）
+            if block_serial:
+                serial_wildcard = f"*{block_serial}*"
+                should_conditions.append({
+                    "wildcard": {
+                        "hostname": serial_wildcard
+                    }
+                })
+                print(f"[Syslog Search] Applying block_serial wildcard filter: {serial_wildcard}")
             
             # should条件を追加（OR条件）
             query["function_score"]["query"]["bool"]["must"].append({

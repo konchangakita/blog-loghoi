@@ -392,11 +392,17 @@ kubectl get svc -n loghoihoi
 
 **期待される出力:**
 ```
-NAME                      TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-elasticsearch-service     ClusterIP   10.x.x.x        <none>        9200/TCP   2m
-loghoi-backend-service    ClusterIP   10.x.x.x        <none>        7776/TCP   1m
-loghoi-frontend-service   ClusterIP   10.x.x.x        <none>        7777/TCP   1m
+NAME                      TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)                       AGE
+elasticsearch-service     ClusterIP      10.x.x.x        <none>        9200/TCP                      2m
+kibana-service            ClusterIP      10.x.x.x        <none>        5601/TCP                      2m
+loghoi-backend-service    ClusterIP      10.x.x.x        <none>        7776/TCP                      1m
+loghoi-frontend-service   ClusterIP      10.x.x.x        <none>        7777/TCP                      1m
+loghoi-syslog-service     LoadBalancer   10.x.x.x        10.55.11.47   7515:30760/TCP,5066:31609/TCP 1m
 ```
+
+**重要**: `loghoi-syslog-service`の`EXTERNAL-IP`がSyslogサーバーのアドレスです。
+- **Syslog送信先**: `EXTERNAL-IP:7515` (例: 10.55.11.47:7515)
+- **Metrics確認**: `EXTERNAL-IP:5066` (例: 10.55.11.47:5066)
 
 ### 3. Ingress確認
 
