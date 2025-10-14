@@ -9,6 +9,8 @@ metadata:
     version: v1.0.15
 spec:
   replicas: 1  # PersistentVolume(RWO)使用のため1に変更
+  strategy:
+    type: Recreate  # HostPath(RWO)使用時はRecreate必須（RollingUpdateだとロック競合）
   selector:
     matchLabels:
       app: loghoi
@@ -22,6 +24,20 @@ spec:
     spec:
       securityContext:
         fsGroup: 1000
+      initContainers:
+      - name: prepare-output-dirs
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          # 出力ディレクトリの作成と権限設定
+          mkdir -p /app/output/log /app/output/zip
+          chmod -R 777 /app/output
+          echo "✓ Output directories prepared"
+        volumeMounts:
+        - name: output
+          mountPath: /app/output
       containers:
       - name: backend
         image: konchangakita/loghoi-backend:v1.0.21

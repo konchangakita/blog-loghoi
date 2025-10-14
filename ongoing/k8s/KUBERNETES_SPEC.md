@@ -130,23 +130,62 @@ VERSION=v1.0.1 ./build-and-push.sh
 
 ## 💾 ストレージ
 
-### StorageClass
+### StorageClass設定（環境変数制御）
 
-- **使用方法**: Default StorageClass を使用（環境依存）
-- **NKP環境での例**:
-  - 名前: `nutanix-volume` (default)
-  - Provisioner: `csi.nutanix.com`
-  - ReclaimPolicy: Delete
-  - VolumeBindingMode: WaitForFirstConsumer
-  - AllowVolumeExpansion: true
-- **他環境**: その環境のdefault StorageClass が自動的に使用される
+LogHoihoiは`STORAGE_CLASS`環境変数でストレージ構成を柔軟に変更できます。
+
+#### デフォルト（HostPath）
+
+```bash
+# 環境変数不要（デフォルト）
+./deploy.sh
+
+# または明示的に指定
+STORAGE_CLASS=manual ./deploy.sh
+```
+
+**特徴**:
+- ✅ **StorageClass**: `manual`（HostPath使用）
+- ✅ **Provisioner不要**: CSI Driver等のインストール不要
+- ✅ **即座にデプロイ可能**: どの環境でも動作
+- ⚠️ **単一ノード限定**: Podとデータが同じノードに配置
+- ⚠️ **データ永続性**: 中程度（ノード障害時に損失）
+- 💡 **用途**: 開発・検証環境向け
+
+**自動生成されるPV**:
+- `elasticsearch-data-pv`: HostPath `/mnt/loghoi/elasticsearch-data`
+- `backend-output-pv`: HostPath `/mnt/loghoi/backend-output`
+
+#### カスタムStorageClass
+
+```bash
+# 環境変数で指定
+STORAGE_CLASS=nutanix-volume ./deploy.sh  # NKP
+STORAGE_CLASS=gp3 ./deploy.sh              # AWS EKS
+STORAGE_CLASS=standard ./deploy.sh         # GKE
+```
+
+**特徴**:
+- ✅ **Dynamic Provisioning**: PVが自動作成
+- ✅ **高可用性（HA）対応**: ノード障害に強い
+- ✅ **本番環境推奨**: エンタープライズグレード
+- ⚠️ **要件**: StorageClassとCSI Driverが必要
+
+**NKP環境での例**:
+- 名前: `nutanix-volume`
+- Provisioner: `csi.nutanix.com`
+- ReclaimPolicy: Delete
+- VolumeBindingMode: WaitForFirstConsumer
+- AllowVolumeExpansion: true
 
 ### Persistent Volumes
 
-| PVC | サイズ | StorageClass | マウント先 | 用途 |
-|-----|--------|--------------|----------|------|
-| elasticsearch-data | 10Gi | default | /usr/share/elasticsearch/data | Elasticsearchデータ永続化 |
-| loghoi-backend-output | 10Gi | default | /usr/src/output | バックエンドログファイル保存 |
+| PVC | サイズ | デフォルトStorageClass | マウント先 | 用途 |
+|-----|--------|---------------------|----------|------|
+| elasticsearch-data | 10Gi | manual（HostPath） | /usr/share/elasticsearch/data | Elasticsearchデータ永続化 |
+| loghoi-backend-output | 10Gi | manual（HostPath） | /usr/src/output | バックエンドログファイル保存 |
+
+**注意**: `STORAGE_CLASS`環境変数で変更可能
 
 ---
 
@@ -211,7 +250,9 @@ kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" create secret generic l
 ### Backend
 
 ```yaml
-replicas: 2
+replicas: 1  # HostPath(RWO)使用のため1に制限
+strategy:
+  type: Recreate  # HostPath(RWO)使用時は必須
 resources:
   requests:
     cpu: 250m
@@ -238,6 +279,8 @@ resources:
 
 ```yaml
 replicas: 1
+strategy:
+  type: Recreate  # HostPath(RWO)使用時は必須
 resources:
   requests:
     cpu: 500m
@@ -556,6 +599,34 @@ kubectl top pods -n loghoihoi
 kubectl describe pod -n loghoihoi -l app=elasticsearch
 ```
 
+### Elasticsearchが再起動を繰り返す
+
+**症状**: CrashLoopBackOff、複数のReplicaSetが同時に起動
+
+**原因**: HostPath(ReadWriteOnce)使用時のRollingUpdate競合
+- RollingUpdate戦略により新旧Pod両方が起動
+- 同じPVCに複数Podがアクセス
+- Elasticsearchのnode.lockファイルが競合
+- `LockObtainFailedException: Lock held by another program`
+
+**解決方法**:
+```yaml
+# elasticsearch-deployment.yaml
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate  # HostPath使用時は必須
+```
+
+**確認コマンド**:
+```bash
+# ReplicaSet数を確認（1つのみが正常）
+kubectl get rs -n loghoihoi | grep elasticsearch
+
+# Podログでロック競合を確認
+kubectl logs -n loghoihoi -l app=elasticsearch | grep -i lock
+```
+
 ### Kibanaが起動しない
 
 ```bash
@@ -583,6 +654,27 @@ kubectl describe pod -n loghoihoi -l component=kibana
 ---
 
 ## 📝 変更履歴
+
+### v1.1.0 (2025-10-14)
+- ✅ **StorageClass環境変数対応**
+  - `STORAGE_CLASS`環境変数でストレージ構成を柔軟に変更可能
+  - デフォルトはHostPath（`manual`）- 開発・検証環境向け
+  - カスタムStorageClass指定で本番環境対応
+- ✅ **HostPath自動構成**
+  - PV自動生成機能追加（`manual` StorageClass使用時）
+  - nodeSelector自動設定（単一ノード環境対応）
+  - initContainerで権限問題を解決（Backend）
+- 🔧 **Recreate戦略導入**
+  - ElasticsearchとBackendにRecreate戦略を適用
+  - HostPath(RWO)使用時のRollingUpdate競合を解消
+  - ロックファイル競合問題を解決
+- 📊 **Kibana自動デプロイ**
+  - deploy.shにKibanaデプロイステップを追加
+  - Elasticsearchデータの可視化が可能に
+- 📚 **ドキュメント強化**
+  - DEPLOYMENT_GUIDE.md更新（StorageClass設定手順追加）
+  - 環境別設定例追加（NKP, GKE, EKS, AKS）
+  - トラブルシューティング更新（RollingUpdate競合対策追加）
 
 ### v1.0.12 (2025-10-09)
 - ✅ Kibanaデプロイメントを追加

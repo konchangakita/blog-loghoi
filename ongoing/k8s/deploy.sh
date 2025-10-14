@@ -11,6 +11,7 @@ NC='\033[0m' # No Color
 # 設定
 KUBECONFIG_PATH="${KUBECONFIG:-/home/nutanix/nkp/kon-hoihoi.conf}"
 NAMESPACE="loghoihoi"
+STORAGE_CLASS="${STORAGE_CLASS:-manual}"  # デフォルトは manual (HostPath)
 
 echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}   Log Hoihoi Kubernetes Deployment  ${NC}"
@@ -18,6 +19,7 @@ echo -e "${GREEN}======================================${NC}"
 echo ""
 echo -e "Kubeconfig: ${YELLOW}${KUBECONFIG_PATH}${NC}"
 echo -e "Namespace: ${YELLOW}${NAMESPACE}${NC}"
+echo -e "StorageClass: ${YELLOW}${STORAGE_CLASS}${NC}"
 echo ""
 
 # kubeconfigの確認
@@ -193,56 +195,142 @@ echo -e "${GREEN}======================================${NC}"
 echo ""
 
 # 1. ConfigMap
-echo -e "${YELLOW}[1/9] Deploying ConfigMap...${NC}"
+echo -e "${YELLOW}[1/10] Deploying ConfigMap...${NC}"
 ${K} apply -f configmap.yaml
 echo -e "${GREEN}✓ ConfigMap deployed${NC}"
 echo ""
 
 # 2. Nginx ConfigMap
-echo -e "${YELLOW}[2/9] Deploying Nginx ConfigMap...${NC}"
+echo -e "${YELLOW}[2/10] Deploying Nginx ConfigMap...${NC}"
 ${K} apply -f nginx-config.yaml
 echo -e "${GREEN}✓ Nginx ConfigMap deployed${NC}"
 echo ""
 
-# 3. Elasticsearch PVC
-echo -e "${YELLOW}[3/9] Deploying Elasticsearch PVC...${NC}"
-${K} apply -f elasticsearch-pvc.yaml
-echo -e "${GREEN}✓ Elasticsearch PVC deployed${NC}"
+# 3. StorageClass別のPV/PVC作成
+echo -e "${YELLOW}[3/10] Deploying Persistent Volumes...${NC}"
+
+if [ "$STORAGE_CLASS" = "manual" ]; then
+    # HostPath用のPV作成
+    echo -e "${BLUE}  Using HostPath (manual StorageClass)${NC}"
+    
+    # ノード名を自動取得
+    NODE_NAME=$(${K} get nodes -o jsonpath='{.items[0].metadata.name}')
+    echo -e "${BLUE}  Selected node: ${NODE_NAME}${NC}"
+    
+    # PV作成
+    cat <<EOF | ${K} apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: elasticsearch-data-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /mnt/loghoi/elasticsearch-data
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: backend-output-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /mnt/loghoi/backend-output
+    type: DirectoryOrCreate
+EOF
+    echo -e "${GREEN}✓ HostPath PVs created${NC}"
+else
+    echo -e "${BLUE}  Using StorageClass: ${STORAGE_CLASS} (Dynamic Provisioning)${NC}"
+    echo -e "${BLUE}  PVs will be created automatically${NC}"
+fi
 echo ""
 
-# 4. Backend Output PVC
-echo -e "${YELLOW}[4/9] Deploying Backend Output PVC...${NC}"
-${K} apply -f backend-output-pvc.yaml
-echo -e "${GREEN}✓ Backend Output PVC deployed${NC}"
+# 4. PVC作成（動的生成）
+echo -e "${YELLOW}[4/10] Deploying Persistent Volume Claims...${NC}"
+cat <<EOF | ${K} apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-data
+  namespace: ${NAMESPACE}
+  labels:
+    app: loghoi
+    component: elasticsearch
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ${STORAGE_CLASS}
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loghoi-backend-output
+  namespace: ${NAMESPACE}
+  labels:
+    app: loghoi
+    component: backend-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ${STORAGE_CLASS}
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+echo -e "${GREEN}✓ PVCs deployed${NC}"
 echo ""
 
 # 5. Elasticsearch
-echo -e "${YELLOW}[5/9] Deploying Elasticsearch...${NC}"
+echo -e "${YELLOW}[5/10] Deploying Elasticsearch...${NC}"
 ${K} apply -f elasticsearch-deployment.yaml
 echo -e "${GREEN}✓ Elasticsearch deployed${NC}"
 echo ""
 
 # 6. Services
-echo -e "${YELLOW}[6/9] Deploying Services...${NC}"
+echo -e "${YELLOW}[6/10] Deploying Services...${NC}"
 ${K} apply -f services.yaml
 echo -e "${GREEN}✓ Services deployed${NC}"
 echo ""
 
 # 7. Backend & Frontend
-echo -e "${YELLOW}[7/9] Deploying Backend and Frontend...${NC}"
+echo -e "${YELLOW}[7/10] Deploying Backend and Frontend...${NC}"
 ${K} apply -f backend-deployment.yaml
 ${K} apply -f frontend-deployment.yaml
 echo -e "${GREEN}✓ Backend and Frontend deployed${NC}"
 echo ""
 
 # 8. Ingress
-echo -e "${YELLOW}[8/9] Deploying Ingress...${NC}"
+echo -e "${YELLOW}[8/10] Deploying Ingress...${NC}"
 ${K} apply -f ingress.yaml
 echo -e "${GREEN}✓ Ingress deployed${NC}"
 echo ""
 
-# 9. Syslog (Optional)
-echo -e "${YELLOW}[9/9] Deploying Syslog (Optional)...${NC}"
+# 9. Kibana (Optional)
+echo -e "${YELLOW}[9/10] Deploying Kibana (Optional)...${NC}"
+if [ -f "kibana-deployment.yaml" ]; then
+    ${K} apply -f kibana-deployment.yaml
+    echo -e "${GREEN}✓ Kibana deployed${NC}"
+else
+    echo -e "${YELLOW}⚠ Kibana deployment skipped (file not found)${NC}"
+fi
+echo ""
+
+# 10. Syslog (Optional)
+echo -e "${YELLOW}[10/10] Deploying Syslog (Optional)...${NC}"
 if [ -f "syslog-deployment.yaml" ]; then
     ${K} apply -f syslog-deployment.yaml
     echo -e "${GREEN}✓ Syslog deployed${NC}"
@@ -250,6 +338,24 @@ else
     echo -e "${YELLOW}⚠ Syslog deployment skipped (file not found)${NC}"
 fi
 echo ""
+
+# HostPath使用時のnodeSelector設定
+if [ "$STORAGE_CLASS" = "manual" ]; then
+    echo -e "${YELLOW}[HostPath] Configuring nodeSelector for Pods...${NC}"
+    
+    # Elasticsearchにnode selectorを追加
+    ${K} patch deployment elasticsearch -n ${NAMESPACE} \
+        -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"'${NODE_NAME}'"}}}}}' \
+        2>/dev/null || echo -e "${YELLOW}  ⚠ Elasticsearch nodeSelector patch skipped${NC}"
+    
+    # BackendにnodeSelectorを追加
+    ${K} patch deployment loghoi-backend -n ${NAMESPACE} \
+        -p '{"spec":{"template":{"spec":{"nodeSelector":{"kubernetes.io/hostname":"'${NODE_NAME}'"}}}}}' \
+        2>/dev/null || echo -e "${YELLOW}  ⚠ Backend nodeSelector patch skipped${NC}"
+    
+    echo -e "${GREEN}✓ Pods configured to run on node: ${NODE_NAME}${NC}"
+    echo ""
+fi
 
 # デプロイ状態確認
 echo -e "${BLUE}Deployment Status:${NC}"
@@ -265,14 +371,28 @@ echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}   Deployment Completed!             ${NC}"
 echo -e "${GREEN}======================================${NC}"
 echo ""
+echo -e "${BLUE}📦 StorageClass: ${YELLOW}${STORAGE_CLASS}${NC}"
+if [ "$STORAGE_CLASS" = "manual" ]; then
+    echo -e "${BLUE}💾 Storage Type: ${YELLOW}HostPath${NC}"
+    echo -e "${BLUE}🖥️  Node: ${YELLOW}${NODE_NAME}${NC}"
+    echo -e "${BLUE}📁 Data Paths:${NC}"
+    echo -e "   - Elasticsearch: ${YELLOW}/mnt/loghoi/elasticsearch-data${NC}"
+    echo -e "   - Backend Output: ${YELLOW}/mnt/loghoi/backend-output${NC}"
+else
+    echo -e "${BLUE}💾 Storage Type: ${YELLOW}Dynamic Provisioning${NC}"
+fi
+echo ""
 echo -e "${YELLOW}Next steps:${NC}"
 echo -e "1. Wait for all pods to be ready:"
 echo -e "   ${BLUE}kubectl --kubeconfig=${KUBECONFIG_PATH} get pods -n ${NAMESPACE} -w${NC}"
 echo ""
-echo -e "2. Check Ingress IP:"
+echo -e "2. Check PVC status:"
+echo -e "   ${BLUE}kubectl --kubeconfig=${KUBECONFIG_PATH} get pvc -n ${NAMESPACE}${NC}"
+echo ""
+echo -e "3. Check Ingress IP:"
 echo -e "   ${BLUE}kubectl --kubeconfig=${KUBECONFIG_PATH} get ingress -n ${NAMESPACE}${NC}"
 echo ""
-echo -e "3. Access the application:"
+echo -e "4. Access the application:"
 echo -e "   ${BLUE}http://<INGRESS_IP>${NC}"
 echo ""
 
