@@ -17,9 +17,31 @@
 - kubectl CLI
 - Kubeconfig: `/home/nutanix/nkp/kon-hoihoi.conf`
 - Namespace: `loghoihoi` (新規作成)
-- StorageClass: default (環境のdefault StorageClassを使用)
+- **StorageClass**: 環境変数で指定（デフォルトは`manual` - HostPath）
 - IngressClass: `kommander-traefik` (既存)
 - MetalLB: IPアドレスプール 10.55.23.41-10.55.23.43
+
+## ストレージ構成
+
+### デフォルト（HostPath）
+```bash
+# 環境変数不要
+./deploy.sh
+```
+- ✅ StorageClass/CSI不要
+- ✅ 開発・検証環境向け
+- ⚠️ 単一ノード限定
+
+### カスタムStorageClass
+```bash
+# 環境変数で指定
+STORAGE_CLASS=nutanix-volume ./deploy.sh  # NKP
+STORAGE_CLASS=gp3 ./deploy.sh              # AWS
+STORAGE_CLASS=standard ./deploy.sh         # GKE
+```
+- ✅ 本番環境推奨
+- ✅ 高可用性対応
+- ⚠️ StorageClass/CSI必要
 
 ## クイックスタート（自動デプロイ）
 

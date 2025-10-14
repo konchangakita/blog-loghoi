@@ -53,13 +53,26 @@ Internet/LAN
 - ✅ **Kubernetes クラスタ**: v1.24以上
 - ✅ **kubectl CLI**: インストール済み
 - ✅ **kubeconfig**: クラスタへのアクセス設定済み
-- ✅ **Default StorageClass**: 設定済み（PVC用）
 - ✅ **Ingress Controller**: Traefik等がインストール済み
+
+### ストレージ要件
+
+LogHoihoiは以下のいずれかのストレージ構成が必要です：
+
+#### デフォルト構成（HostPath）
+- ✅ **ノードへの書き込み権限**: `/mnt/loghoi/` ディレクトリ作成可能
+- ✅ **単一ノード環境**: Podが同じノードにスケジュールされる
+- 💡 **用途**: 開発・検証環境向け
+
+#### カスタムStorageClass構成（推奨: 本番環境）
+- ✅ **StorageClass**: クラスタに設定済み
+- ✅ **Dynamic Provisioner**: CSI Driver等が稼働中
+- 💡 **用途**: 本番環境、高可用性が必要な環境
 
 ### 推奨要件
 
 - ✅ **MetalLB**: LoadBalancer IP割り当て（オンプレ環境の場合）
-- ✅ **Nutanix CSI**: Nutanix環境の場合
+- ✅ **Nutanix CSI**: Nutanix環境の場合（カスタムStorageClass使用時）
 
 ### 環境例（本番NKP環境）
 
@@ -88,10 +101,23 @@ MetalLB: 10.55.23.41-10.55.23.43
 
 最も簡単な方法は、自動デプロイスクリプトを使用することです。
 
+#### デフォルト（HostPath使用）
+
 ```bash
 cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
 KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 ```
+
+デフォルトでは`manual` StorageClass（HostPath）を使用します。開発・検証環境向けの設定です。
+
+#### カスタムStorageClass使用
+
+```bash
+cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+KUBECONFIG=/path/to/your/kubeconfig.conf STORAGE_CLASS=my-storage-class ./deploy.sh
+```
+
+本番環境や、独自のStorageClassを使用する場合は環境変数で指定できます。
 
 ### スクリプトが自動的に行うこと
 
@@ -196,15 +222,114 @@ kubectl apply -f configmap.yaml
 
 ### 5. PVC（Persistent Volume Claim）の作成
 
-```bash
-# Elasticsearch用
-kubectl apply -f elasticsearch-pvc.yaml
+#### デフォルト（HostPath使用）
 
-# Backend出力用
-kubectl apply -f backend-output-pvc.yaml
+```bash
+# 自動的にPVとPVCが作成されます（deploy.sh実行時）
+# 手動で作成する場合は以下を実行：
+
+# ノード名を取得
+NODE_NAME=$(kubectl get nodes -o jsonpath='{.items[0].metadata.name}')
+
+# PV作成（HostPath）
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: elasticsearch-data-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /mnt/loghoi/elasticsearch-data
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: backend-output-pv
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: manual
+  hostPath:
+    path: /mnt/loghoi/backend-output
+    type: DirectoryOrCreate
+EOF
+
+# PVC作成
+STORAGE_CLASS=manual
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-data
+  namespace: loghoihoi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: $STORAGE_CLASS
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loghoi-backend-output
+  namespace: loghoihoi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: $STORAGE_CLASS
+  resources:
+    requests:
+      storage: 10Gi
+EOF
 ```
 
-**注意**: PVCはdefault StorageClassを使用します。環境に応じて自動的に適切なStorageClassが選択されます。
+#### カスタムStorageClass使用
+
+```bash
+# 環境変数でStorageClassを指定
+STORAGE_CLASS=my-storage-class
+
+# PVC作成（PVは不要、Dynamic Provisioningが自動作成）
+cat <<EOF | kubectl apply -f -
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-data
+  namespace: loghoihoi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: $STORAGE_CLASS
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: loghoi-backend-output
+  namespace: loghoihoi
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: $STORAGE_CLASS
+  resources:
+    requests:
+      storage: 10Gi
+EOF
+```
 
 ### 6. Elasticsearchのデプロイ
 
@@ -380,6 +505,26 @@ kubectl logs -n loghoihoi -l component=backend | grep "SSH"
 kubectl describe pvc <pvc-name> -n loghoihoi
 ```
 
+#### HostPath使用時
+
+**原因**: PVとPVCのStorageClassが一致していない
+
+**解決方法**:
+```bash
+# PVのStorageClassを確認
+kubectl get pv -o custom-columns=NAME:.metadata.name,STORAGECLASS:.spec.storageClassName
+
+# PVCのStorageClassを確認
+kubectl get pvc -n loghoihoi -o custom-columns=NAME:.metadata.name,STORAGECLASS:.spec.storageClassName
+
+# 不一致の場合はPVを削除して再作成
+kubectl delete pv elasticsearch-data-pv backend-output-pv
+# deploy.shを再実行
+./deploy.sh
+```
+
+#### カスタムStorageClass使用時
+
 **原因**: StorageClassが存在しない、またはProvisioner未稼働
 
 **解決方法**:
@@ -387,11 +532,14 @@ kubectl describe pvc <pvc-name> -n loghoihoi
 # StorageClassを確認
 kubectl get storageclass
 
-# default StorageClassが存在するか確認
-kubectl get storageclass | grep "(default)"
+# 指定したStorageClassが存在するか確認
+kubectl get storageclass my-storage-class
 
 # CSI Driverが稼働しているか確認
 kubectl get pods -n kube-system | grep csi
+
+# StorageClassが無い場合は環境変数を変更
+STORAGE_CLASS=manual ./deploy.sh  # HostPathに切り替え
 ```
 
 ### 4. Ingressでアクセスできない
@@ -525,8 +673,11 @@ kubectl delete pvc --all -n loghoihoi
 # kubeconfig設定
 export KUBECONFIG=/home/nutanix/nkp/kon-hoihoi.conf
 
-# デプロイ
+# デフォルト（HostPath）
 ./deploy.sh
+
+# CSI利用の場合
+STORAGE_CLASS=nutanix-volume ./deploy.sh
 ```
 
 ### GKE (Google Kubernetes Engine)
@@ -535,8 +686,11 @@ export KUBECONFIG=/home/nutanix/nkp/kon-hoihoi.conf
 # gcloud設定
 gcloud container clusters get-credentials <cluster-name> --region <region>
 
-# デプロイ
-./deploy.sh
+# GKE標準StorageClass使用
+STORAGE_CLASS=standard ./deploy.sh
+
+# SSD使用
+STORAGE_CLASS=standard-rwo ./deploy.sh
 ```
 
 ### EKS (Amazon Elastic Kubernetes Service)
@@ -545,8 +699,11 @@ gcloud container clusters get-credentials <cluster-name> --region <region>
 # aws-cli設定
 aws eks update-kubeconfig --name <cluster-name> --region <region>
 
-# デプロイ
-./deploy.sh
+# EBS使用
+STORAGE_CLASS=gp2 ./deploy.sh
+
+# または gp3
+STORAGE_CLASS=gp3 ./deploy.sh
 ```
 
 ### AKS (Azure Kubernetes Service)
@@ -555,8 +712,18 @@ aws eks update-kubeconfig --name <cluster-name> --region <region>
 # az-cli設定
 az aks get-credentials --resource-group <resource-group> --name <cluster-name>
 
-# デプロイ
-./deploy.sh
+# Azure Disk使用
+STORAGE_CLASS=default ./deploy.sh
+
+# または managed-csi
+STORAGE_CLASS=managed-csi ./deploy.sh
+```
+
+### 開発・検証環境（どの環境でも）
+
+```bash
+# HostPath使用（StorageClass不要）
+STORAGE_CLASS=manual ./deploy.sh
 ```
 
 ---
@@ -580,6 +747,48 @@ az aks get-credentials --resource-group <resource-group> --name <cluster-name>
 
 ---
 
-**最終更新**: 2025-10-13  
-**バージョン**: v1.0.0
+---
+
+## 📦 StorageClass設定まとめ
+
+### デフォルト（HostPath）
+
+```bash
+# 環境変数不要（デフォルト）
+./deploy.sh
+
+# または明示的に指定
+STORAGE_CLASS=manual ./deploy.sh
+```
+
+**特徴**:
+- ✅ StorageClassやCSI Driver不要
+- ✅ 即座にデプロイ可能
+- ⚠️ 単一ノード限定
+- ⚠️ データ永続性は中程度（ノード障害時に損失）
+
+### カスタムStorageClass
+
+```bash
+# 環境変数で指定
+STORAGE_CLASS=your-storage-class ./deploy.sh
+```
+
+**特徴**:
+- ✅ Dynamic Provisioning（自動PV作成）
+- ✅ 高可用性（HA）対応
+- ✅ 本番環境推奨
+- ⚠️ StorageClassとCSI Driverが必要
+
+### StorageClass一覧確認
+
+```bash
+# 利用可能なStorageClassを確認
+kubectl get storageclass
+```
+
+---
+
+**最終更新**: 2025-10-14  
+**バージョン**: v1.1.0 - StorageClass環境変数対応
 
