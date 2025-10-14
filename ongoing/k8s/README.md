@@ -91,9 +91,33 @@ Internet/LAN
 
 ## 🎯 前提条件
 
-- ✅ Kubernetes 1.24以上
-- ✅ kubectl CLI
-- ✅ Ingress Controller (Traefik等)
+### 必須要件
+
+- ✅ **Kubernetes**: v1.24以上
+- ✅ **kubectl CLI**: インストール済み
+- ✅ **Ingress Controller**: Traefik等がインストール済み
+
+### リソース要件
+
+LogHoihoiをデプロイするために必要な最小リソース：
+
+| リソース | 最小要件 | 推奨 |
+|---|---|---|
+| **CPU** | 2 vCPU | 4 vCPU |
+| **Memory** | 4 GB | 8 GB |
+| **Storage** | 20 GB | 50 GB |
+| **Nodes** | 1ノード | 2ノード以上 |
+
+#### コンポーネント別リソース
+
+| コンポーネント | CPU (Request/Limit) | Memory (Request/Limit) | Storage |
+|---|---|---|---|
+| **Elasticsearch** | 500m / 1000m | 1Gi / 2Gi | 10Gi (PVC) |
+| **Backend** | 250m / 500m | 256Mi / 512Mi | 10Gi (PVC) |
+| **Frontend** (×2) | 100m / 200m | 128Mi / 256Mi | - |
+| **Kibana** | 500m / 1000m | 512Mi / 1Gi | - |
+| **Syslog** | 100m / 200m | 128Mi / 256Mi | - |
+| **合計** | **1.8 vCPU** | **3.3 GB** | **20 GB** |
 
 **ストレージ**:
 - デフォルト: HostPath使用（StorageClass不要）
