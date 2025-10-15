@@ -40,7 +40,7 @@ services:
     volumes:
       - ./backend/fastapi_app:/usr/src/fastapi_app:z
       - ./backend/core:/usr/src/core:z
-      - ./backend/config:/usr/src/config:z
+      - ./backend/config:/app/config:z
       - ./backend/output:/usr/src/output:z
       - ./shared:/usr/src/shared:z # 共通ライブラリをマウント
       - ./config/.ssh:/app/config/.ssh:z # SSH鍵ディレクトリ
