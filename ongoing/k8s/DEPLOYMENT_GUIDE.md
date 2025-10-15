@@ -459,6 +459,20 @@ echo "Application URL: http://${INGRESS_IP}"
 ---
 
 ## トラブルシューティング
+\n+### 開発環境（Docker-compose）の参照パス統一について（Compose限定）
+
+- 目的: Backend が参照する設定パスを Kubernetes と同一の `/app/config` に統一し、環境差異による不具合を防止します。
+- 変更点（Compose 環境のみ）:
+  - `ongoing/docker-compose_fastapi.yml` の `backend-fastapi.volumes` で `./backend/config:/app/config` をマウント
+  - SSH 鍵は従来どおり `/app/config/.ssh` を使用
+- 影響範囲: Docker-compose 開発環境のみ。Kubernetes 本番環境への影響はありません（既に `/app/config` 前提で実装済み）。
+- 確認手順:
+  1. コンテナ再作成後、Backend コンテナ内で `ls -la /app/config` を実行し、次の2ファイルが存在することを確認
+     - `col_logfile.json`
+     - `col_command.json`
+  2. `POST /api/col/getlogs` 実行時にバックエンドログへ収集進捗（例: `ログファイルをダウンロード中... (x/26)`）が出力されることを確認
+
+補足: 以前は Compose 側が `./backend/config` を `/usr/src/config` にマウントしており、コンテナ再起動の仕方によって `/app/config` に設定が見えない場合がありました。本対応で参照とマウント先を `/app/config` に統一しています。
 
 ### 1. Podが起動しない
 
