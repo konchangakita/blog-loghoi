@@ -204,14 +204,13 @@ def get_cvm_hostnames(cluster_name):
     指定されたクラスターのhostname一覧をElasticsearchから取得
     
     PC Registration時に保存された host_names（ハイパーバイザーのhostname）を取得。
-    Syslog検索時はワイルドカード（hostname*）で検索するため、
-    ハイパーバイザー名（例: NTNX-61c637c0-A）で十分。
+    host_namesがない場合は、Syslogデータから実際のhostnameを取得。
     
     Args:
         cluster_name (str): クラスター名（例: "DM3-POC023-CE"）
     
     Returns:
-        list: hostnameの配列（例: ["NTNX-61c637c0-A", "NTNX-e51b46bc-A"]）
+        list: hostnameの配列（例: ["NTNX-61c637c0-A-CVM", "NTNX-e51b46bc-A-CVM"]）
     """
     # Elasticsearchからクラスター情報を取得
     data = es.get_cvmlist_document(cluster_name)
@@ -221,9 +220,56 @@ def get_cvm_hostnames(cluster_name):
     # host_names フィールドを取得
     hostnames = data[0].get("host_names", [])
     
-    if not hostnames:
-        print(f"⚠️ [get_cvm_hostnames] host_names フィールドが見つかりません。クラスターを再登録してください。")
-        raise Exception(f"No hostnames found for cluster {cluster_name}. Please re-register the cluster.")
+    if hostnames:
+        print(f"[get_cvm_hostnames] host_namesから取得: {hostnames}")
+        return sorted(hostnames)
     
-    print(f"[get_cvm_hostnames] 取得したhostnames: {hostnames}")
-    return sorted(hostnames)
+    # host_namesがない場合、Syslogデータから実際のhostnameを取得
+    print(f"⚠️ [get_cvm_hostnames] host_namesフィールドがありません。Syslogデータから取得します。")
+    
+    # block_serial_numberを取得
+    serial = data[0].get("block_serial_number", "")
+    if not serial:
+        raise Exception(f"No serial number found for cluster {cluster_name}")
+    
+    # Elasticsearchから実際のhostnameを取得（シリアル番号でフィルタ）
+    try:
+        from core.ela import ElasticSearchGateway
+        es_gateway = ElasticSearchGateway()
+        
+        # Syslogインデックスからhostnameを集約
+        query = {
+            "size": 0,
+            "query": {
+                "wildcard": {
+                    "hostname": f"*{serial}*"
+                }
+            },
+            "aggs": {
+                "unique_hostnames": {
+                    "terms": {
+                        "field": "hostname.keyword",
+                        "size": 100
+                    }
+                }
+            }
+        }
+        
+        result = es_gateway.es.search(index="filebeat-*", body=query)
+        buckets = result.get("aggregations", {}).get("unique_hostnames", {}).get("buckets", [])
+        
+        if buckets:
+            hostnames = [bucket["key"] for bucket in buckets]
+            print(f"[get_cvm_hostnames] Syslogから取得: {hostnames}")
+            return sorted(hostnames)
+        
+        # Syslogデータもない場合、デフォルトのhostnameを生成
+        print(f"⚠️ [get_cvm_hostnames] Syslogデータもありません。デフォルト名を生成します。")
+        return [f"NTNX-{serial}-A-CVM", f"NTNX-{serial}-B-CVM", 
+                f"NTNX-{serial}-C-CVM", f"NTNX-{serial}-D-CVM"]
+        
+    except Exception as e:
+        print(f"❌ [get_cvm_hostnames] Syslogからの取得失敗: {e}")
+        # フォールバック: デフォルトのhostname生成
+        return [f"NTNX-{serial}-A-CVM", f"NTNX-{serial}-B-CVM", 
+                f"NTNX-{serial}-C-CVM", f"NTNX-{serial}-D-CVM"]
