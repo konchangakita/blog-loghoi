@@ -213,9 +213,16 @@ if [ "$STORAGE_CLASS" = "manual" ]; then
     # HostPath用のPV作成
     echo -e "${BLUE}  Using HostPath (manual StorageClass)${NC}"
     
-    # ノード名を自動取得
-    NODE_NAME=$(${K} get nodes -o jsonpath='{.items[0].metadata.name}')
-    echo -e "${BLUE}  Selected node: ${NODE_NAME}${NC}"
+    # ワーカーノード（control-plane以外）を優先して自動選択
+    WORKER_NODE_NAME=$(${K} get nodes -l '!node-role.kubernetes.io/control-plane' -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+    if [ -n "${WORKER_NODE_NAME}" ]; then
+        NODE_NAME="${WORKER_NODE_NAME}"
+        echo -e "${BLUE}  Selected worker node: ${NODE_NAME}${NC}"
+    else
+        # フォールバック: 先頭ノード（単一ノードクラスタ等）
+        NODE_NAME=$(${K} get nodes -o jsonpath='{.items[0].metadata.name}')
+        echo -e "${YELLOW}  No worker-only node found. Fallback to: ${NODE_NAME}${NC}"
+    fi
     
     # PV作成
     cat <<EOF | ${K} apply -f -
