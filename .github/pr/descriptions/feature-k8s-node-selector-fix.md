@@ -17,3 +17,4 @@ HostPath(手動PV)環境で control-plane 固定により Pod が Pending とな
 ## マージ方法
 - Squash and merge を推奨
 
+
