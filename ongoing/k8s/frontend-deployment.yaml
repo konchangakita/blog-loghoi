@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: konchangakita/loghoi-frontend:latest
+        image: ghcr.io/konchangakita/loghoi-frontend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 7777

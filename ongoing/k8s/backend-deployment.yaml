@@ -40,7 +40,7 @@ spec:
           mountPath: /app/output
       containers:
       - name: backend
-        image: konchangakita/loghoi-backend:latest
+        image: ghcr.io/konchangakita/loghoi-backend:latest
         imagePullPolicy: Always
         ports:
         - containerPort: 7776
