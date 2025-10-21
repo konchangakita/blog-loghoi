@@ -91,15 +91,6 @@ else
     KEYS_GENERATED=true
 fi
 
-# 公開鍵の表示
-echo ""
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${BLUE}📋 SSH公開鍵${NC}"
-echo -e "${BLUE}=========================================${NC}"
-cat "${SSH_PUBLIC_KEY}"
-echo -e "${BLUE}=========================================${NC}"
-echo ""
-
 if [ "$KEYS_GENERATED" = true ]; then
     echo ""
     echo -e "${RED}🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨${NC}"
@@ -263,8 +254,20 @@ else
 fi
 echo ""
 
-# 4. PVC作成（動的生成）
-echo -e "${YELLOW}[4/10] Deploying Persistent Volume Claims...${NC}"
+# 4. PVのclaimRefクリア（ネームスペース再作成時の対策）
+if [ "$STORAGE_CLASS" = "manual" ]; then
+    echo -e "${BLUE}Checking PV claimRef status...${NC}"
+    
+    # 古いclaimRefをクリア（エラーが発生しても続行）
+    kubectl --kubeconfig=${KUBECONFIG_PATH} patch pv elasticsearch-data-pv -p '{"spec":{"claimRef":null}}' 2>/dev/null || echo -e "${YELLOW}  ⚠ elasticsearch-data-pv not found or already cleared${NC}"
+    kubectl --kubeconfig=${KUBECONFIG_PATH} patch pv backend-output-pv -p '{"spec":{"claimRef":null}}' 2>/dev/null || echo -e "${YELLOW}  ⚠ backend-output-pv not found or already cleared${NC}"
+    
+    echo -e "${GREEN}✓ PV claimRef cleared${NC}"
+    echo ""
+fi
+
+# 5. PVC作成（動的生成）
+echo -e "${YELLOW}[5/10] Deploying Persistent Volume Claims...${NC}"
 cat <<EOF | ${K} apply -f -
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -301,33 +304,33 @@ EOF
 echo -e "${GREEN}✓ PVCs deployed${NC}"
 echo ""
 
-# 5. Elasticsearch
-echo -e "${YELLOW}[5/10] Deploying Elasticsearch...${NC}"
+# 6. Elasticsearch
+echo -e "${YELLOW}[6/10] Deploying Elasticsearch...${NC}"
 ${K} apply -f elasticsearch-deployment.yaml
 echo -e "${GREEN}✓ Elasticsearch deployed${NC}"
 echo ""
 
-# 6. Services
-echo -e "${YELLOW}[6/10] Deploying Services...${NC}"
+# 7. Services
+echo -e "${YELLOW}[7/10] Deploying Services...${NC}"
 ${K} apply -f services.yaml
 echo -e "${GREEN}✓ Services deployed${NC}"
 echo ""
 
-# 7. Backend & Frontend
-echo -e "${YELLOW}[7/10] Deploying Backend and Frontend...${NC}"
+# 8. Backend & Frontend
+echo -e "${YELLOW}[8/10] Deploying Backend and Frontend...${NC}"
 ${K} apply -f backend-deployment.yaml
 ${K} apply -f frontend-deployment.yaml
 echo -e "${GREEN}✓ Backend and Frontend deployed${NC}"
 echo ""
 
-# 8. Ingress
-echo -e "${YELLOW}[8/10] Deploying Ingress...${NC}"
+# 9. Ingress
+echo -e "${YELLOW}[9/10] Deploying Ingress...${NC}"
 ${K} apply -f ingress.yaml
 echo -e "${GREEN}✓ Ingress deployed${NC}"
 echo ""
 
-# 9. Kibana (Optional)
-echo -e "${YELLOW}[9/10] Deploying Kibana (Optional)...${NC}"
+# 10. Kibana (Optional)
+echo -e "${YELLOW}[10/10] Deploying Kibana (Optional)...${NC}"
 if [ -f "kibana-deployment.yaml" ]; then
     ${K} apply -f kibana-deployment.yaml
     echo -e "${GREEN}✓ Kibana deployed${NC}"
@@ -336,8 +339,8 @@ else
 fi
 echo ""
 
-# 10. Syslog (Optional)
-echo -e "${YELLOW}[10/10] Deploying Syslog (Optional)...${NC}"
+# 11. Syslog (Optional)
+echo -e "${YELLOW}[11/11] Deploying Syslog (Optional)...${NC}"
 if [ -f "syslog-deployment.yaml" ]; then
     ${K} apply -f syslog-deployment.yaml
     echo -e "${GREEN}✓ Syslog deployed${NC}"
@@ -407,5 +410,11 @@ echo -e "5. Access the application:"
 echo -e "   ${BLUE}http://<INGRESS_IP>${NC}"
 echo ""
 
-
+# SSH公開鍵の表示（最後に表示）
+echo -e "${BLUE}=========================================${NC}"
+echo -e "${BLUE}📋 SSH公開鍵${NC}"
+echo -e "${BLUE}=========================================${NC}"
+cat "${SSH_PUBLIC_KEY}"
+echo -e "${BLUE}=========================================${NC}"
+echo ""
 

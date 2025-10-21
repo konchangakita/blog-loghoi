@@ -64,12 +64,13 @@ frontend/next-app/loghoi/
 
 ### イメージタグ
 
-- **レジストリ**: `docker.io` (Docker Hub)
+- **レジストリ**: `ghcr.io` (GitHub Container Registry) - **2025-10-21移行**
 - **Namespace**: `konchangakita`
-- **イメージタグ戦略**（2025-10-14更新）:
-  - **Backend**: `konchangakita/loghoi-backend:latest` - 常に最新版を使用
-  - **Frontend**: `konchangakita/loghoi-frontend:latest` - 常に最新版を使用
-  - **Syslog**: `konchangakita/loghoi-syslog:v1.0.1` - 安定版を使用（頻繁に更新されないため固定）
+- **イメージタグ戦略**（2025-10-21更新）:
+  - **Backend**: `ghcr.io/konchangakita/loghoi-backend:latest` - 常に最新版を使用
+  - **Frontend**: `ghcr.io/konchangakita/loghoi-frontend:latest` - 常に最新版を使用
+  - **Syslog**: `ghcr.io/konchangakita/loghoi-syslog:v1.0.1` - 安定版を使用（頻繁に更新されないため固定）
+- **移行理由**: Docker Hubのイメージプルエラー（500/504/401 Unauthorized）を解決
 - **注意**: `latest`タグは開発イテレーション高速化のため。本番環境では特定バージョンタグの使用を推奨
 - **公式イメージ**:
   - `docker.elastic.co/elasticsearch/elasticsearch:8.11.0` - Elasticsearch
@@ -82,12 +83,27 @@ frontend/next-app/loghoi/
 cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
 ./build-and-push.sh
 
-# レジストリへプッシュ
-PUSH_IMAGES=true DOCKER_REGISTRY=your-registry.io ./build-and-push.sh
+# GitHub Container Registry (GHCR) へプッシュ
+PUSH_IMAGES=true DOCKER_REGISTRY=ghcr.io ./build-and-push.sh
 
 # バージョン指定
 VERSION=v1.0.1 ./build-and-push.sh
 ```
+
+### GitHub Container Registry (GHCR) 設定
+
+**認証設定**:
+```bash
+# GitHub Personal Access Tokenでログイン
+echo $GITHUB_TOKEN | docker login ghcr.io -u konchangakita --password-stdin
+
+# または手動ログイン
+docker login ghcr.io
+```
+
+**パッケージ公開設定**:
+- GitHubリポジトリの「Packages」セクションで各パッケージを**Public**に設定
+- これにより認証なしでイメージプルが可能
 
 ---
 
@@ -444,6 +460,15 @@ cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
 ./deploy.sh
 ```
 
+**deploy.shの主要機能:**
+- **ネームスペース自動作成**: 存在しない場合は自動作成
+- **SSH鍵管理**: 既存鍵の使用または新規生成
+- **PV claimRef自動クリア**: ネームスペース再作成時の循環問題を解決
+- **ストレージクラス自動作成**: `manual` StorageClassの自動生成
+- **nodeSelector自動設定**: HostPath使用時の最適ノード選択
+- **全コンポーネントデプロイ**: 11ステップで完全デプロイ
+- **SSH公開鍵表示**: デプロイ完了後に表示
+
 ### 手動デプロイ
 
 ```bash
@@ -639,6 +664,24 @@ kubectl logs -n loghoihoi -l component=kibana --tail=100
 kubectl describe pod -n loghoihoi -l component=kibana
 ```
 
+### ネームスペース削除・再作成後のデプロイ失敗
+
+**症状**: PodがPending状態、PVCがバインドされない
+
+**原因**: PVの`claimRef`が古いネームスペースのPVCを参照
+
+**解決方法**:
+```bash
+# 手動でPVのclaimRefをクリア
+kubectl patch pv elasticsearch-data-pv -p '{"spec":{"claimRef":null}}'
+kubectl patch pv backend-output-pv -p '{"spec":{"claimRef":null}}'
+
+# または、deploy.shを再実行（v1.2.1以降は自動でクリア）
+./deploy.sh
+```
+
+**注意**: v1.2.1以降のdeploy.shは自動でこの問題を解決します。
+
 ---
 
 ## 📚 参考資料
@@ -653,6 +696,32 @@ kubectl describe pod -n loghoihoi -l component=kibana
 ---
 
 ## 📝 変更履歴
+
+### v1.2.1 (2025-10-21)
+- ✅ **ネームスペース再作成時の自動修復機能**
+  - PVのclaimRefを自動クリア（ネームスペース削除・再作成時の循環問題を解決）
+  - `manual` StorageClass使用時に自動実行
+  - エラーハンドリング追加（PVが存在しない場合も継続）
+- 🔧 **deploy.sh改善**
+  - ステップ番号を調整（4→5, 5→6, 6→7, 7→8, 8→9, 9→10, 10→11）
+  - ネームスペース削除・再作成が一発で完了
+- 📚 **動作確認完了**
+  - ネームスペース削除→再作成→デプロイの完全自動化を実現
+
+### v1.2.0 (2025-10-21)
+- ✅ **GitHub Container Registry (GHCR) 移行**
+  - Docker Hub → GHCR.io への完全移行
+  - イメージプルエラー（500/504/401 Unauthorized）を解決
+  - パッケージ公開設定で認証なしプルを実現
+- ✅ **ストレージクラス自動作成**
+  - `manual` StorageClassの自動生成機能追加
+  - HostPath環境での即座デプロイを実現
+- 🔧 **deploy.sh改善**
+  - SSH公開鍵表示をスクリプト最後に移動
+  - ユーザビリティ向上（デプロイ状況確認後に公開鍵確認）
+- 📚 **仕様書更新**
+  - KUBERNETES_SPEC.mdにGHCR設定手順を追加
+  - イメージタグ戦略を更新
 
 ### v1.1.0 (2025-10-14)
 - ✅ **StorageClass環境変数対応**
@@ -708,8 +777,8 @@ kubectl describe pod -n loghoihoi -l component=kibana
 
 ---
 
-**最終更新**: 2025-10-09  
-**現在のバージョン**: v1.0.12  
+**最終更新**: 2025-10-21  
+**現在のバージョン**: v1.2.1  
 **作成者**: AI Assistant  
 **レビュー**: 必要に応じて更新してください
 
