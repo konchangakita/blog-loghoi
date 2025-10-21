@@ -4,9 +4,19 @@
 シスログ機能は、NutanixクラスターのシステムログをElasticsearchから検索・表示する機能です。キーワード、日時範囲を指定してログを検索し、結果を構造化して表示できます。
 
 ## バージョン
-1.3.0（最終更新: 2025-10-14）
+1.4.0（最終更新: 2025-10-21）
 
 ## 変更履歴
+### v1.4.0（2025-10-21）
+- **Kubernetes対応**: GitHub Container Registry (GHCR) への移行
+  - Docker Hub → GHCR.io への完全移行
+  - イメージプルエラー（500/504/401 Unauthorized）を解決
+  - パッケージ公開設定で認証なしプルを実現
+- **イメージタグ更新**:
+  - Backend: `ghcr.io/konchangakita/loghoi-backend:latest`
+  - Frontend: `ghcr.io/konchangakita/loghoi-frontend:latest`
+  - Syslog: `ghcr.io/konchangakita/loghoi-syslog:v1.0.1`
+
 ### v1.3.0（2025-10-14）
 - **Syslog検索改善**: `block_serial_number`をOR条件に追加
   - 問題: hostname取得APIが返す値（例: `DM3-POC011-1`）と実際のSyslogデータのhostname（例: `NTNX-18SM6H160088-A-CVM`）が一致せず、検索結果が0件になる問題を解決
@@ -64,7 +74,7 @@ graph LR
 - **Kubernetes構成**:
   - Deployment: `loghoi-syslog`
   - Service: `LoadBalancer` (External IP: 10.55.23.42)
-  - イメージ: `konchangakita/loghoi-syslog:v1.0.1`
+  - イメージ: `ghcr.io/konchangakita/loghoi-syslog:v1.0.1` (v1.4.0で更新)
 - **処理フロー**:
   1. syslogメッセージを受信（TCP 7515）
   2. パース処理（タイムスタンプ、ホスト名、メッセージ）
@@ -578,7 +588,7 @@ setup.kibana:
 - Ports: 7515 (Syslog), 5066 (HTTP Metrics)
 
 # Backend Deployment
-- Image: konchangakita/loghoi-backend:v1.0.22
+- Image: ghcr.io/konchangakita/loghoi-backend:latest (v1.4.0で更新)
 - 環境変数:
   - PYTHONDONTWRITEBYTECODE=1
   - PYTHONUNBUFFERED=1
@@ -650,8 +660,8 @@ setup.kibana:
 ```bash
 # Dockerイメージのビルド
 cd /home/nutanix/konchangakita/blog-loghoi/ongoing/syslog
-docker build -f Dockerfile.k8s -t konchangakita/loghoi-syslog:v1.0.1 .
-docker push konchangakita/loghoi-syslog:v1.0.1
+docker build -f Dockerfile.k8s -t ghcr.io/konchangakita/loghoi-syslog:v1.0.1 .
+docker push ghcr.io/konchangakita/loghoi-syslog:v1.0.1
 
 # Kubernetesにデプロイ
 kubectl apply -f /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s/syslog-deployment.yaml
@@ -777,9 +787,9 @@ kubectl exec -n loghoi deployment/elasticsearch -- curl -s "http://localhost:920
 ```bash
 # バックエンドイメージのビルド＆デプロイ
 cd /home/nutanix/konchangakita/blog-loghoi/ongoing
-docker build -f backend/Dockerfile.k8s -t konchangakita/loghoi-backend:v1.0.22 .
-docker push konchangakita/loghoi-backend:v1.0.22
-kubectl set image deployment/loghoi-backend -n loghoi backend=konchangakita/loghoi-backend:v1.0.22
+docker build -f backend/Dockerfile.k8s -t ghcr.io/konchangakita/loghoi-backend:latest .
+docker push ghcr.io/konchangakita/loghoi-backend:latest
+kubectl set image deployment/loghoi-backend -n loghoi backend=ghcr.io/konchangakita/loghoi-backend:latest
 
 # フロントエンドからアクセス
 # https://10.55.23.41/syslog?pcip=<PC_IP>&cluster=<クラスター名>&prism=<Prism_IP>
