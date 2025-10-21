@@ -460,6 +460,15 @@ cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
 ./deploy.sh
 ```
 
+**deploy.shの主要機能:**
+- **ネームスペース自動作成**: 存在しない場合は自動作成
+- **SSH鍵管理**: 既存鍵の使用または新規生成
+- **PV claimRef自動クリア**: ネームスペース再作成時の循環問題を解決
+- **ストレージクラス自動作成**: `manual` StorageClassの自動生成
+- **nodeSelector自動設定**: HostPath使用時の最適ノード選択
+- **全コンポーネントデプロイ**: 11ステップで完全デプロイ
+- **SSH公開鍵表示**: デプロイ完了後に表示
+
 ### 手動デプロイ
 
 ```bash
@@ -655,6 +664,24 @@ kubectl logs -n loghoihoi -l component=kibana --tail=100
 kubectl describe pod -n loghoihoi -l component=kibana
 ```
 
+### ネームスペース削除・再作成後のデプロイ失敗
+
+**症状**: PodがPending状態、PVCがバインドされない
+
+**原因**: PVの`claimRef`が古いネームスペースのPVCを参照
+
+**解決方法**:
+```bash
+# 手動でPVのclaimRefをクリア
+kubectl patch pv elasticsearch-data-pv -p '{"spec":{"claimRef":null}}'
+kubectl patch pv backend-output-pv -p '{"spec":{"claimRef":null}}'
+
+# または、deploy.shを再実行（v1.2.1以降は自動でクリア）
+./deploy.sh
+```
+
+**注意**: v1.2.1以降のdeploy.shは自動でこの問題を解決します。
+
 ---
 
 ## 📚 参考資料
@@ -669,6 +696,17 @@ kubectl describe pod -n loghoihoi -l component=kibana
 ---
 
 ## 📝 変更履歴
+
+### v1.2.1 (2025-10-21)
+- ✅ **ネームスペース再作成時の自動修復機能**
+  - PVのclaimRefを自動クリア（ネームスペース削除・再作成時の循環問題を解決）
+  - `manual` StorageClass使用時に自動実行
+  - エラーハンドリング追加（PVが存在しない場合も継続）
+- 🔧 **deploy.sh改善**
+  - ステップ番号を調整（4→5, 5→6, 6→7, 7→8, 8→9, 9→10, 10→11）
+  - ネームスペース削除・再作成が一発で完了
+- 📚 **動作確認完了**
+  - ネームスペース削除→再作成→デプロイの完全自動化を実現
 
 ### v1.2.0 (2025-10-21)
 - ✅ **GitHub Container Registry (GHCR) 移行**
@@ -740,7 +778,7 @@ kubectl describe pod -n loghoihoi -l component=kibana
 ---
 
 **最終更新**: 2025-10-21  
-**現在のバージョン**: v1.2.0  
+**現在のバージョン**: v1.2.1  
 **作成者**: AI Assistant  
 **レビュー**: 必要に応じて更新してください
 
