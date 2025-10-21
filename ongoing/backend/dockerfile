@@ -11,10 +11,10 @@ RUN apt-get update -y \
 
 WORKDIR /usr/src
 
-# Install deps first (use fastapi-specific requirements)
-COPY ./requirements_fastapi.txt /usr/src/requirements_fastapi.txt
+# Install deps first
+COPY ./requirements.txt /usr/src/requirements.txt
 RUN pip install --upgrade pip \
-    && pip install -r /usr/src/requirements_fastapi.txt
+    && pip install -r /usr/src/requirements.txt
 
 # Copy application code
 COPY ./fastapi_app /usr/src/fastapi_app
