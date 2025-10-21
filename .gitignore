@@ -241,3 +241,9 @@ backend/output/
 # Environment files
 .env
 .env.*
+
+# Cursor IDE files
+.cursor/
+.cursorrules
+.cursorignore
+*.cursor
