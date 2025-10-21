@@ -34,7 +34,7 @@
 
 ```bash
 cd ongoing
-docker-compose -f docker-compose_fastapi.yml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 
 # フロントエンド: http://localhost:7777
 # バックエンドAPI: http://localhost:7776/docs

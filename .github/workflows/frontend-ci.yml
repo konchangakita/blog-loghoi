@@ -109,7 +109,7 @@ jobs:
       - name: Start backend services
         run: |
           cd ../../../../ongoing
-          docker compose -f docker-compose_fastapi.yml up -d
+          docker compose -f docker-compose.yml up -d
           sleep 10
 
       - name: Wait for backend to be ready
@@ -141,7 +141,7 @@ jobs:
         if: always()
         run: |
           cd ../../../../ongoing
-          docker compose -f docker-compose_fastapi.yml down
+          docker compose -f docker-compose.yml down
 
   build:
     name: Build Check

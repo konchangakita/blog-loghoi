@@ -34,41 +34,13 @@ services:
       context: ./backend
       dockerfile: dockerfile
     container_name: loghoi-backend
-    # scp/SFTPの互換性のためrootで実行（出力は後段でchown処理）
     ports:
       - 7776:7776
     volumes:
-      - ./backend/fastapi_app:/usr/src/fastapi_app:z
-      - ./backend/core:/usr/src/core:z
-      - ./backend/config:/app/config:z
-      - ./backend/output:/usr/src/output:z
-      - ./shared:/usr/src/shared:z # 共通ライブラリをマウント
-      - ./config/.ssh:/app/config/.ssh:z # SSH鍵ディレクトリ
-      - ./backend/docker-entrypoint.sh:/app/docker-entrypoint.sh:z # entrypointスクリプト
-    working_dir: /usr/src/fastapi_app
-    entrypoint: ["/app/docker-entrypoint.sh"]
-    command:
-      [
-        "uvicorn",
-        "app_fastapi:socket_app",
-        "--reload",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "7776",
-      ]
-    environment:
-      - PYTHONPATH=/usr/src:/usr/src/shared # Python パス設定
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-      - BACKEND_HOST=0.0.0.0
-      - BACKEND_PORT=7776
-      - DEBUG=false
-      - HOST_UID=1000
-      - HOST_GID=1000
-      - SSH_KEY_PATH=/app/config/.ssh/loghoi-key
-      - SSH_PUBLIC_KEY_PATH=/app/config/.ssh/loghoi-key.pub
-    depends_on:
-      - elasticsearch
+      - ./backend/flaskr:/usr/src/flaskr:z
+    working_dir: /usr/src/flaskr
+    command: bash -c "cd /usr/src/flaskr
+      && tail -f /dev/null"
     networks:
       - local
 
@@ -83,10 +55,8 @@ services:
       - ./frontend/next-app:/usr/src/next-app:z
     command: bash -c "cd /usr/src/next-app/loghoi
       && yarn
-      && yarn dev"
+      && tail -f /dev/null"
     working_dir: /usr/src/next-app/loghoi
-    environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://10.38.113.49:7776
     networks:
       - local
 

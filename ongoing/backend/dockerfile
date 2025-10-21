@@ -1,15 +1,32 @@
 FROM python:3.11.4-slim
 
-RUN apt-get update -y
-RUN apt-get install -y curl
-RUN apt-get install -y ssh-client
-RUN pip install -U pip
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
-WORKDIR /tmp
-COPY ./requirements.txt .
-RUN pip install -r requirements.txt
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends \
+       curl \
+       openssh-client \
+    && rm -rf /var/lib/apt/lists/*
 
-#CMD ["tail", "-f", "/dev/null"]
+WORKDIR /usr/src
 
-#WORKDIR /usr/src/flaskr
-#CMD ["python", "app.py"]
+# Install deps first (use fastapi-specific requirements)
+COPY ./requirements_fastapi.txt /usr/src/requirements_fastapi.txt
+RUN pip install --upgrade pip \
+    && pip install -r /usr/src/requirements_fastapi.txt
+
+# Copy application code
+COPY ./fastapi_app /usr/src/fastapi_app
+COPY ./core /usr/src/core
+COPY ./config /usr/src/config
+ENV PYTHONPATH=/usr/src:/usr/src/shared
+WORKDIR /usr/src/fastapi_app
+
+EXPOSE 7776
+
+CMD ["python", "-m", "uvicorn", "app_fastapi:socket_app", "--host", "0.0.0.0", "--port", "7776"]
+
+
+
+

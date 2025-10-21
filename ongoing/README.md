@@ -8,7 +8,7 @@ Nutanix環境のログ収集・分析システムです。Prism Centralに登録
 ### docker-compose（開発環境）
 ```bash
 cd ongoing
-docker-compose -f docker-compose_fastapi.yml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 
 # アクセス
 # フロントエンド: http://localhost:7777
@@ -118,7 +118,7 @@ git clone https://github.com/konchangakita/blog-loghoi.git
 cd blog-loghoi/ongoing
 
 # docker-compose起動
-docker-compose -f docker-compose_fastapi.yml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 
 # SSH鍵の確認（自動生成される）
 cat config/.ssh/loghoi-key.pub
