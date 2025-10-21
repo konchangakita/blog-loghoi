@@ -91,15 +91,6 @@ else
     KEYS_GENERATED=true
 fi
 
-# 公開鍵の表示
-echo ""
-echo -e "${BLUE}=========================================${NC}"
-echo -e "${BLUE}📋 SSH公開鍵${NC}"
-echo -e "${BLUE}=========================================${NC}"
-cat "${SSH_PUBLIC_KEY}"
-echo -e "${BLUE}=========================================${NC}"
-echo ""
-
 if [ "$KEYS_GENERATED" = true ]; then
     echo ""
     echo -e "${RED}🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨🚨${NC}"
@@ -407,5 +398,11 @@ echo -e "5. Access the application:"
 echo -e "   ${BLUE}http://<INGRESS_IP>${NC}"
 echo ""
 
-
+# SSH公開鍵の表示（最後に表示）
+echo -e "${BLUE}=========================================${NC}"
+echo -e "${BLUE}📋 SSH公開鍵${NC}"
+echo -e "${BLUE}=========================================${NC}"
+cat "${SSH_PUBLIC_KEY}"
+echo -e "${BLUE}=========================================${NC}"
+echo ""
 
