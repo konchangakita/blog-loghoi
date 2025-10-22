@@ -1,36 +1,29 @@
-import { useEffect, useState } from 'react'
 import { getBackendUrl } from '../../lib/getBackendUrl'
 
-interface dict {
-  [key: string]: any
+interface Dict {
+  [key: string]: unknown
 }
 
-type ResValues = {
-  pc_list: dict
-  cluster_list: dict
-}
-
-const fetchPost = (path: string, query: dict) => {
-  const [data, setData] = useState<dict>()
+const fetchPost = async (path: string, query: Dict): Promise<Dict | undefined> => {
   const requestUrl = `${getBackendUrl()}${path}`
   const requestOptions = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(query),
   }
-  useEffect(() => {
-    const fetchData = async () => {
-      const response = await fetch(requestUrl, requestOptions)
-      if (response.status === 200) {
-        const data = await response.json()
-        setData(data)
-      } else {
-        alert('Failed to connect to backend')
-      }
+  try {
+    const response = await fetch(requestUrl, requestOptions)
+    if (response.status === 200) {
+      const data = await response.json()
+      // console.log('PC List:', data)
+      return data
+    } else {
+      alert('Failed to connect to backend')
+      return undefined
     }
-    fetchData()
-  }, [])
-  //console.log('PC List:', data)
-  return data
+  } catch (error) {
+    console.error('Error posting data:', error)
+    return undefined
+  }
 }
 export default fetchPost
