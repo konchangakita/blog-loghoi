@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   },
 }
 
+// eslint-disable-next-line react/function-component-definition
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang='en'>
