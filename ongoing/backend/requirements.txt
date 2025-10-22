@@ -1,21 +1,31 @@
-black==23.7.0
-elastic-transport==8.4.0
+# LogHoi Backend Requirements (FastAPI版)
+
+# FastAPI Core
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.0.3
+
+# WebSocket Support
+python-socketio==5.13.0
+python-engineio==4.12.2
+
+# Database & Search
 elasticsearch==8.9.0
-Flask==2.3.2
-Flask-Cors==4.0.0
-Flask-SocketIO==5.3.5
-jupyter-events==0.7.0
-jupyter-lsp==2.2.0
-jupyter_client==8.3.0
-jupyter_core==5.3.1
-jupyter_server==2.7.1
-jupyter_server_terminals==0.4.4
-jupyterlab==4.0.5
-jupyterlab-pygments==0.2.2
-jupyterlab_server==2.24.0
+elastic-transport==8.4.0
+
+# SSH & Network
 paramiko==3.3.1
 requests==2.31.0
-aiohttp==3.9.1
-fastapi==0.104.1
-uvicorn==0.24.0
-python-socketio==5.10.0
+
+# CORS & Security
+python-multipart==0.0.6
+
+# Development & Testing
+pytest==7.4.0
+pytest-asyncio==0.21.1
+httpx==0.25.2
+
+# Optional: Development tools
+black==23.7.0
+uvloop==0.19.0  # Performance boost for uvicorn

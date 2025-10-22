@@ -8,7 +8,7 @@ Nutanix環境のログ収集・分析システムです。Prism Centralに登録
 ### docker-compose（開発環境）
 ```bash
 cd ongoing
-docker-compose -f docker-compose_fastapi.yml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 
 # アクセス
 # フロントエンド: http://localhost:7777
@@ -35,11 +35,11 @@ cd ongoing/k8s
 
 | ドキュメント | 説明 | バージョン | 最終更新 |
 |---|---|---|---|
-| [COLLECT_LOG_SPECIFICATION.md](./COLLECT_LOG_SPECIFICATION.md) | **ログ収集機能**<br>CVMからログファイルを収集してZIP化<br>- リアルタイム進捗表示<br>- バックグラウンド処理<br>- 自動キャッシュクリーンアップ | v1.2.0 | 2025-10-11 |
-| [REALTIME_LOG_SPECIFICATION.md](./REALTIME_LOG_SPECIFICATION.md) | **リアルタイムログ機能**<br>CVMのログファイルをリアルタイム表示<br>- tail -f相当の機能<br>- フィルタリング機能<br>- CVM選択機能 | v1.1.0 | 2025-10-10 |
-| [SYSLOG_SPECIFICATION.md](./SYSLOG_SPECIFICATION.md) | **Syslog機能**<br>Nutanix SyslogをElasticsearchで検索<br>- クラスター判別機能<br>- hostname自動取得<br>- 高度な検索クエリ | v1.2.0 | 2025-10-12 |
-| [SSH_KEY_MANAGEMENT_SPEC.md](./SSH_KEY_MANAGEMENT_SPEC.md) | **SSH鍵管理機能**<br>SSH鍵の自動生成・管理<br>- 自動生成と永続化<br>- エラー時のモーダル自動表示<br>- Kubernetes/docker-compose対応 | v1.2.0 | 2025-10-13 |
-| [UUID_EXPLORER_SPECIFICATION.md](./UUID_EXPLORER_SPECIFICATION.md) | **UUID Explorer機能**<br>Nutanix UUIDの検索・分析<br>- UUID検索<br>- 関連エンティティ表示<br>- 履歴管理 | v1.0.0 | 2025-10-10 |
+| [COLLECT_LOG_SPECIFICATION.md](./docs/COLLECT_LOG_SPECIFICATION.md) | **ログ収集機能**<br>CVMからログファイルを収集してZIP化<br>- リアルタイム進捗表示<br>- バックグラウンド処理<br>- 自動キャッシュクリーンアップ | v1.2.0 | 2025-10-11 |
+| [REALTIME_LOG_SPECIFICATION.md](./docs/REALTIME_LOG_SPECIFICATION.md) | **リアルタイムログ機能**<br>CVMのログファイルをリアルタイム表示<br>- tail -f相当の機能<br>- フィルタリング機能<br>- CVM選択機能 | v1.1.0 | 2025-10-10 |
+| [SYSLOG_SPECIFICATION.md](./docs/SYSLOG_SPECIFICATION.md) | **Syslog機能**<br>Nutanix SyslogをElasticsearchで検索<br>- クラスター判別機能<br>- hostname自動取得<br>- 高度な検索クエリ | v1.2.0 | 2025-10-12 |
+| [SSH_KEY_MANAGEMENT_SPEC.md](./docs/SSH_KEY_MANAGEMENT_SPEC.md) | **SSH鍵管理機能**<br>SSH鍵の自動生成・管理<br>- 自動生成と永続化<br>- エラー時のモーダル自動表示<br>- Kubernetes/docker-compose対応 | v1.2.0 | 2025-10-13 |
+| [UUID_EXPLORER_SPECIFICATION.md](./docs/UUID_EXPLORER_SPECIFICATION.md) | **UUID Explorer機能**<br>Nutanix UUIDの検索・分析<br>- UUID検索<br>- 関連エンティティ表示<br>- 履歴管理 | v1.0.0 | 2025-10-10 |
 
 ### デプロイメントガイド
 
@@ -118,7 +118,7 @@ git clone https://github.com/konchangakita/blog-loghoi.git
 cd blog-loghoi/ongoing
 
 # docker-compose起動
-docker-compose -f docker-compose_fastapi.yml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 
 # SSH鍵の確認（自動生成される）
 cat config/.ssh/loghoi-key.pub
@@ -131,7 +131,7 @@ cat config/.ssh/loghoi-key.pub
 3. Prism Element > Settings > Cluster Lockdown
 4. 「Add Public Key」で公開鍵を登録
 
-詳細は[SSH_KEY_MANAGEMENT_SPEC.md](./SSH_KEY_MANAGEMENT_SPEC.md)を参照。
+詳細は[SSH_KEY_MANAGEMENT_SPEC.md](./docs/SSH_KEY_MANAGEMENT_SPEC.md)を参照。
 
 ### API仕様
 
@@ -174,7 +174,7 @@ yarn test
 ## 🙋 トラブルシューティング
 
 ### SSH接続エラー
-→ [SSH_KEY_MANAGEMENT_SPEC.md](./SSH_KEY_MANAGEMENT_SPEC.md) のトラブルシューティングセクションを参照
+→ [SSH_KEY_MANAGEMENT_SPEC.md](./docs/SSH_KEY_MANAGEMENT_SPEC.md) のトラブルシューティングセクションを参照
 
 ### Elasticsearch接続エラー
 → docker-composeでElasticsearchが起動しているか確認

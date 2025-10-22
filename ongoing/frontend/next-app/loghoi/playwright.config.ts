@@ -22,7 +22,7 @@ export default defineConfig({
   /* 共通設定 */
   use: {
     /* ベースURL */
-    baseURL: 'http://localhost:7777',
+    baseURL: 'http://localhost:3001',
     /* スクリーンショット */
     screenshot: 'only-on-failure',
     /* ビデオ録画 */
@@ -33,8 +33,8 @@ export default defineConfig({
 
   /* テスト実行前にサーバーを起動 */
   webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:7777',
+    command: 'npm run dev -- --port 3001',
+    url: 'http://localhost:3001',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },

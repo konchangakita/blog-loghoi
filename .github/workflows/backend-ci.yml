@@ -149,7 +149,7 @@ jobs:
       - name: Start services with Docker Compose
         run: |
           cd ongoing
-          docker compose -f docker-compose_fastapi.yml up -d
+          docker compose -f docker-compose.yml up -d
           sleep 15
 
       - name: Wait for services to be ready
@@ -177,13 +177,13 @@ jobs:
         if: failure()
         run: |
           cd ongoing
-          docker compose -f docker-compose_fastapi.yml logs backend-fastapi
+          docker compose -f docker-compose.yml logs backend
 
       - name: Stop services
         if: always()
         run: |
           cd ongoing
-          docker compose -f docker-compose_fastapi.yml down
+          docker compose -f docker-compose.yml down
 
   security-scan:
     name: Security Scan
@@ -219,4 +219,3 @@ jobs:
           name: security-reports
           path: ongoing/backend/bandit-report.json
           retention-days: 30
-

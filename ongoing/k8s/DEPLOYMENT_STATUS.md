@@ -178,7 +178,7 @@ kubectl get deployment -n loghoihoi
 
 | 環境 | 起動方法 | ステータス | 用途 |
 |------|---------|-----------|------|
-| **Docker Compose** | `docker-compose -f docker-compose_fastapi.yml up` | ✅ 稼働可能 | 開発・テスト |
+| **Docker Compose** | `docker-compose -f docker-compose.yml up` | ✅ 稼働可能 | 開発・テスト |
 | **Kubernetes** | `./k8s/deploy.sh` | ⚠️ イメージ配布待ち | 本番想定 |
 
 **推奨**: 当面はDocker Composeで開発を継続し、コンテナレジストリ環境が整ってからKubernetesデプロイを実施。

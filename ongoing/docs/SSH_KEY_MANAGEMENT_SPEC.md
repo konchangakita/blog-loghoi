@@ -50,7 +50,7 @@ ongoing/
 │       └── README.md            # 鍵管理の説明
 ├── k8s/
 │   └── deploy.sh                # Kubernetes デプロイスクリプト
-├── docker-compose_fastapi.yml   # docker-compose設定
+├── docker-compose.yml   # docker-compose設定
 └── .gitignore                   # 鍵ファイルを除外
 ```
 
@@ -161,10 +161,10 @@ volumes:
 
 ## docker-compose環境での実装
 
-### 1. docker-compose_fastapi.yml の変更
+### 1. docker-compose.yml の変更
 
 ```yaml
-backend-fastapi:
+backend:
   volumes:
     - ./config/.ssh:/app/config/.ssh:z  # ホストパスをマウント
   environment:
@@ -213,7 +213,7 @@ fi
 ./scripts/init-ssh-keys.sh
 
 # docker-compose起動
-docker-compose -f docker-compose_fastapi.yml up -d
+docker-compose -f docker-compose.yml up -d
 ```
 
 ## エラーハンドリング
@@ -356,7 +356,7 @@ kubectl delete secret loghoi-secrets -n loghoi
    # docker-compose
    cd /home/nutanix/konchangakita/blog-loghoi/ongoing
    ./scripts/init-ssh-keys.sh
-   docker-compose -f docker-compose_fastapi.yml restart backend-fastapi
+   docker-compose -f docker-compose.yml restart backend
    ```
 
 4. 新しい公開鍵をNutanix Prismに登録
@@ -574,7 +574,7 @@ echo "✓ SSH keys ready for docker-compose"
 
 ```yaml
 services:
-  backend-fastapi:
+  backend:
     volumes:
       - ./config/.ssh:/app/config/.ssh:z
     environment:
@@ -590,7 +590,7 @@ cd /home/nutanix/konchangakita/blog-loghoi/ongoing
 ./scripts/init-ssh-keys.sh
 
 # 2. docker-compose起動
-docker-compose -f docker-compose_fastapi.yml up -d
+docker-compose -f docker-compose.yml up -d
 
 # 3. 公開鍵の確認（必要に応じて）
 cat /home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh/loghoi-key.pub
@@ -1082,7 +1082,7 @@ const executeApiCall = useCallback(async (
 3. **環境変数の確認**
    ```bash
    # コンテナ内で確認
-   docker exec loghoi-backend-fastapi env | grep SSH
+   docker exec loghoi-backend env | grep SSH
    ```
 
 ## セキュリティベストプラクティス
