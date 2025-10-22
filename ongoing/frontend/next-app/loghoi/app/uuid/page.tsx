@@ -3,8 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from 'react-hook-form'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faSearch } from '@fortawesome/free-solid-svg-icons'
 
 import Navbar from '../../components/navbar'
 import Loading from '../../components/loading'
@@ -37,7 +35,7 @@ interface UuidResponse {
 export default function UuidPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { fetchUuidData, loading, error, errorMessage, errorAlert, clearError } = useUuidApi()
+  const { fetchUuidData, loading, error, errorAlert, clearError } = useUuidApi()
   
   const [entity, setEntity] = useState<Record<string, any>>({})
   const [isActive, setActive] = useState('vmlist')
@@ -50,8 +48,6 @@ export default function UuidPage() {
   const [isInitialLoading, setIsInitialLoading] = useState(true)
 
   const {
-    register,
-    handleSubmit,
     watch,
     setValue,
     formState: { errors },
@@ -161,8 +157,8 @@ export default function UuidPage() {
           setAuthError('認証に失敗しました: SSH接続を確認してください')
         }
       }
-    } catch (error) {
-      console.error('Error fetching UUID data:', error)
+    } catch (err) {
+      console.error('Error fetching UUID data:', err)
       setIsAuthenticating(false)
       setAuthError('接続エラーが発生しました')
     }
