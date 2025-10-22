@@ -1,6 +1,5 @@
 import { Suspense } from 'react'
 
-// components
 import Loading from '@/components/loading'
 import PcRegist from '@/components/pcRegist'
 import PcList from '@/components/pcList'

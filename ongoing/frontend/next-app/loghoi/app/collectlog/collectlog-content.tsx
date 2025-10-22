@@ -2,20 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
-// components
+
 import Loading from '@/components/loading'
-import { openSshKeyModal } from '../../lib/sshKeyModal'
 import Collecting from '@/components/collecting'
+import { openSshKeyModal } from '../../lib/sshKeyModal'
+
 import CvmSelector from './components/CvmSelector'
 import LogCollector from './components/LogCollector'
 import ZipManager from './components/ZipManager'
 import LogFileList from './components/LogFileList'
 import CollectLogViewer from './components/LogViewer'
-
-// hooks
 import { useCollectLogApi } from './hooks/useCollectLogApi'
-
-// types
 import { CollectLogState } from './types'
 
 const CollectlogContnet = () => {
