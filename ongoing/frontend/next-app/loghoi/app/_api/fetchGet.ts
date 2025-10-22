@@ -1,24 +1,27 @@
+import { useEffect, useState } from 'react'
 import { getBackendUrl } from '../../lib/getBackendUrl'
 
-interface Dict {
-  [key: string]: unknown
+interface dict {
+  [key: string]: any
 }
 
 type ResValues = {
-  pc_list: Dict
-  cluster_list: Dict
+  pc_list: dict
+  cluster_list: dict
 }
 
-const fetchGet = async (path: string): Promise<ResValues | undefined> => {
+const fetchGet = (path: string) => {
+  const [data, setData] = useState<ResValues>()
   const requestUrl = `${getBackendUrl()}${path}`
-  try {
-    const response = await fetch(requestUrl, { method: 'GET' })
-    const data = await response.json()
-    // console.log('PC List:', data)
-    return data
-  } catch (error) {
-    console.error('Error fetching data:', error)
-    return undefined
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      const response = await fetch(requestUrl, { method: 'GET' })
+      const data = await response.json()
+      setData(data)
+    }
+    fetchData()
+  }, [])
+  //console.log('PC List:', data)
+  return data
 }
 export default fetchGet
