@@ -21,8 +21,9 @@ const CvmSelector = ({ cvmsIp, prismLeader, cvmChecked, onCvmChange, loading }: 
     const isLeader = val === prismLeader ? '*' : null
     return (
       <div key={idx}>
-        <label className='label justify-normal cursor-pointer p-0'>
+        <label className='label justify-normal cursor-pointer p-0' htmlFor={`cvm-${idx}`}>
           <input
+            id={`cvm-${idx}`}
             type='radio'
             name='cvm'
             value={val}
