@@ -1,10 +1,10 @@
 'use client'
+
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { openSshKeyModal } from '../../lib/sshKeyModal'
-
 // components
 import Loading from '@/components/loading'
+import { openSshKeyModal } from '../../lib/sshKeyModal'
 import Collecting from '@/components/collecting'
 import CvmSelector from './components/CvmSelector'
 import LogCollector from './components/LogCollector'
@@ -16,7 +16,7 @@ import CollectLogViewer from './components/LogViewer'
 import { useCollectLogApi } from './hooks/useCollectLogApi'
 
 // types
-import { CollectLogState, ClusterData } from './types'
+import { CollectLogState } from './types'
 
 const CollectlogContnet = () => {
   const searchParams = useSearchParams()
@@ -26,7 +26,6 @@ const CollectlogContnet = () => {
   // API フック
   const {
     error,
-    clearError,
     getCvmList,
     collectLogs,
     getZipList,
@@ -56,7 +55,7 @@ const CollectlogContnet = () => {
   const [appendTick, setAppendTick] = useState(0)
   const [fileSizeBytes, setFileSizeBytes] = useState<number | null>(null)
   const [hasMore, setHasMore] = useState<boolean>(false)
-  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false)
+  // const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false)
   // キャッシュ管理UIは非表示化（自動クリーンアップに移行）
   
   // ログ収集の進捗情報
