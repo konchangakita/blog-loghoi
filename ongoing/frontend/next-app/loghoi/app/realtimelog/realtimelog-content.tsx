@@ -12,7 +12,7 @@ import { LogFiles } from '@/lib/rt-logs'
 import RealtimeLogViewer from './realtimelog-logview'
 import Loading from '@/components/loading'
 
-//fontawesome
+// fontawesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
 
