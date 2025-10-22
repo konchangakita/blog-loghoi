@@ -1,4 +1,5 @@
 'use client'
+
 import { LogViewerProps } from '../types'
 import React from 'react'
 import LogViewer from '../../../components/shared/LogViewer'

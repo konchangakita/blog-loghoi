@@ -1,4 +1,5 @@
 'use client'
+
 import { LogCollectorProps } from '../types'
 
 const LogCollector = ({ onCollectLogs, collecting, cvmChecked }: LogCollectorProps) => {
@@ -7,6 +8,7 @@ const LogCollector = ({ onCollectLogs, collecting, cvmChecked }: LogCollectorPro
   return (
     <div className="flex flex-col items-center">
       <button 
+        type="button"
         className={`btn w-48 ${isDisabled ? 'btn-disabled' : 'btn-primary'}`}
         onClick={onCollectLogs}
         disabled={isDisabled}

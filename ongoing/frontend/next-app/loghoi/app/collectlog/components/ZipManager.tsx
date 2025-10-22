@@ -1,4 +1,5 @@
 'use client'
+
 import { ZipManagerProps } from '../types'
 import { getBackendUrl } from '../../../lib/getBackendUrl'
 
@@ -45,6 +46,7 @@ const ZipManager = ({
       </div>
       <div className="py-0.5">
         <button 
+          type="button"
           className="btn btn-secondary w-48"
           onClick={handleDownload}
           disabled={!selectedZip}
