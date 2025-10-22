@@ -80,3 +80,5 @@ jobs:
               run: |
                   cd ../../../../ongoing
                   docker compose -f docker-compose.yml down
+
+

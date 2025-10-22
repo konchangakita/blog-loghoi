@@ -1,16 +1,14 @@
 'use client'
+
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
 import { getBackendUrl } from '../../lib/getBackendUrl'
 import { openSshKeyModal } from '../../lib/sshKeyModal'
 
 // Lib
-//import { LogFiles } from '@/lib/rt-logs'
 import { LogFiles } from '@/lib/rt-logs'
 
-//components
+// components
 import RealtimeLogViewer from './realtimelog-logview'
 import Loading from '@/components/loading'
 
