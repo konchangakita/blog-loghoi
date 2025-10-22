@@ -6,13 +6,13 @@ import { useForm } from 'react-hook-form'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faSearch } from '@fortawesome/free-solid-svg-icons'
 
-import UuidListTable from './components/UuidListTable'
-import { useUuidApi } from './hooks/useUuidApi'
 import Navbar from '../../components/navbar'
 import Loading from '../../components/loading'
-import UuidCollecting from './components/UuidCollecting'
 import { ErrorDisplay, SearchInput, Button } from '../../components/common'
 import { getBackendUrl } from '../../lib/getBackendUrl'
+import UuidListTable from './components/UuidListTable'
+import { useUuidApi } from './hooks/useUuidApi'
+import UuidCollecting from './components/UuidCollecting'
 
 type FormValues = {
   searchUuid: string
