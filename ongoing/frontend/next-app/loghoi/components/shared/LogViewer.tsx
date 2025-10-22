@@ -1,8 +1,10 @@
 'use client'
+
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import io from 'socket.io-client'
 import { saveAs } from 'file-saver'
 import { usePathname, useSearchParams } from 'next/navigation'
+
 import { getBackendUrl } from '../../lib/getBackendUrl'
 import VirtualizedLogList from './VirtualizedLogList'
 
