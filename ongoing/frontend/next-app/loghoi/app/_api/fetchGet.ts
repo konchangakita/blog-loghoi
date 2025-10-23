@@ -16,12 +16,12 @@ const fetchGet = (path: string) => {
   useEffect(() => {
     const fetchData = async () => {
       const response = await fetch(requestUrl, { method: 'GET' })
-      const data = await response.json()
-      setData(data)
+      const responseData = await response.json()
+      setData(responseData)
     }
     fetchData()
   }, [])
-  //console.log('PC List:', data)
+  // console.log('PC List:', data)
   return data
 }
 export default fetchGet
