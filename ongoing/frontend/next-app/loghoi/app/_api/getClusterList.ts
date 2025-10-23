@@ -40,9 +40,9 @@ const getClusterList = (query: dict) => {
           console.error('API Error:', response.status, errorText)
           setError(`API接続エラー (${response.status}): ${errorText}`)
         }
-      } catch (error) {
-        console.error('Network Error:', error)
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      } catch (err) {
+        console.error('Network Error:', err)
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
         setError(`ネットワークエラー: ${errorMessage}`)
       } finally {
         setLoading(false)
