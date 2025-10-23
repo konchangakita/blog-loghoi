@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 interface dict {
   [key: string]: any
 }
 
-type ResValues = {
-  pc_list: dict
-  cluster_list: dict
-}
 
 const fetchPost = (path: string, query: dict) => {
   const [data, setData] = useState<dict>()
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND}${path}`
+  const requestUrl = `${getBackendUrl()}${path}`
   const requestOptions = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -21,15 +18,15 @@ const fetchPost = (path: string, query: dict) => {
     const fetchData = async () => {
       const response = await fetch(requestUrl, requestOptions)
       if (response.status === 200) {
-        const data = await response.json()
-        setData(data)
+        const responseData = await response.json()
+        setData(responseData)
       } else {
         alert('Failed to connect to backend')
       }
     }
     fetchData()
   }, [])
-  //console.log('PC List:', data)
+  // console.log('PC List:', data)
   return data
 }
 export default fetchPost

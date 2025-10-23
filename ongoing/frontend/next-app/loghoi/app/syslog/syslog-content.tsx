@@ -1,18 +1,17 @@
 'use client'
+
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { saveAs } from 'file-saver'
-
-// need install
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
-
-/* カレンダーからデータを取得するためのライブラリの読み込み */
 import DatePicker from 'react-datepicker'
-import 'react-datepicker/dist/react-datepicker.css'
-
-// fontawesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faXmark } from '@fortawesome/free-solid-svg-icons'
+
+import 'react-datepicker/dist/react-datepicker.css'
+
+import Loading from '@/components/loading'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 // Input value
 type FormValues = {
@@ -27,7 +26,16 @@ const SyslogContent = () => {
   const pcip = searchParams.get('pcip')
   const cluster = searchParams.get('cluster')
   const prism = searchParams.get('prism')
-  const [resMsg, setResMsg] = useState<string[]>([])
+  const [resMsg, setResMsg] = useState<any[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [isPageLoading, setIsPageLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string>('')
+
+  // hostname関連の状態
+  const [hostnames, setHostnames] = useState<string[]>([])
+  const [selectedHostnames, setSelectedHostnames] = useState<string[]>([])
+  const [isLoadingHostnames, setIsLoadingHostnames] = useState<boolean>(false)
+  const [hostnameError, setHostnameError] = useState<string>('')
 
   // react hook form
   const {
@@ -54,14 +62,74 @@ const SyslogContent = () => {
 
   // フィルター用初期設定
   const [filter, setFilter] = useState<string>('')
-  console.log('filter word:', filter)
   const clearFilter = () => {
     setFilter('')
   }
 
+  // hostname一覧を取得
+  useEffect(() => {
+    const fetchHostnames = async () => {
+      if (!cluster) {
+        console.warn('cluster_name が指定されていません')
+        return
+      }
+
+      setIsLoadingHostnames(true)
+      setHostnameError('')
+
+      try {
+        const response = await fetch(`${getBackendUrl()}/api/hostnames`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cluster_name: cluster }),
+          signal: AbortSignal.timeout(30000), // 30秒タイムアウト
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error: ${response.status}`)
+        }
+
+        const data = await response.json()
+        setHostnames(data.hostnames || [])
+        // 初期状態で「すべて選択」
+        setSelectedHostnames(data.hostnames || [])
+        console.log(`取得したhostnames: ${data.hostnames}`)
+      } catch (error) {
+        console.error('❌ Hostname取得エラー:', error)
+        setHostnameError('Hostnameの取得に失敗しました')
+      } finally {
+        setIsLoadingHostnames(false)
+      }
+    }
+
+    fetchHostnames()
+  }, [cluster])
+
+  // ページの初期読み込み完了時にローディング状態を解除
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsPageLoading(false)
+    }, 1000) // 1秒後にローディング完了
+
+    return () => clearTimeout(timer)
+  }, [])
+
   // FileをSaveするための関数を定義
   const handleDownload = () => {
-    const data = resMsg.join('\n')
+    const data = resMsg.map((logEntry: any) => {
+      if (typeof logEntry === 'string') {
+        return logEntry
+      } else {
+        const parts = []
+        if (logEntry.timestamp) parts.push(`[${new Date(logEntry.timestamp).toLocaleString('ja-JP')}]`)
+        if (logEntry.hostname) parts.push(`[${logEntry.hostname}]`)
+        if (logEntry.facility_label) parts.push(`[Facility: ${logEntry.facility_label}]`)
+        if (logEntry.severity_label) parts.push(`[Severity: ${logEntry.severity_label}]`)
+        parts.push(logEntry.message || '')
+        return parts.join(' ')
+      }
+    }).join('\n')
+    
     const outputData = new Blob([data], { type: 'text/plain;charset=utf-8' })
     const nowData = new Date()
     const yearData = nowData.getFullYear()
@@ -71,37 +139,83 @@ const SyslogContent = () => {
     const minutesData = ('0' + nowData.getMinutes()).slice(-2)
     const secondsData = ('0' + nowData.getSeconds()).slice(-2)
     const outputDateName = `syslog_${yearData}${monthData}${dayData}-${hoursData}${minutesData}${secondsData}.txt`
-    console.log(outputDateName)
     saveAs(outputData, outputDateName)
   }
 
   const searchSyslog: SubmitHandler<FormValues> = async (data) => {
-    console.log('********** debug **************: ', data)
-    const query = { pcip: pcip, cluster: cluster }
-    const sendData = { data, query }
-    console.log('************ senddata debug *************', sendData)
-
-    const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/sys/search`
+    
+    setIsLoading(true)
+    setError('')
+    
+    // 日付を適切な形式に変換
+    const formatDate = (date: Date | null) => {
+      if (!date) return ''
+      return date.toISOString().replace('Z', '')
+    }
+    
+    const sendData = {
+      keyword: data.searchtxt || '',
+      start_datetime: formatDate(data.startDT),
+      end_datetime: formatDate(data.endDT),
+      serial: '', // 必要に応じて設定
+      cluster: cluster || '', // URLパラメータから取得
+      hostnames: selectedHostnames // 選択されたhostnameリスト
+    }
+    
+    const requestUrl = `${getBackendUrl()}/api/sys/search`
     const requestOptions = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(sendData),
     }
 
-    const response = await fetch(requestUrl, requestOptions)
-    if (response.status === 200) {
+    try {
+      const response = await fetch(requestUrl, requestOptions)
       const resJson = await response.json()
-      setResMsg(resJson)
-    } else {
-      alert('Failed to connect to backend')
+      
+      
+      if (response.status === 200 && resJson.status === 'success') {
+        setResMsg(resJson.data || [])
+        setError('')
+      } else {
+        console.error('API Error:', resJson)
+        setError(`検索エラー: ${resJson.message || 'Unknown error'}`)
+        setResMsg([])
+      }
+    } catch (error) {
+      console.error('Network Error:', error)
+      setError('バックエンドへの接続に失敗しました')
+      setResMsg([])
+    } finally {
+      setIsLoading(false)
     }
   }
 
   const handleClear = () => {
     setResMsg([])
+    setError('')
   }
 
-  const filteredLogs = resMsg.filter((logM) => logM.toLowerCase().includes(filter.toLowerCase()))
+  const filteredLogs = resMsg.filter((logEntry) => {
+    if (typeof logEntry === 'string') {
+      // 古い形式（文字列）の場合
+      return logEntry.toLowerCase().includes(filter.toLowerCase())
+    } else {
+      // 新しい形式（オブジェクト）の場合
+      const message = logEntry.message || ''
+      const facility = logEntry.facility_label || ''
+      const severity = logEntry.severity_label || ''
+      const searchText = filter.toLowerCase()
+      return message.toLowerCase().includes(searchText) ||
+             facility.toLowerCase().includes(searchText) ||
+             severity.toLowerCase().includes(searchText)
+    }
+  })
+
+  // ページの初期読み込み中はローディング画面を表示
+  if (isPageLoading) {
+    return <Loading />
+  }
 
   return (
     <>
@@ -114,6 +228,7 @@ const SyslogContent = () => {
                 <input type='text' {...register('searchtxt')} className='textarea textarea-bordered w-full' placeholder='検索キーワードを入力' />
               </div>
               <div className='flex flex-nowrap p-1'>
+
                 <div className='p-1 '>
                   <label className='label'>
                     <span className='label-text'></span>
@@ -130,7 +245,7 @@ const SyslogContent = () => {
                           className='input input-bordered input-primary input-sm w-50'
                           dateFormat='yyyy/MM/dd HH:mm'
                           /* locale='ja' */
-                          selected={value}
+                          selected={value || startDateTime}
                           onChange={onChange}
                           showTimeSelect
                           timeIntervals={60}
@@ -157,7 +272,7 @@ const SyslogContent = () => {
                           className='input input-bordered input-primary input-sm w-50'
                           dateFormat='yyyy/MM/dd HH:mm'
                           /* locale='ja' */
-                          selected={value}
+                          selected={value || endDateTime}
                           onChange={onChange}
                           showTimeSelect
                           timeIntervals={60}
@@ -169,8 +284,12 @@ const SyslogContent = () => {
                 </div>
                 <div className='p-1 flex items-stretch'>
                   <div className='self-end'>
-                    <button className='btn btn-primary' type='submit'>
-                      Search
+                    <button 
+                      className='btn btn-primary' 
+                      type='submit'
+                      disabled={isLoading}
+                    >
+                      {isLoading ? '検索中...' : 'Search'}
                     </button>
                   </div>
                 </div>
@@ -196,16 +315,61 @@ const SyslogContent = () => {
                 </div>
               </div>
             </form>
+            
+            {/* エラーメッセージ表示 */}
+            {error && (
+              <div className='alert alert-error mx-5 mt-2'>
+                <span>{error}</span>
+              </div>
+            )}
+            
+            
+            {/* ローディング表示 */}
+            {isLoading && <Loading />}
+            
             <div className=''>
               <div className='mockup-code h-[480px] overflow-auto text-left mx-5 '>
-                <div className='w-[640px] '>
+                <div className='w-full '>
                   <pre className='px-2'>
                     <code className=''>
-                      {filteredLogs.map((val: string, idx: number) => (
-                        <p className='text-xs m-0' key={idx}>
-                          {val}
-                        </p>
+                      {filteredLogs.map((logEntry: any, idx: number) => (
+                        <div key={idx} className='text-xs m-0 mb-0.5 p-0.5 border-l-2 border-gray-200'>
+                          {typeof logEntry === 'string' ? (
+                            // 古い形式（文字列）の場合
+                            <p className='m-0 text-white'>{logEntry}</p>
+                          ) : (
+                            // 新しい形式（オブジェクト）の場合
+                            <div className='m-0'>
+                              <div className='text-gray-400 mb-0 leading-4' style={{fontSize: '0.6rem', lineHeight: '1rem'}}>
+                                {logEntry.timestamp && (
+                                  <span className='mr-3'>
+                                    {new Date(logEntry.timestamp).toLocaleString('ja-JP')}
+                                  </span>
+                                )}
+                                {logEntry.hostname && (
+                                  <span className='mr-3'>
+                                    <span className='text-gray-500'>Host:</span> {logEntry.hostname}
+                                  </span>
+                                )}
+                                {logEntry.facility_label && (
+                                  <span className='mr-3'>
+                                    <span className='text-gray-500'>Facility:</span> {logEntry.facility_label}
+                                  </span>
+                                )}
+                                {logEntry.severity_label && (
+                                  <span className='mr-3'>
+                                    <span className='text-gray-500'>Severity:</span> {logEntry.severity_label}
+                                  </span>
+                                )}
+                              </div>
+                              <p className='m-0 text-white'>{logEntry.message}</p>
+                            </div>
+                          )}
+                        </div>
                       ))}
+                      {filteredLogs.length === 0 && !isLoading && (
+                        <p className='text-xs m-0 text-gray-500'>検索結果がありません</p>
+                      )}
                     </code>
                   </pre>
                 </div>

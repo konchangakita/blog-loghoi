@@ -1,0 +1,79 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: loghoi
+  namespace: loghoihoi
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - secret.yaml
+  - nginx-config.yaml
+  - backend-deployment.yaml
+  - frontend-deployment.yaml
+  - elasticsearch-deployment.yaml
+  - services.yaml
+  - ingress.yaml
+  - hpa.yaml
+
+commonLabels:
+  app: loghoi
+  version: v1.0.0
+  managed-by: kustomize
+
+images:
+  - name: loghoi/backend
+    newTag: v1.0.0
+  - name: loghoi/frontend
+    newTag: v1.0.0
+
+patchesStrategicMerge:
+  - |-
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: loghoi-backend
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backend
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "250m"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+
+configMapGenerator:
+  - name: loghoi-config
+    literals:
+      - APP_NAME=LogHoi
+      - APP_VERSION=v1.0.0
+      - DEBUG=false
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=7776
+      - FRONTEND_PORT=3000
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - ELASTICSEARCH_INDEX_PREFIX=loghoi
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - CORS_ORIGINS=*
+      - CORS_CREDENTIALS=true
+      - MAX_CONNECTIONS=100
+      - TIMEOUT=30
+      - MAX_FILE_SIZE=100MB
+      - UPLOAD_DIR=/app/uploads
+      - LOG_DIR=/app/logs
+
+secretGenerator:
+  - name: loghoi-secrets
+    literals:
+      - DB_PASSWORD=dev-password
+      - API_KEY=dev-api-key
+      - JWT_SECRET=dev-jwt-secret
+      - ENCRYPTION_KEY=dev-encryption-key
+    files:
+      - SSH_PRIVATE_KEY=./secrets/ssh-private-key

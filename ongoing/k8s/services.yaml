@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loghoi-backend-service
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 7776
+    targetPort: 7776
+    protocol: TCP
+    name: http
+  selector:
+    app: loghoi
+    component: backend
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loghoi-frontend-service
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: frontend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 7777
+    targetPort: 7777
+    protocol: TCP
+    name: http
+  selector:
+    app: loghoi
+    component: frontend
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch-service
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: elasticsearch
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9200
+    targetPort: 9200
+    protocol: TCP
+    name: http
+  selector:
+    app: elasticsearch
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana-service
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: kibana
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5601
+    targetPort: 5601
+    protocol: TCP
+    name: http
+  selector:
+    app: kibana
+    component: kibana

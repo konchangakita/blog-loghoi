@@ -1,0 +1,158 @@
+# blog-loghoi プロジェクト用 Cursor Ignore ファイル
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+logs/
+log/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn-integrity
+
+# Next.js
+.next/
+out/
+.vercel
+
+# Docker
+.dockerignore
+
+# Kubernetes
+*.kubeconfig
+
+# Elasticsearch data
+elastic/es-data/
+elasticsearch-data/
+
+# Output directories
+output/
+temp/
+tmp/
+
+# Test coverage
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Large binary files
+*.bin
+*.exe
+*.dll
+
+# Documentation build
+docs/_build/
+site/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# Elasticsearch indices (large files)
+elastic/es-data/nodes/*/indices/
+
+# Log files from applications
+*.log
+*.out
+*.err
+
+# Temporary files created by applications
+*.tmp
+*.temp
+
+# Cache directories
+.cache/
+cache/
+
+# Local development files
+local/
+dev/
+
+# Configuration files with sensitive data
+config/local.json
+config/production.json
+secrets/

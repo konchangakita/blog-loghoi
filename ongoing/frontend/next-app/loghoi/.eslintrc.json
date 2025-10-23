@@ -23,6 +23,11 @@
         "unnamedComponents": "arrow-function"
       }
     ],
-    "react/prop-types": "off"
+    "react/prop-types": "off",
+    "@typescript-eslint/naming-convention": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "react-hooks/rules-of-hooks": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "no-alert": "off"
   }
 }

@@ -1,0 +1,210 @@
+---
+description: GitFlow運用ルール - ブランチ戦略、コミット規約、PR運用
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# GitFlow 運用ルール
+
+## ブランチ戦略
+
+### ブランチ構成（現在の状況に合わせた運用）
+- `main` ブランチ：本番リリース専用。直接コミット禁止。
+- `refactor` ブランチ：**メイン開発ブランチ**（developの役割も兼ねる）。PR経由でのみ変更。
+  - kubernetes化までのリファクタリング作業
+  - 新機能開発の統合ブランチ
+  - 次期リリース候補の準備
+- `feature/*` ブランチ：新機能開発用。作業完了後、refactorにPRを出す。
+- `hotfix/*` ブランチ：本番バグ修正用。mainとrefactorにマージする。
+- `release/*` ブランチ：リリース前テスト。refactorから分岐し、mainへマージ後削除。
+
+### 将来的なブランチ構成（リファクタリング完了後）
+- `develop` ブランチ：次期リリース候補。PR経由でのみ変更。
+- `refactor` ブランチ：リファクタリング専用ブランチ（段階的に廃止予定）
+
+### ブランチ運用フロー（現在の状況）
+1. **機能開発**: `feature/*` → `refactor` → `main`
+2. **バグ修正**: `hotfix/*` → `main` + `refactor`
+3. **リリース**: `release/*` ← `refactor` → `main`
+
+### ブランチ運用フロー（将来的）
+1. **機能開発**: `feature/*` → `develop` → `main`
+2. **バグ修正**: `hotfix/*` → `main` + `develop`
+3. **リリース**: `release/*` ← `develop` → `main`
+
+## コミットメッセージ規約
+
+### Conventional Commits形式を使用
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer(s)]
+```
+
+### コミットタイプ
+- `feat`: 新機能追加
+- `fix`: バグ修正
+- `docs`: ドキュメント修正
+- `refactor`: 構造変更（機能追加・修正なし）
+- `chore`: ビルド/依存関連更新
+- `test`: テスト追加・修正
+- `style`: コードスタイル修正（機能に影響なし）
+- `perf`: パフォーマンス改善
+
+### 例
+```
+feat(log-collection): Elasticsearch接続機能を追加
+fix(auth): 認証タイムアウトエラーを修正
+docs(readme): セットアップ手順を更新
+refactor(backend): データベース接続処理を共通化
+chore(deps): Flask 2.3.0にアップデート
+```
+
+## Pull Request 運用
+
+### 🚨 重要: PRを作成せずに直接マージすることは禁止
+
+### PR作成の必須手順
+1. **featureブランチで作業完了後、必ずリモートにpush**
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+2. **GitHub上でPRを作成（またはCLIコマンド使用）**
+   ```bash
+   # GitHub CLIを使用する場合（メール通知なし）
+   gh pr create --base refactor --head feature/your-feature-name \
+     --title "[#123] feat: 機能名" \
+     --body "変更内容の説明"
+   
+   # ※GitHubの通知設定でPR作成時のメールを無効化することを推奨
+   # Settings > Notifications > Email notification preferences
+   # "Pull requests" のチェックを外す
+   ```
+
+3. **PRテンプレートに従って説明を記載**
+   - 変更内容
+   - テスト結果
+   - 影響範囲
+   - スクリーンショット（UI変更の場合）
+
+4. **レビュー承認後にマージ**
+   - マージ方法: `Squash and merge` または `Create a merge commit`
+   - マージ後、ローカルのfeatureブランチを削除
+
+5. **ローカルブランチのクリーンアップ**
+   ```bash
+   git checkout refactor
+   git pull origin refactor
+   git branch -d feature/your-feature-name
+   ```
+
+### PR作成ルール
+- **すべてのfeatureブランチは必ずPR経由でrefactorにマージ**
+- すべてのPRには最低1人のレビューアが必要
+- PRタイトルは関連チケット番号を含める（例: `[#123] feat: ログ収集機能の追加`）
+- 自動テストが通らない限りマージ禁止
+- PR説明には変更内容、テスト結果、影響範囲を記載
+
+### レビュー基準
+- コード品質（可読性、保守性）
+- セキュリティ要件の遵守
+- パフォーマンスへの影響
+- テストカバレッジの確認
+
+## コードレビュー & テスト
+
+### 必須要件
+- 新機能はユニットテストを含めること
+- LinterとFormatterを実行してからPRを作成する
+- 影響範囲がある場合はdevelopで統合テストを行う
+
+### テスト戦略
+- **ユニットテスト**: 各機能の単体テスト
+- **統合テスト**: コンポーネント間の連携テスト
+- **E2Eテスト**: エンドツーエンドの動作確認
+- **パフォーマンステスト**: 負荷・応答時間の確認
+
+### 品質チェック
+- コードカバレッジ80%以上
+- 静的解析ツール（pylint, eslint等）の警告0件
+- セキュリティスキャンの通過
+
+## リリース管理
+
+### リリース手順
+1. `develop`から`release/*`ブランチを作成
+2. リリース候補のテスト実施
+3. 問題なければ`main`にマージ
+4. タグ作成（v1.0.0形式）
+5. `develop`にリリース内容をマージ
+
+### バージョニング
+- **セマンティックバージョニング**（SemVer）を使用
+- 形式: `MAJOR.MINOR.PATCH`
+- 例: `1.2.3`
+
+## 制限事項
+
+### 禁止行為
+以下は禁止されています：
+
+- ❌ **refactorブランチに直接コミット** - PR経由でのみ変更可能（現在のメイン開発ブランチ）
+- ❌ **mainブランチでのpush** - 本番リリース専用のため直接操作禁止
+- ❌ **PRを作成せずにfeatureブランチをrefactorに直接マージ** - `git merge`コマンドでの直接マージは禁止
+  ```bash
+  # ❌ 禁止: 直接マージ
+  git checkout refactor
+  git merge feature/your-feature-name
+  
+  # ✅ 正しい方法: PRを作成してからマージ
+  git push origin feature/your-feature-name
+  # GitHub上でPR作成 → レビュー → マージ
+  ```
+- ❌ **コミットメッセージに「test」や「tmp」と書く** - 正式なコミットメッセージを使用
+- ❌ **--no-verify フラグの使用** - フックをスキップしない（特別な理由がない限り）
+
+### 将来的な禁止行為（developブランチ作成後）
+- **developブランチに直接コミット** - PR経由でのみ変更可能
+
+### 開発作業の制限
+- **すべての更新は`/home/nutanix/konchangakita/blog-loghoi/ongoing`フォルダ配下で行うこと**
+  - `blog/`フォルダは過去のブログ記事対応履歴のため、直接編集禁止
+  - 新しい機能開発や修正は必ず`ongoing/`配下で実施
+  - 完了した機能は適切なタイミングで`blog/`に日付フォルダとして移動
+
+### 例外事項
+以下の場合のみ、refactorブランチへの直接コミットを許可します：
+
+#### ✅ 許可される直接コミット
+- **軽微なドキュメント更新**
+  - READMEの誤字脱字修正
+  - REFACTORING_PLAN等の進捗記録更新
+  - コメントの修正
+  - ドキュメントの軽微な追記
+- **ルールファイルの更新**（`.cursor/rules/*.mdc`, `AGENTS.md`等）
+- **設定ファイルの軽微な修正**（typo修正など）
+
+#### ❌ 直接コミット禁止（PR必須）
+- コード実装（機能追加・バグ修正）
+- 依存関係の変更（requirements.txt, package.json等）
+- 大規模なドキュメント変更
+- アーキテクチャに影響する変更
+
+#### その他の例外
+- 緊急時（Hotfix）のみ、適切な手順に従ってmainブランチを操作可能
+- 重大な例外操作は事前承認が必要
+
+## 緊急対応
+
+### Hotfix運用
+- 本番環境の重大なバグは`hotfix/*`ブランチで対応
+- `main`と`develop`の両方にマージ
+- 可能な限り迅速な対応を心がける
+
+### ロールバック手順
+- タグベースでのロールバック
+- データベースマイグレーションの考慮
+- 影響範囲の事前確認

@@ -1,0 +1,51 @@
+# Git関連
+.git/
+.gitignore
+.github/
+
+# ドキュメント
+*.md
+!README.md
+
+# テスト
+tests/
+*.test.py
+*.spec.ts
+
+# ログ・一時ファイル
+*.log
+*.tmp
+__pycache__/
+*.pyc
+
+# 過去のコード
+blog/
+
+# データディレクトリ
+elastic/es-data/
+backend/output/
+
+# IDE
+.vscode/
+.cursor/
+.idea/
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+
+# OS
+.DS_Store
+Thumbs.db

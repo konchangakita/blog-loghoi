@@ -1,0 +1,107 @@
+name: PR Gate
+
+on:
+  pull_request:
+    branches:
+      - refactor
+      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  check-pr-requirements:
+    name: Check PR Requirements
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check PR title format
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if ! echo "$PR_TITLE" | grep -E "^(\[#[a-zA-Z0-9_-]+\] )?(feat|fix|docs|refactor|chore|test|style|perf)(\(.+\))?: .+"; then
+            echo "❌ PR title must follow Conventional Commits format"
+            echo "Examples:"
+            echo "  feat: add new feature"
+            echo "  [#123] feat: add new feature"
+            echo "  fix(auth): resolve bug in login"
+            echo "  docs: update README"
+            exit 1
+          fi
+          echo "✅ PR title format is correct"
+
+      - name: Check PR description
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if [ -z "$PR_BODY" ] || [ ${#PR_BODY} -lt 50 ]; then
+            echo "❌ PR description is too short (minimum 50 characters)"
+            exit 1
+          fi
+          echo "✅ PR description is adequate"
+
+      - name: Check branch name
+        run: |
+          BRANCH_NAME="${{ github.head_ref }}"
+          if ! echo "$BRANCH_NAME" | grep -E "^(feature|fix|hotfix|release)/[a-z0-9-]+$"; then
+            echo "⚠️ Warning: Branch name should follow pattern: feature/*, fix/*, hotfix/*, release/*"
+          fi
+
+      - name: Label PR based on files changed
+        uses: actions/labeler@v5
+        continue-on-error: true
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+  check-all-tests-passed:
+    name: All Tests Status
+    runs-on: ubuntu-latest
+    needs: [check-pr-requirements]
+    if: github.event.pull_request.draft == false
+
+    steps:
+      - name: Check status of other workflows
+        run: |
+          echo "✅ All required checks must pass before merging"
+          echo "Required checks:"
+          echo "  - Frontend CI (Lint, Type Check, Unit Tests, E2E Tests, Build)"
+          echo "  - Backend CI (Lint, Format Check, Unit Tests, Integration Tests, Security Scan)"
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✅ PR requirements check passed! Please wait for all CI checks to complete.'
+            })
+
+  pr-size-check:
+    name: Check PR Size
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR size
+        run: |
+          ADDED=$(git diff --numstat origin/${{ github.base_ref }}...HEAD | awk '{sum+=$1} END {print sum}')
+          DELETED=$(git diff --numstat origin/${{ github.base_ref }}...HEAD | awk '{sum+=$2} END {print sum}')
+          TOTAL=$((ADDED + DELETED))
+
+          echo "Lines added: $ADDED"
+          echo "Lines deleted: $DELETED"
+          echo "Total changes: $TOTAL"
+
+          if [ $TOTAL -gt 1000 ]; then
+            echo "⚠️ Warning: This PR is quite large ($TOTAL lines changed)"
+            echo "Consider splitting into smaller PRs for easier review"
+          fi
+

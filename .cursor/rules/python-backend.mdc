@@ -1,0 +1,60 @@
+---
+description: Python（FastAPI）バックエンド開発用ルール
+globs: ["**/*.py", "**/requirements*.txt", "**/pytest.ini"]
+alwaysApply: false
+---
+
+# Python バックエンド開発ルール
+
+## 開発方針
+- **FastAPI**: 今後の新規開発はすべてFastAPIを使用
+- **Flask**: 過去開発のコードのみ（新規開発では使用禁止）
+- 既存のFlaskコードは段階的にFastAPIに移行する
+
+## Python（FastAPI）
+- PEP 8 に準拠する
+- 関数・クラスにはdocstringを記述する
+- エラーハンドリングを適切に実装する
+- **非同期処理を積極的に活用する**
+- 設定は環境変数または設定ファイルから読み込む
+- Pydanticモデルを使用してリクエスト/レスポンスを定義する
+- 依存性注入（Dependency Injection）を活用する
+
+## テスト
+- 単体テスト、統合テストを適切に実装する
+- pytestを使用する
+- テストカバレッジを意識する
+- テストファイルは`test_*.py`の命名規則に従う
+
+## ログ処理
+- ログレベルを適切に使用する
+- 構造化ログ（JSON形式）を推奨する
+- 個人情報を含むログは適切にマスキングする
+- ログローテーションを実装する
+
+## セキュリティ
+- 適切な認証メカニズムを実装する
+- セッション管理を安全に行う
+- 権限チェックを適切に実装する
+- 機密情報は環境変数またはSecretで管理
+
+## FastAPI固有のベストプラクティス
+- **ルーターファイル**: 機能ごとに`routers/`ディレクトリで分離
+- **ミドルウェア**: 認証、ログ、CORS等を適切に設定
+- **例外処理**: FastAPIのHTTPExceptionを活用
+- **バリデーション**: Pydanticモデルでリクエスト検証
+- **OpenAPI/Swagger**: 自動生成されるAPI仕様書を活用
+- **バックグラウンドタスク**: BackgroundTasksまたはCeleryを使用
+
+## パフォーマンス
+- データベースクエリの最適化
+- キャッシュ戦略の実装
+- **非同期処理を積極的に活用**
+- リソース使用量の監視
+- データベース接続プールの設定
+
+## Flaskからの移行ガイドライン
+- 既存のFlaskルートをFastAPIルーターに段階的に移行
+- Flaskの`request`オブジェクト → FastAPIの依存性注入に変更
+- Flaskの`jsonify` → FastAPIのPydanticモデルレスポンスに変更
+- Flaskの`@app.route` → FastAPIの`@router.get/post/put/delete`に変更

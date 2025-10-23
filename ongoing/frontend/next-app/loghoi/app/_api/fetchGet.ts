@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getBackendUrl } from '../../lib/getBackendUrl'
 
 interface dict {
   [key: string]: any
@@ -11,16 +12,16 @@ type ResValues = {
 
 const fetchGet = (path: string) => {
   const [data, setData] = useState<ResValues>()
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND}${path}`
+  const requestUrl = `${getBackendUrl()}${path}`
   useEffect(() => {
     const fetchData = async () => {
       const response = await fetch(requestUrl, { method: 'GET' })
-      const data = await response.json()
-      setData(data)
+      const responseData = await response.json()
+      setData(responseData)
     }
     fetchData()
   }, [])
-  //console.log('PC List:', data)
+  // console.log('PC List:', data)
   return data
 }
 export default fetchGet

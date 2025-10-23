@@ -1,16 +1,20 @@
 'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
-
 import { useEffect, useState } from 'react'
+
+import { getBackendUrl } from '../lib/getBackendUrl'
 
 interface dict {
   [key: string]: any
 }
 
 type ResValues = {
-  pc_list: dict
-  cluster_list: dict
+  pc_list: dict | null
+  cluster_list: dict | null
+  error?: string | null
+  errorType?: string | null
 }
 
 const DisplayCluster = ({ clusterList }: any) => {
@@ -20,9 +24,15 @@ const DisplayCluster = ({ clusterList }: any) => {
       const icon = iconList[val.hypervisor]
       return (
         <tr className='' key={idx + 1}>
-          <td className='whitespace-normal'>
-            <div className='ml-8'>
-              <Image src={icon} width={30} height={30} alt={''} className='inline' />
+          <td className='whitespace-normal pl-16 md:pl-24 lg:pl-40 text-left'>
+            <div className='inline-flex items-center'>
+              <Image 
+                src={icon} 
+                width={30} 
+                height={30} 
+                alt={val.hypervisor} 
+                className='inline'
+              />
               <div className='inline px-2'>
                 {val.name} {val.prism_ip}
               </div>
@@ -39,31 +49,86 @@ const DisplayCluster = ({ clusterList }: any) => {
 }
 
 export default function PcList2() {
-  const requestUrl = `${process.env.NEXT_PUBLIC_BACKEND_HOST}/api/pclist`
+  const requestUrl = `${getBackendUrl()}/api/pclist`
   const [data, setData] = useState<ResValues>()
+  const [showAlert, setShowAlert] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
-      const response = await fetch(requestUrl, { method: 'GET' })
-      const data = await response.json()
-      setData(data)
+      try {
+        const response = await fetch(requestUrl, { 
+          method: 'GET',
+          signal: AbortSignal.timeout(10000) // 10秒のタイムアウト
+        })
+        
+        if (!response.ok) {
+          console.error(`API Error: ${response.status} ${response.statusText}`)
+          setData({
+            pc_list: null,
+            cluster_list: null,
+            error: `バックエンド接続エラー (${response.status}): ${response.statusText}`,
+            errorType: 'CONNECTION_ERROR'
+          })
+          setShowAlert(true)
+          setIsLoading(false)
+          return
+        }
+        
+        const data = await response.json()
+        setData(data)
+        setIsLoading(false)
+        
+        // エラーがある場合はアラートを表示
+        if (data.error && data.errorType !== 'NO_DATA') {
+          setShowAlert(true)
+        }
+      } catch (error) {
+        console.error('Network Error:', error)
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+        setData({
+          pc_list: null,
+          cluster_list: null,
+          error: `ネットワークエラー: ${errorMessage}`,
+          errorType: 'NETWORK_ERROR'
+        })
+        setShowAlert(true)
+        setIsLoading(false)
+      }
     }
     fetchData()
   }, [])
+  
   console.log('PC List:', data)
 
   const pcList: any = data ? data.pc_list : ''
   const clusterList: any = data ? data.cluster_list : ''
 
-  const displayPc = pcList.length ? (
+  // エラー表示
+  const displayError = data?.error && data?.errorType !== 'NO_DATA' ? (
+    <div className="alert alert-error mb-4">
+      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{data.error}</span>
+      <button 
+        className="btn btn-sm btn-ghost" 
+        onClick={() => setShowAlert(false)}
+      >
+        ✕
+      </button>
+    </div>
+  ) : null
+
+  const displayPc = pcList && pcList.length ? (
     pcList.map((val: dict, idx: number) => {
       const clusterListSub = clusterList[val.prism_ip]
       return (
-        <div className='table table-compact p-4' key={idx + 1}>
-          <table className='table '>
-            <thead className='sticky top-0'>
-              <tr className='hover'>
-                <th>
+        <div className='w-full flex justify-center p-4' key={idx + 1}>
+          <table className='table table-compact mx-auto w-full max-w-3xl'>
+            <thead>
+              <tr>
+                <th className='text-center'>
                   <div className='text-2xl'>
                     <p className='inline px-4'>
                       <Link href={{ pathname: 'gatekeeper', query: { pcip: val.prism_ip } }}>
@@ -94,10 +159,24 @@ export default function PcList2() {
     </div>
   )
 
+  // ローディング表示
+  if (isLoading) {
+    return (
+      <>
+        <div className='text-2xl font-bold m-5 text-center'>Prism Central List</div>
+        <div className='flex flex-col justify-center items-center'>
+          <div className='text-lg text-gray-500 animate-pulse'>Loading...</div>
+        </div>
+      </>
+    )
+  }
+
   return (
     <>
-      <div className='text-2xl font-bold m-5'>PC LIST</div>
-
+      <div className='text-2xl font-bold m-5 text-center'>Prism Central List</div>
+      
+      {showAlert && displayError}
+      
       <div className='flex flex-col justify-center items-center'>{displayPc}</div>
     </>
   )

@@ -6,12 +6,10 @@ import Contents from './gatekeeper-contents'
 const GateKeeperPage = () => {
   return (
     <>
-      <div className=''>
-        <div className="bg-[url('/Desktop-BG-3DPurple.png')] bg-cover bg-center bg-violet-900 h-full">
-          <Suspense fallback={<p>Loading feed...</p>}>
-            <Contents />
-          </Suspense>
-        </div>
+      <div className="min-h-screen bg-[url('/Desktop-BG-3DPurple.png')] bg-cover bg-center bg-fixed bg-violet-900">
+        <Suspense fallback={<p>Loading feed...</p>}>
+          <Contents />
+        </Suspense>
       </div>
     </>
   )

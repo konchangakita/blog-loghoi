@@ -1,0 +1,35 @@
+---
+description: JavaScript/TypeScript（Next.js）フロントエンド開発用ルール
+globs: ["**/frontend/**", "**/next-app/**", "**/*.tsx", "**/*.ts", "**/*.js", "**/*.jsx", "**/package.json"]
+alwaysApply: false
+---
+
+# フロントエンド開発ルール
+
+## JavaScript/TypeScript（Next.js）
+- ESLint、Prettierの設定に従う
+- TypeScriptの型定義を適切に使用する
+- コンポーネントは関数コンポーネントを使用する
+- 状態管理は適切なライブラリ（useState、useContext等）を使用する
+
+## React/Next.js ベストプラクティス
+- コンポーネントの最適化
+- 画像の最適化
+- バンドルサイズの削減
+- レンダリングパフォーマンスの向上
+
+## スタイリング
+- CSS Modulesまたはstyled-componentsを使用
+- レスポンシブデザインを意識する
+- アクセシビリティを考慮する
+
+## 状態管理
+- 適切な状態管理ライブラリを選択
+- グローバル状態とローカル状態を適切に使い分ける
+- 状態の正規化を意識する
+
+## パフォーマンス
+- コンポーネントの最適化（memo、useMemo、useCallback）
+- 画像の最適化（next/image）
+- コード分割（dynamic import）
+- レンダリングパフォーマンスの向上

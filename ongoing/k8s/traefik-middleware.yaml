@@ -1,0 +1,29 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: loghoi-timeout
+  namespace: loghoihoi
+spec:
+  # レスポンスタイムアウトを10分に設定（ログ収集は時間がかかる）
+  forwardAuth:
+    address: ""
+  headers:
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: loghoi-timeout
+  namespace: loghoihoi
+spec:
+  # 実際のタイムアウト設定はIngressControllerレベルで設定
+  # ここではダミーのミドルウェアとして定義
+  headers:
+    customRequestHeaders:
+      X-Timeout: "600"
+
+
+
+
+

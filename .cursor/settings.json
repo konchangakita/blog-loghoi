@@ -1,0 +1,129 @@
+{
+  "editor": {
+    "tabSize": 4,
+    "insertSpaces": true,
+    "detectIndentation": false,
+    "trimAutoWhitespace": true,
+    "formatOnSave": true,
+    "formatOnPaste": true,
+    "formatOnType": true
+  },
+  "python": {
+    "defaultInterpreterPath": "./venv/bin/python",
+    "linting.enabled": true,
+    "linting.pylintEnabled": true,
+    "linting.flake8Enabled": true,
+    "linting.mypyEnabled": true,
+    "formatting.provider": "black",
+    "formatting.blackArgs": ["--line-length=88"],
+    "testing.pytestEnabled": true,
+    "testing.pytestArgs": ["-v", "--tb=short"]
+  },
+  "javascript": {
+    "format.enable": true,
+    "format.insertSpaceAfterFunctionKeywordForAnonymousFunctions": false,
+    "format.insertSpaceAfterOpeningAndBeforeClosingNonemptyParentheses": false,
+    "format.placeOpenBraceOnNewLineForFunctions": false,
+    "format.placeOpenBraceOnNewLineForControlBlocks": false
+  },
+  "typescript": {
+    "format.enable": true,
+    "preferences.importModuleSpecifier": "relative"
+  },
+  "files": {
+    "associations": {
+      "*.yml": "yaml",
+      "*.yaml": "yaml",
+      "Dockerfile*": "dockerfile",
+      "*.dockerfile": "dockerfile",
+      "requirements*.txt": "pip-requirements",
+      "*.json": "jsonc"
+    },
+    "exclude": {
+      "**/__pycache__": true,
+      "**/node_modules": true,
+      "**/.git": true,
+      "**/elastic/es-data": true,
+      "**/output": true,
+      "**/.pytest_cache": true,
+      "**/venv": true,
+      "**/.venv": true,
+      "**/env": true,
+      "**/.env": true,
+      "**/.next": true,
+      "**/dist": true,
+      "**/build": true
+    },
+    "watcherExclude": {
+      "**/__pycache__/**": true,
+      "**/node_modules/**": true,
+      "**/elastic/es-data/**": true,
+      "**/output/**": true,
+      "**/.pytest_cache/**": true,
+      "**/venv/**": true,
+      "**/.venv/**": true,
+      "**/env/**": true,
+      "**/.env/**": true,
+      "**/.next/**": true,
+      "**/dist/**": true,
+      "**/build/**": true
+    }
+  },
+  "search": {
+    "exclude": {
+      "**/__pycache__": true,
+      "**/node_modules": true,
+      "**/elastic/es-data": true,
+      "**/output": true,
+      "**/.pytest_cache": true,
+      "**/venv": true,
+      "**/.venv": true,
+      "**/env": true,
+      "**/.env": true,
+      "**/.next": true,
+      "**/dist": true,
+      "**/build": true
+    }
+  },
+  "emmet": {
+    "includeLanguages": {
+      "javascript": "javascriptreact",
+      "typescript": "typescriptreact"
+    }
+  },
+  "terminal": {
+    "integrated": {
+      "defaultProfile": {
+        "linux": "bash"
+      }
+    }
+  },
+  "git": {
+    "ignoreLimitWarning": true,
+    "autoStash": true,
+    "confirmSync": false
+  },
+  "docker": {
+    "showStartPage": false
+  },
+  "yaml": {
+    "schemas": {
+      "https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json": [
+        "docker-compose*.yml",
+        "docker-compose*.yaml"
+      ],
+      "https://raw.githubusercontent.com/kubernetes/kubernetes/master/api/openapi-spec/swagger.json": [
+        "k8s/*.yaml",
+        "k8s/*.yml",
+        "*.k8s.yaml",
+        "*.k8s.yml"
+      ]
+    }
+  },
+  "markdown": {
+    "preview": {
+      "breaks": true,
+      "linkify": true
+    }
+  }
+}
