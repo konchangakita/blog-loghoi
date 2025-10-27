@@ -18,5 +18,15 @@ test.describe('スモークテスト', () => {
     await page.goto('/uuid');
     await expect(page).toHaveTitle(/LogHoi/);
   });
+
+  test('Realtime Logページが表示される', async ({ page }) => {
+    await page.goto('/realtimelog');
+    await expect(page).toHaveTitle(/LogHoi/);
+  });
+
+  test('Syslogページが表示される', async ({ page }) => {
+    await page.goto('/syslog');
+    await expect(page).toHaveTitle(/LogHoi/);
+  });
 });
 
