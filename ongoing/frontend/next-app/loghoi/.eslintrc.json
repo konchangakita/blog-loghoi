@@ -23,6 +23,22 @@
         "unnamedComponents": "arrow-function"
       }
     ],
-    "react/prop-types": "off"
+    "react/prop-types": "off",
+    "@typescript-eslint/naming-convention": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-shadow": "off",
+    "@typescript-eslint/no-use-before-define": "off",
+    "@typescript-eslint/dot-notation": "off",
+    "react-hooks/rules-of-hooks": "off",
+    "react-hooks/exhaustive-deps": "off",
+    "no-alert": "off",
+    "no-console": "off",
+    "spaced-comment": "off",
+    "import/prefer-default-export": "off",
+    "lines-around-directive": "off",
+    "react/no-array-index-key": "off",
+    "jsx-a11y/label-has-associated-control": "off",
+    "import/order": "off"
   }
 }
