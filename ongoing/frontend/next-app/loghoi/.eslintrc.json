@@ -45,6 +45,18 @@
     "no-await-in-loop": "off",
     "no-plusplus": "off",
     "no-promise-executor-return": "off",
-    "@typescript-eslint/lines-between-class-members": "off"
+    "@typescript-eslint/lines-between-class-members": "off",
+    "@typescript-eslint/no-unused-expressions": "off",
+    "no-sequences": "off",
+    "no-restricted-globals": "off",
+    "no-else-return": "off",
+    "prefer-template": "off",
+    "object-shorthand": "off",
+    "import/no-useless-path-segments": "off",
+    "react/jsx-no-useless-fragment": "off",
+    "class-methods-use-this": "off",
+    "@typescript-eslint/return-await": "off",
+    "max-classes-per-file": "off",
+    "prefer-destructuring": "off"
   }
 }
