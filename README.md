@@ -1,4 +1,4 @@
-# Nutanixログホイホイ ブログシリーズのコード置き場
+# Nutanixログホイホイ
 
 ここはブログと連動したリポジトリ  
 ブログシリーズは[コチラ](https://konchangakita.hatenablog.com/archive/category/Nutanix%20%E3%83%AD%E3%82%B0%E3%81%BB%E3%81%84%E3%81%BB%E3%81%84)
