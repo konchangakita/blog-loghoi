@@ -28,6 +28,11 @@ KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 
 詳細なデプロイ手順は **[Kubernetesデプロイメントガイド](./k8s/DEPLOYMENT_GUIDE.md)** を参照してください。
 
+> **注意**: Syslog機能を使用する場合は、デプロイ後にNutanixクラスター（Prism Element）でSyslog設定を行い、デプロイしたSyslogサーバ宛てにSyslogを転送するよう設定する必要があります。
+>
+> 設定手順の詳細は参考ブログ「[【Nutanix ログほいほい】シスログ ほいほい](https://konchangakita.hatenablog.com/entry/2024/05/20/090000)」を参照してください。なお、AOS（Acropolis Operating System）のバージョンによってコマンドが変更になる可能性があります。
+
+
 ## 📚 ドキュメント
 
 ### Kubernetes デプロイメントガイド
