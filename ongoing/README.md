@@ -1,4 +1,4 @@
-# LogHoi - Nutanixログホイホイ
+# Nutanixログホイホイ
 
 ## 概要
 Nutanix環境のログ収集・分析システムです。Prism Centralに登録されたクラスターから、リアルタイムログ、Syslog、ログファイル収集を行い、Elasticsearchで検索・分析できます。
@@ -7,8 +7,7 @@ Nutanix環境のログ収集・分析システムです。Prism Centralに登録
 
 ### docker-compose（開発環境）
 ```bash
-cd ongoing
-docker-compose -f docker-compose.yml up -d --build
+docker-compose -f ongoing/docker-compose.yml up -d --build
 
 # アクセス
 # フロントエンド: http://localhost:7777
@@ -29,6 +28,12 @@ KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 
 ## 📚 ドキュメント
 
+### デプロイメントガイド
+
+| ドキュメント | 説明 |
+|---|---|
+| [Kubernetesデプロイメントガイド](./k8s/DEPLOYMENT_GUIDE.md) | **本番環境デプロイ手順**<br>- クイックスタート<br>- 詳細な手動デプロイ手順<br>- トラブルシューティング<br>- 環境別設定 |
+
 ### 機能仕様書
 
 各機能の詳細な仕様、API、実装方法を記載しています。
@@ -40,12 +45,6 @@ KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 | [SYSLOG_SPECIFICATION.md](./docs/SYSLOG_SPECIFICATION.md) | **Syslog機能**<br>Nutanix SyslogをElasticsearchで検索<br>- クラスター判別機能<br>- hostname自動取得<br>- 高度な検索クエリ | v1.3.0 | 2025-10-29 |
 | [SSH_KEY_MANAGEMENT_SPEC.md](./docs/SSH_KEY_MANAGEMENT_SPEC.md) | **SSH鍵管理機能**<br>SSH鍵の自動生成・管理<br>- 自動生成と永続化<br>- エラー時のモーダル自動表示<br>- Kubernetes/docker-compose対応 | v1.3.0 | 2025-10-29 |
 | [UUID_EXPLORER_SPECIFICATION.md](./docs/UUID_EXPLORER_SPECIFICATION.md) | **UUID Explorer機能**<br>Nutanix UUIDの検索・分析<br>- UUID検索<br>- 関連エンティティ表示<br>- 履歴管理 | v1.1.0 | 2025-10-29 |
-
-### デプロイメントガイド
-
-| ドキュメント | 説明 |
-|---|---|
-| [Kubernetesデプロイメントガイド](./k8s/DEPLOYMENT_GUIDE.md) | **本番環境デプロイ手順**<br>- クイックスタート<br>- 詳細な手動デプロイ手順<br>- トラブルシューティング<br>- 環境別設定 |
 
 ### アーカイブドキュメント
 
@@ -115,10 +114,10 @@ ongoing/
 ```bash
 # リポジトリクローン
 git clone https://github.com/konchangakita/blog-loghoi.git
-cd blog-loghoi/ongoing
+cd blog-loghoi
 
 # docker-compose起動
-docker-compose -f docker-compose.yml up -d --build
+docker-compose -f ongoing/docker-compose.yml up -d --build
 
 # SSH鍵の確認（自動生成される）
 cat config/.ssh/loghoi-key.pub
