@@ -6,7 +6,7 @@ metadata:
   labels:
     app: loghoi
     component: backend
-    version: v1.0.15
+    version: v1.0.33
 spec:
   replicas: 1  # PersistentVolume(RWO)使用のため1に変更
   strategy:
@@ -20,7 +20,7 @@ spec:
       labels:
         app: loghoi
         component: backend
-        version: v1.0.18
+        version: v1.0.33
     spec:
       securityContext:
         fsGroup: 1000
@@ -40,7 +40,7 @@ spec:
           mountPath: /app/output
       containers:
       - name: backend
-        image: ghcr.io/konchangakita/loghoi-backend:latest
+        image: ghcr.io/konchangakita/loghoi-backend:v1.0.33
         imagePullPolicy: Always
         ports:
         - containerPort: 7776

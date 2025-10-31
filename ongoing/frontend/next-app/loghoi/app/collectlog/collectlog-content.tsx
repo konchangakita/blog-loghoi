@@ -55,7 +55,7 @@ const CollectlogContnet = () => {
   const [appendTick, setAppendTick] = useState(0)
   const [fileSizeBytes, setFileSizeBytes] = useState<number | null>(null)
   const [hasMore, setHasMore] = useState<boolean>(false)
-  // const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false)
   // キャッシュ管理UIは非表示化（自動クリーンアップに移行）
   
   // ログ収集の進捗情報

@@ -8,9 +8,9 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # 設定
-REGISTRY="${DOCKER_REGISTRY:-docker.io}"
+REGISTRY="${DOCKER_REGISTRY:-ghcr.io}"
 NAMESPACE="${DOCKER_NAMESPACE:-konchangakita}"
-VERSION="${VERSION:-v1.0.3}"
+VERSION="${VERSION:-v1.0.33}"
 
 echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}Log Hoihoi Docker Image Build & Push${NC}"
@@ -39,6 +39,13 @@ docker build -t ${REGISTRY}/${NAMESPACE}/loghoi-frontend:${VERSION} \
              -f frontend/next-app/loghoi/Dockerfile.k8s \
              frontend/next-app/loghoi
 
+# Syslogイメージのビルド
+echo -e "${GREEN}Building syslog image...${NC}"
+docker build -t ${REGISTRY}/${NAMESPACE}/loghoi-syslog:${VERSION} \
+             -t ${REGISTRY}/${NAMESPACE}/loghoi-syslog:latest \
+             -f syslog/Dockerfile.k8s \
+             syslog
+
 # イメージのプッシュ
 if [ "${PUSH_IMAGES}" = "true" ]; then
     echo -e "${GREEN}Pushing images to registry...${NC}"
@@ -46,6 +53,8 @@ if [ "${PUSH_IMAGES}" = "true" ]; then
     docker push ${REGISTRY}/${NAMESPACE}/loghoi-backend:latest
     docker push ${REGISTRY}/${NAMESPACE}/loghoi-frontend:${VERSION}
     docker push ${REGISTRY}/${NAMESPACE}/loghoi-frontend:latest
+    docker push ${REGISTRY}/${NAMESPACE}/loghoi-syslog:${VERSION}
+    docker push ${REGISTRY}/${NAMESPACE}/loghoi-syslog:latest
     echo -e "${GREEN}Images pushed successfully!${NC}"
 else
     echo -e "${YELLOW}Skipping push (set PUSH_IMAGES=true to push)${NC}"
@@ -56,4 +65,5 @@ echo -e "${GREEN}Build completed!${NC}"
 echo ""
 echo -e "Backend image:  ${YELLOW}${REGISTRY}/${NAMESPACE}/loghoi-backend:${VERSION}${NC}"
 echo -e "Frontend image: ${YELLOW}${REGISTRY}/${NAMESPACE}/loghoi-frontend:${VERSION}${NC}"
+echo -e "Syslog image:   ${YELLOW}${REGISTRY}/${NAMESPACE}/loghoi-syslog:${VERSION}${NC}"
 

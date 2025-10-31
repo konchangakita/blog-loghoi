@@ -6,7 +6,7 @@ metadata:
   labels:
     app: loghoi
     component: frontend
-    version: v1.0.10
+    version: v1.0.33
 spec:
   replicas: 2
   selector:
@@ -18,11 +18,11 @@ spec:
       labels:
         app: loghoi
         component: frontend
-        version: v1.0.32
+        version: v1.0.33
     spec:
       containers:
       - name: frontend
-        image: ghcr.io/konchangakita/loghoi-frontend:latest
+        image: ghcr.io/konchangakita/loghoi-frontend:v1.0.33
         imagePullPolicy: Always
         ports:
         - containerPort: 7777
