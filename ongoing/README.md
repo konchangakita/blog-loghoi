@@ -1,13 +1,15 @@
-# Nutanixログホイホイ
+# Nutanixログほいほい
 
 ## 概要
-Nutanix環境のログ収集・分析システムです。Prism Centralに登録されたクラスターから、リアルタイムログ、Syslog、ログファイル収集を行い、Elasticsearchで検索・分析できます。
+Nutanix環境のログ収集ツールです  
+Prism Centralに登録されたクラスターから、CVMのリアルタイムログ、Syslog、ログファイル収集
+
 
 ## 🚀 クイックスタート
 
 ### docker-compose（開発環境）
 ```bash
-docker-compose -f ongoing/docker-compose.yml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 
 # アクセス
 # フロントエンド: http://localhost:7777
@@ -28,7 +30,7 @@ KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 
 ## 📚 ドキュメント
 
-### デプロイメントガイド
+### Kubernetes デプロイメントガイド
 
 | ドキュメント | 説明 |
 |---|---|
@@ -65,7 +67,7 @@ KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 ### ディレクトリ構成
 
 ```
-ongoing/
+/
 ├── backend/
 │   ├── fastapi_app/          # FastAPIアプリケーション
 │   ├── core/                 # コアロジック（SSH接続、ログ収集）
@@ -112,12 +114,8 @@ ongoing/
 ### 環境構築
 
 ```bash
-# リポジトリクローン
-git clone https://github.com/konchangakita/blog-loghoi.git
-cd blog-loghoi
-
 # docker-compose起動
-docker-compose -f ongoing/docker-compose.yml up -d --build
+docker-compose -f docker-compose.yml up -d --build
 
 # SSH鍵の確認（自動生成される）
 cat config/.ssh/loghoi-key.pub
@@ -147,8 +145,8 @@ http://localhost:7776/docs
 
 ## 📖 関連リンク
 
-- [ブログ: Nutanixログホイホイ](https://konchangakita.hatenablog.com/)
-- [GitHub リポジトリ](https://github.com/konchangakita/blog-loghoi)
+- [ブログ: Nutanixログほいほい](https://konchangakita.hatenablog.com/)
+- [GitHub 開発ブログ リポジトリ](https://github.com/konchangakita/blog-loghoi)
 
 ## 🙋 トラブルシューティング
 
