@@ -1,13 +1,14 @@
-# LogHoi - Nutanixログホイホイ
+# Nutanixログほいほい
 
 ## 概要
-Nutanix環境のログ収集・分析システムです。Prism Centralに登録されたクラスターから、リアルタイムログ、Syslog、ログファイル収集を行い、Elasticsearchで検索・分析できます。
+Nutanix環境のログ収集ツールです  
+Prism Centralに登録されたクラスターから、CVMのリアルタイムログ、Syslog、ログファイル収集
+
 
 ## 🚀 クイックスタート
 
 ### docker-compose（開発環境）
 ```bash
-cd ongoing
 docker-compose -f docker-compose.yml up -d --build
 
 # アクセス
@@ -18,8 +19,8 @@ docker-compose -f docker-compose.yml up -d --build
 
 ### Kubernetes（本番環境）
 ```bash
-cd ongoing/k8s
-./deploy.sh
+cd k8s
+KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 
 # アクセス
 # Ingress経由でアクセス（環境に応じて設定）
@@ -27,7 +28,18 @@ cd ongoing/k8s
 
 詳細なデプロイ手順は **[Kubernetesデプロイメントガイド](./k8s/DEPLOYMENT_GUIDE.md)** を参照してください。
 
+> **注意**: Syslog機能を使用する場合は、デプロイ後にNutanixクラスター（Prism Element）でSyslog設定を行い、デプロイしたSyslogサーバ宛てにSyslogを転送するよう設定する必要があります。
+>
+> 設定手順の詳細は参考ブログ「[【Nutanix ログほいほい】シスログ ほいほい](https://konchangakita.hatenablog.com/entry/2024/05/20/090000)」を参照してください。なお、AOS（Acropolis Operating System）のバージョンによってコマンドが変更になる可能性があります。
+
+
 ## 📚 ドキュメント
+
+### Kubernetes デプロイメントガイド
+
+| ドキュメント | 説明 |
+|---|---|
+| [Kubernetesデプロイメントガイド](./k8s/DEPLOYMENT_GUIDE.md) | **本番環境デプロイ手順**<br>- クイックスタート<br>- 詳細な手動デプロイ手順<br>- トラブルシューティング<br>- 環境別設定 |
 
 ### 機能仕様書
 
@@ -35,17 +47,11 @@ cd ongoing/k8s
 
 | ドキュメント | 説明 | バージョン | 最終更新 |
 |---|---|---|---|
-| [COLLECT_LOG_SPECIFICATION.md](./docs/COLLECT_LOG_SPECIFICATION.md) | **ログ収集機能**<br>CVMからログファイルを収集してZIP化<br>- リアルタイム進捗表示<br>- バックグラウンド処理<br>- 自動キャッシュクリーンアップ | v1.2.0 | 2025-10-11 |
-| [REALTIME_LOG_SPECIFICATION.md](./docs/REALTIME_LOG_SPECIFICATION.md) | **リアルタイムログ機能**<br>CVMのログファイルをリアルタイム表示<br>- tail -f相当の機能<br>- フィルタリング機能<br>- CVM選択機能 | v1.1.0 | 2025-10-10 |
-| [SYSLOG_SPECIFICATION.md](./docs/SYSLOG_SPECIFICATION.md) | **Syslog機能**<br>Nutanix SyslogをElasticsearchで検索<br>- クラスター判別機能<br>- hostname自動取得<br>- 高度な検索クエリ | v1.2.0 | 2025-10-12 |
-| [SSH_KEY_MANAGEMENT_SPEC.md](./docs/SSH_KEY_MANAGEMENT_SPEC.md) | **SSH鍵管理機能**<br>SSH鍵の自動生成・管理<br>- 自動生成と永続化<br>- エラー時のモーダル自動表示<br>- Kubernetes/docker-compose対応 | v1.2.0 | 2025-10-13 |
-| [UUID_EXPLORER_SPECIFICATION.md](./docs/UUID_EXPLORER_SPECIFICATION.md) | **UUID Explorer機能**<br>Nutanix UUIDの検索・分析<br>- UUID検索<br>- 関連エンティティ表示<br>- 履歴管理 | v1.0.0 | 2025-10-10 |
-
-### デプロイメントガイド
-
-| ドキュメント | 説明 |
-|---|---|
-| [Kubernetesデプロイメントガイド](./k8s/DEPLOYMENT_GUIDE.md) | **本番環境デプロイ手順**<br>- クイックスタート<br>- 詳細な手動デプロイ手順<br>- トラブルシューティング<br>- 環境別設定 |
+| [COLLECT_LOG_SPECIFICATION.md](./docs/COLLECT_LOG_SPECIFICATION.md) | **ログ収集機能**<br>CVMからログファイルを収集してZIP化<br>- リアルタイム進捗表示<br>- バックグラウンド処理<br>- 自動キャッシュクリーンアップ | v1.3.0 | 2025-10-29 |
+| [REALTIME_LOG_SPECIFICATION.md](./docs/REALTIME_LOG_SPECIFICATION.md) | **リアルタイムログ機能**<br>CVMのログファイルをリアルタイム表示<br>- tail -f相当の機能<br>- フィルタリング機能<br>- CVM選択機能 | v1.2.0 | 2025-10-29 |
+| [SYSLOG_SPECIFICATION.md](./docs/SYSLOG_SPECIFICATION.md) | **Syslog機能**<br>Nutanix SyslogをElasticsearchで検索<br>- クラスター判別機能<br>- hostname自動取得<br>- 高度な検索クエリ | v1.3.0 | 2025-10-29 |
+| [SSH_KEY_MANAGEMENT_SPEC.md](./docs/SSH_KEY_MANAGEMENT_SPEC.md) | **SSH鍵管理機能**<br>SSH鍵の自動生成・管理<br>- 自動生成と永続化<br>- エラー時のモーダル自動表示<br>- Kubernetes/docker-compose対応 | v1.3.0 | 2025-10-29 |
+| [UUID_EXPLORER_SPECIFICATION.md](./docs/UUID_EXPLORER_SPECIFICATION.md) | **UUID Explorer機能**<br>Nutanix UUIDの検索・分析<br>- UUID検索<br>- 関連エンティティ表示<br>- 履歴管理 | v1.1.0 | 2025-10-29 |
 
 ### アーカイブドキュメント
 
@@ -66,7 +72,7 @@ cd ongoing/k8s
 ### ディレクトリ構成
 
 ```
-ongoing/
+/
 ├── backend/
 │   ├── fastapi_app/          # FastAPIアプリケーション
 │   ├── core/                 # コアロジック（SSH接続、ログ収集）
@@ -113,10 +119,6 @@ ongoing/
 ### 環境構築
 
 ```bash
-# リポジトリクローン
-git clone https://github.com/konchangakita/blog-loghoi.git
-cd blog-loghoi/ongoing
-
 # docker-compose起動
 docker-compose -f docker-compose.yml up -d --build
 
@@ -140,26 +142,6 @@ cat config/.ssh/loghoi-key.pub
 http://localhost:7776/docs
 ```
 
-## 🧪 テスト
-
-```bash
-# バックエンドテスト
-cd backend
-pytest
-
-# フロントエンドテスト
-cd frontend/next-app/loghoi
-yarn test
-```
-
-## 📝 ブランチ戦略
-
-- `main`: 本番リリース専用
-- `refactor`: メイン開発ブランチ
-- `feature/*`: 機能開発用
-
-詳細は[GitFlow運用ルール](.cursor/rules/gitflow-workflow.mdc)を参照。
-
 ## 🔒 セキュリティ
 
 - SSH秘密鍵は`.gitignore`で除外
@@ -168,8 +150,8 @@ yarn test
 
 ## 📖 関連リンク
 
-- [ブログ: Nutanixログホイホイ](https://konchangakita.hatenablog.com/)
-- [GitHub リポジトリ](https://github.com/konchangakita/blog-loghoi)
+- [ブログ: Nutanixログほいほい](https://konchangakita.hatenablog.com/)
+- [GitHub 開発ブログ リポジトリ](https://github.com/konchangakita/blog-loghoi)
 
 ## 🙋 トラブルシューティング
 
@@ -186,5 +168,4 @@ yarn test
 
 このプロジェクトは個人のブログ記事用のサンプルコードです。
 
-<!-- テスト用コメント: PR作成テスト - 2025-10-21 -->
 
