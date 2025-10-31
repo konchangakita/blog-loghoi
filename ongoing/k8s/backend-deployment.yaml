@@ -26,7 +26,7 @@ spec:
         fsGroup: 1000
       initContainers:
       - name: prepare-output-dirs
-        image: busybox
+        image: quay.io/prometheus/busybox:latest
         command:
         - sh
         - -c
