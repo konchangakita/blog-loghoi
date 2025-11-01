@@ -18,6 +18,7 @@ spec:
   rules:
   - http:
       paths:
+      # バックエンドAPIエンドポイント（/apiプレフィックスを保持）
       - path: /api
         pathType: Prefix
         backend:
@@ -39,6 +40,29 @@ spec:
             name: kibana-service
             port:
               number: 5601
+      # Swagger UI/ReDoc/OpenAPI JSON用（/apiなしでもアクセス可能、/より前に配置）
+      - path: /docs
+        pathType: Exact
+        backend:
+          service:
+            name: loghoi-backend-service
+            port:
+              number: 7776
+      - path: /redoc
+        pathType: Exact
+        backend:
+          service:
+            name: loghoi-backend-service
+            port:
+              number: 7776
+      - path: /openapi.json
+        pathType: Exact
+        backend:
+          service:
+            name: loghoi-backend-service
+            port:
+              number: 7776
+      # フロントエンド（最後に配置）
       - path: /
         pathType: Prefix
         backend:
