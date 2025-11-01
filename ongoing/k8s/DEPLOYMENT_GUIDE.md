@@ -57,7 +57,13 @@ Internet/LAN
 - ✅ **Kubernetes クラスタ**: v1.24以上
 - ✅ **kubectl CLI**: インストール済み
 - ✅ **kubeconfig**: クラスタへのアクセス設定済み
-- ✅ **Ingress Controller**: Traefik等がインストール済み
+- ✅ **Helm**: Traefik自動インストール用（未インストールの場合は自動インストール時にエラー表示）
+
+### 推奨要件
+
+- ✅ **Ingress Controller**: Traefikが既にインストールされている場合、自動検出して使用します
+  - 未インストールの場合: 自動インストールを試行（Helm必要）
+  - 他のIngress Controller使用時: 警告表示後、Traefikインストールを選択可能
 
 ### ストレージ要件
 
@@ -73,7 +79,7 @@ LogHoihoiは以下のいずれかのストレージ構成が必要です：
 - ✅ **Dynamic Provisioner**: CSI Driver等が稼働中
 - 💡 **用途**: 本番環境、高可用性が必要な環境
 
-### 推奨要件
+### 追加推奨要件
 
 - ✅ **MetalLB**: LoadBalancer IP割り当て（オンプレ環境の場合）
 - ✅ **Nutanix CSI**: Nutanix環境の場合（カスタムStorageClass使用時）
@@ -132,13 +138,19 @@ KUBECONFIG=/path/to/your/kubeconfig.conf STORAGE_CLASS=my-storage-class ./deploy
    - 鍵が無い場合: 新規生成して公開鍵を表示
    - Nutanix Prismへの登録確認
 4. ✅ Kubernetes Secret作成 (SSH鍵)
-5. ✅ リソースのデプロイ
-   - ConfigMap
-   - PVC (Elasticsearch, Backend)
+5. ✅ **Traefik Ingress Controllerの確認と自動インストール**
+   - 既にTraefikがインストール済み: 検出してスキップ
+   - 他のIngress Controller検出時: 警告表示して確認
+   - 未インストール時: 自動インストール（Helm使用）
+6. ✅ リソースのデプロイ（順序）
+   - ConfigMap / Nginx ConfigMap
+   - Ingress Controller確認・インストール（上記）
+   - Persistent Volumes / PVC
    - Elasticsearch
    - Services
-   - Backend/Frontend
+   - Backend / Frontend
    - Ingress
+   - Kibana / Syslog（オプション）
 
 ### SSH公開鍵の登録（初回デプロイ時）
 
@@ -454,7 +466,28 @@ echo "Application URL: http://${INGRESS_IP}"
 ブラウザで以下にアクセス:
 - **フロントエンド**: `http://<INGRESS_IP>/`
 - **バックエンドAPI**: `http://<INGRESS_IP>/api/`
-- **API ドキュメント**: `http://<INGRESS_IP>/docs`
+- **API ドキュメント (Swagger UI)**: `http://<INGRESS_IP>/api/docs`
+  - API定義の閲覧・テストが可能
+  - OpenAPIスキーマ (`/api/openapi.json`) を自動的に読み込み
+- **API ドキュメント (ReDoc)**: `http://<INGRESS_IP>/api/redoc`
+  - API定義の閲覧が可能（Swagger UIの代替）
+  - OpenAPIスキーマ (`/api/openapi.json`) を自動的に読み込み
+- **Kibana**: `http://<INGRESS_IP>/kibana`
+
+### 7. トラブルシューティング用コマンド
+
+デプロイスクリプトの実行後、以下のURLが自動的に表示されます：
+
+- **Kibana接続URL**: `http://<INGRESS_IP>/kibana`
+- **Backend API一覧 (Swagger UI)**: `http://<INGRESS_IP>/api/docs`
+- **Backend API一覧 (ReDoc)**: `http://<INGRESS_IP>/api/redoc`
+
+直接ポートフォワードで接続する場合：
+```bash
+# Backendへの直接接続
+kubectl port-forward -n loghoihoi svc/loghoi-backend-service 7776:7776
+# アクセス: http://localhost:7776
+```
 
 ---
 
@@ -558,18 +591,38 @@ STORAGE_CLASS=manual ./deploy.sh  # HostPathに切り替え
 kubectl get ingress -n loghoihoi -o yaml
 ```
 
-**原因**: IngressClassが存在しない、またはLoadBalancer未設定
+**原因**: IngressClassが存在しない、Traefikが未起動、またはLoadBalancer未設定
 
 **解決方法**:
 ```bash
 # IngressClassを確認
 kubectl get ingressclass
 
-# Ingress Controllerが稼働しているか確認
+# Traefikが稼働しているか確認
 kubectl get pods -n kommander | grep traefik
+
+# Traefik ServiceのLoadBalancer IPを確認
+kubectl get svc -n kommander traefik
 
 # MetalLB（またはLoadBalancer）が稼働しているか確認
 kubectl get pods -n metallb-system
+
+# デプロイスクリプトで自動インストール（推奨）
+# Traefikが未インストールの場合、自動的にインストールを試行します
+```
+
+**注意**: デプロイスクリプト（`deploy.sh`）は自動的にTraefikのインストール状態を確認し、未インストールの場合は自動インストールを試行します。手動でインストールする場合は、Helmを使用してください：
+
+```bash
+# Helmリポジトリ追加
+helm repo add traefik https://traefik.github.io/charts
+helm repo update
+
+# Traefikインストール
+helm install traefik traefik/traefik \
+  -f traefik-values.yaml \
+  -n kommander \
+  --create-namespace
 ```
 
 ### 5. Elasticsearch接続エラー
@@ -812,6 +865,6 @@ kubectl get storageclass
 
 ---
 
-**最終更新**: 2025-10-14  
-**バージョン**: v1.1.0 - StorageClass環境変数対応
+**最終更新**: 2025-11-01  
+**バージョン**: v1.1.1 - Backend API (Swagger UI/ReDoc) アクセス修正対応
 

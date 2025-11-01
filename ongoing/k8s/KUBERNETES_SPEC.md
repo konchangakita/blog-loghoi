@@ -66,10 +66,11 @@ frontend/next-app/loghoi/
 
 - **レジストリ**: `ghcr.io` (GitHub Container Registry) - **2025-10-21移行**
 - **Namespace**: `konchangakita`
-- **イメージタグ戦略**（2025-10-21更新）:
-  - **Backend**: `ghcr.io/konchangakita/loghoi-backend:latest` - 常に最新版を使用
-  - **Frontend**: `ghcr.io/konchangakita/loghoi-frontend:latest` - 常に最新版を使用
-  - **Syslog**: `ghcr.io/konchangakita/loghoi-syslog:v1.0.1` - 安定版を使用（頻繁に更新されないため固定）
+- **イメージタグ戦略**（2025-10-21更新、2025-11-01修正）:
+  - **Backend**: `ghcr.io/konchangakita/loghoi-backend:v1.0.33` - バージョンタグとlatestタグの両方をプッシュ
+  - **Frontend**: `ghcr.io/konchangakita/loghoi-frontend:v1.0.33` - バージョンタグとlatestタグの両方をプッシュ
+  - **Syslog**: `ghcr.io/konchangakita/loghoi-syslog:v1.0.33` - バージョンタグとlatestタグの両方をプッシュ
+  - **デプロイメント**: バージョンタグ（`v1.0.33`）を使用（2025-11-01: バージョン管理統一のため）
 - **移行理由**: Docker Hubのイメージプルエラー（500/504/401 Unauthorized）を解決
 - **注意**: `latest`タグは開発イテレーション高速化のため。本番環境では特定バージョンタグの使用を推奨
 - **公式イメージ**:
@@ -114,12 +115,32 @@ docker login ghcr.io
 - **Controller**: Traefik (`kommander-traefik`)
 - **IngressClass**: `kommander-traefik`
 - **LoadBalancer IP**: 10.55.23.42 (MetalLB割り当て)
+- **自動インストール**: デプロイスクリプト（`deploy.sh`）が自動的にTraefikのインストール状態を確認し、未インストールの場合は自動インストールを試行
+  - 既にインストール済み: 検出してスキップ
+  - 他のIngress Controller検出時: 警告表示して確認を求める
+  - 未インストール時: Helmを使用して自動インストール
+  - **インストール設定**: `traefik-values.yaml` を使用
+
+### Traefik Middleware
+
+- **Middleware名**: `openapi-rewrite` (Namespace: `loghoihoi`)
+- **機能**: `/api/openapi.json`へのリクエストを`/openapi.json`に変換
+  - Swagger UI/ReDocは`/api/openapi.json`を参照
+  - FastAPIは`/openapi.json`のみを提供（既存コード変更なし）
+  - Middlewareが`/api/openapi.json`→`/openapi.json`に変換してFastAPIに転送
+- **適用**: IngressRoute (`loghoi-openapi-redirect`)経由で自動適用
+  - ファイル: `ingressroute-openapi-redirect.yaml`
+  - Middleware: `openapi-rewrite-middleware.yaml`
+- **注意**: 通常のAPIエンドポイント（`/api/pclist`など）には影響なし
 
 ### ルーティング
 
 | パス | バックエンド | 説明 |
 |------|------------|------|
 | `/api/*` | backend:7776 | REST API |
+| `/api/docs` | backend:7776 | Swagger UI (API ドキュメント) |
+| `/api/redoc` | backend:7776 | ReDoc (API ドキュメント) |
+| `/api/openapi.json` | backend:7776 | OpenAPI スキーマ |
 | `/socket.io/*` | backend:7776 | WebSocket (Socket.IO) |
 | `/kibana/*` | kibana:5601 | Kibana UI (ログ可視化) |
 | `/` | frontend:7777 | Next.js アプリケーション |
@@ -777,8 +798,20 @@ kubectl patch pv backend-output-pv -p '{"spec":{"claimRef":null}}'
 
 ---
 
-**最終更新**: 2025-10-21  
-**現在のバージョン**: v1.2.1  
+### v1.0.34 (2025-11-02)
+- ✅ **Backend API (Swagger UI/ReDoc) アクセス修正**
+  - Traefik Middleware (`openapi-rewrite`) を追加して`/api/openapi.json`→`/openapi.json`に変換
+  - IngressRoute (`loghoi-openapi-redirect`) を追加して`/api/openapi.json`を処理
+  - FastAPIの既存コード変更なしでSwagger UI/ReDocが正常動作
+  - `openapi-rewrite-middleware.yaml`と`ingressroute-openapi-redirect.yaml`を追加
+- 📚 **ドキュメント更新**
+  - IngressセクションにTraefik Middlewareの説明を追加
+  - ルーティングテーブルにSwagger UI/ReDoc/OpenAPI JSONのパスを明記
+
+---
+
+**最終更新**: 2025-11-02  
+**現在のバージョン**: v1.0.34  
 **作成者**: AI Assistant  
 **レビュー**: 必要に応じて更新してください
 

@@ -1,0 +1,10 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: openapi-rewrite
+  namespace: loghoihoi
+spec:
+  replacePathRegex:
+    regex: ^/api/openapi.json$
+    replacement: /openapi.json
+
