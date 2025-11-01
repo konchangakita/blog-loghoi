@@ -6,7 +6,7 @@ metadata:
   labels:
     app: loghoi
     component: syslog
-    version: v1.0.0
+    version: v1.0.33
 spec:
   replicas: 1
   selector:
@@ -18,11 +18,11 @@ spec:
       labels:
         app: loghoi
         component: syslog
-        version: v1.0.0
+        version: v1.0.33
     spec:
       containers:
       - name: filebeat
-        image: ghcr.io/konchangakita/loghoi-syslog:v1.0.1
+        image: ghcr.io/konchangakita/loghoi-syslog:v1.0.33
         imagePullPolicy: Always
         ports:
         - containerPort: 7515
