@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 # 設定
 REGISTRY="${DOCKER_REGISTRY:-ghcr.io}"
 NAMESPACE="${DOCKER_NAMESPACE:-konchangakita}"
-VERSION="${VERSION:-v1.0.33}"
+VERSION="${VERSION:-v1.1.0}"
 
 echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}Log Hoihoi Docker Image Build & Push${NC}"
