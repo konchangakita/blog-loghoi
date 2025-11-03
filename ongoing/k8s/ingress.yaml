@@ -42,14 +42,14 @@ spec:
               number: 5601
       # Swagger UI/ReDoc/OpenAPI JSON用（/apiなしでもアクセス可能、/より前に配置）
       - path: /docs
-        pathType: Exact
+        pathType: Prefix
         backend:
           service:
             name: loghoi-backend-service
             port:
               number: 7776
       - path: /redoc
-        pathType: Exact
+        pathType: Prefix
         backend:
           service:
             name: loghoi-backend-service

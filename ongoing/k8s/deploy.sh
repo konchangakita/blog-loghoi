@@ -527,6 +527,13 @@ echo ""
 echo -e "${YELLOW}[9/12] Deploying Ingress...${NC}"
 ${K} apply -f ingress.yaml
 echo -e "${GREEN}✓ Ingress deployed${NC}"
+# Traefik MiddlewareとIngressRouteをデプロイ（OpenAPI JSON用）
+if [ -f "openapi-rewrite-middleware.yaml" ]; then
+    ${K} apply -f openapi-rewrite-middleware.yaml
+fi
+if [ -f "ingressroute-openapi-redirect.yaml" ]; then
+    ${K} apply -f ingressroute-openapi-redirect.yaml
+fi
 echo ""
 
 # 10. Kibana (Optional)
@@ -625,20 +632,20 @@ if [ -n "${INGRESS_IP}" ]; then
     echo -e "   ${YELLOW}アクセス: http://${INGRESS_IP}/kibana${NC}"
     echo ""
     echo -e "${YELLOW}# Backend API一覧 (Swagger UI):${NC}"
-    echo -e "   ${YELLOW}アクセス: http://${INGRESS_IP}/api/docs${NC}"
+    echo -e "   ${YELLOW}アクセス: http://${INGRESS_IP}/docs${NC}"
     echo ""
     echo -e "${YELLOW}# Backend API一覧 (ReDoc):${NC}"
-    echo -e "   ${YELLOW}アクセス: http://${INGRESS_IP}/api/redoc${NC}"
+    echo -e "   ${YELLOW}アクセス: http://${INGRESS_IP}/redoc${NC}"
     echo ""
 else
     echo -e "${YELLOW}# Kibana接続URL (Ingress IP取得後):${NC}"
     echo -e "   ${YELLOW}アクセス: http://<INGRESS_IP>/kibana${NC}"
     echo ""
     echo -e "${YELLOW}# Backend API一覧 (Swagger UI):${NC}"
-    echo -e "   ${YELLOW}アクセス: http://<INGRESS_IP>/api/docs${NC}"
+    echo -e "   ${YELLOW}アクセス: http://<INGRESS_IP>/docs${NC}"
     echo ""
     echo -e "${YELLOW}# Backend API一覧 (ReDoc):${NC}"
-    echo -e "   ${YELLOW}アクセス: http://<INGRESS_IP>/api/redoc${NC}"
+    echo -e "   ${YELLOW}アクセス: http://<INGRESS_IP>/redoc${NC}"
     echo ""
 fi
 echo -e "${YELLOW}# Backend接続URL (port-forward):${NC}"

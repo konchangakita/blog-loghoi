@@ -466,12 +466,12 @@ echo "Application URL: http://${INGRESS_IP}"
 ブラウザで以下にアクセス:
 - **フロントエンド**: `http://<INGRESS_IP>/`
 - **バックエンドAPI**: `http://<INGRESS_IP>/api/`
-- **API ドキュメント (Swagger UI)**: `http://<INGRESS_IP>/api/docs`
+- **API ドキュメント (Swagger UI)**: `http://<INGRESS_IP>/docs`
   - API定義の閲覧・テストが可能
-  - OpenAPIスキーマ (`/api/openapi.json`) を自動的に読み込み
-- **API ドキュメント (ReDoc)**: `http://<INGRESS_IP>/api/redoc`
+  - OpenAPIスキーマ (`/openapi.json`) を自動的に読み込み
+- **API ドキュメント (ReDoc)**: `http://<INGRESS_IP>/redoc`
   - API定義の閲覧が可能（Swagger UIの代替）
-  - OpenAPIスキーマ (`/api/openapi.json`) を自動的に読み込み
+  - OpenAPIスキーマ (`/openapi.json`) を自動的に読み込み
 - **Kibana**: `http://<INGRESS_IP>/kibana`
 
 ### 7. トラブルシューティング用コマンド
@@ -479,8 +479,8 @@ echo "Application URL: http://${INGRESS_IP}"
 デプロイスクリプトの実行後、以下のURLが自動的に表示されます：
 
 - **Kibana接続URL**: `http://<INGRESS_IP>/kibana`
-- **Backend API一覧 (Swagger UI)**: `http://<INGRESS_IP>/api/docs`
-- **Backend API一覧 (ReDoc)**: `http://<INGRESS_IP>/api/redoc`
+- **Backend API一覧 (Swagger UI)**: `http://<INGRESS_IP>/docs`
+- **Backend API一覧 (ReDoc)**: `http://<INGRESS_IP>/redoc`
 
 直接ポートフォワードで接続する場合：
 ```bash

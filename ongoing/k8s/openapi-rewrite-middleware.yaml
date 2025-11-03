@@ -8,3 +8,4 @@ spec:
     regex: ^/api/openapi.json$
     replacement: /openapi.json
 
+
