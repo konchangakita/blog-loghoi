@@ -527,13 +527,6 @@ echo ""
 echo -e "${YELLOW}[9/12] Deploying Ingress...${NC}"
 ${K} apply -f ingress.yaml
 echo -e "${GREEN}✓ Ingress deployed${NC}"
-# Traefik MiddlewareとIngressRouteをデプロイ（OpenAPI JSON用）
-if [ -f "openapi-rewrite-middleware.yaml" ]; then
-    ${K} apply -f openapi-rewrite-middleware.yaml
-fi
-if [ -f "ingressroute-openapi-redirect.yaml" ]; then
-    ${K} apply -f ingressroute-openapi-redirect.yaml
-fi
 echo ""
 
 # 10. Kibana (Optional)

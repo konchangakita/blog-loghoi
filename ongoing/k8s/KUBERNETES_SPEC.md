@@ -121,25 +121,11 @@ docker login ghcr.io
   - 未インストール時: Helmを使用して自動インストール
   - **インストール設定**: `traefik-values.yaml` を使用
 
-### Traefik Middleware
-
-- **Middleware名**: `openapi-rewrite` (Namespace: `loghoihoi`)
-- **機能**: `/api/openapi.json`へのリクエストを`/openapi.json`に変換
-  - Swagger UI/ReDocは`/api/openapi.json`を参照
-  - FastAPIは`/openapi.json`のみを提供（既存コード変更なし）
-  - Middlewareが`/api/openapi.json`→`/openapi.json`に変換してFastAPIに転送
-- **適用**: IngressRoute (`loghoi-openapi-redirect`)経由で自動適用
-  - ファイル: `ingressroute-openapi-redirect.yaml`
-  - Middleware: `openapi-rewrite-middleware.yaml`
-
-- **注意**: 通常のAPIエンドポイント（`/api/pclist`など）には影響なし
-
 ### ルーティング
 
 | パス | pathType | バックエンド | 説明 |
 |------|---------|------------|------|
 | `/api/*` | Prefix | backend:7776 | REST API |
-| `/api/openapi.json` | Prefix | backend:7776 | OpenAPI スキーマ |
 | `/docs` | Prefix | backend:7776 | Swagger UI (API ドキュメント) |
 | `/redoc` | Prefix | backend:7776 | ReDoc (API ドキュメント) |
 | `/openapi.json` | Exact | backend:7776 | OpenAPI スキーマ |
