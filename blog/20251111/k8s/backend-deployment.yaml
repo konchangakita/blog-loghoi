@@ -1,0 +1,124 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loghoi-backend
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: backend
+    version: v1.1.1
+spec:
+  replicas: 1  # PersistentVolume(RWO)使用のため1に変更
+  strategy:
+    type: Recreate  # HostPath(RWO)使用時はRecreate必須（RollingUpdateだとロック競合）
+  selector:
+    matchLabels:
+      app: loghoi
+      component: backend
+  template:
+    metadata:
+      labels:
+        app: loghoi
+        component: backend
+        version: v1.1.1
+    spec:
+      securityContext:
+        fsGroup: 1000
+      initContainers:
+      - name: prepare-output-dirs
+        image: quay.io/prometheus/busybox:latest
+        command:
+        - sh
+        - -c
+        - |
+          # 出力ディレクトリの作成と権限設定
+          mkdir -p /app/output/log /app/output/zip
+          chmod -R 777 /app/output
+          echo "✓ Output directories prepared"
+        volumeMounts:
+        - name: output
+          mountPath: /app/output
+      containers:
+      - name: backend
+        image: ghcr.io/konchangakita/loghoi-backend:v1.1.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7776
+          name: http
+          protocol: TCP
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: SSH_KEY_PATH
+          value: "/app/config/.ssh/ntnx-lockdown"
+        - name: SSH_PUBLIC_KEY_PATH
+          value: "/app/config/.ssh/ntnx-lockdown.pub"
+        envFrom:
+        - configMapRef:
+            name: loghoi-config
+        - secretRef:
+            name: loghoi-secrets
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 7776
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 7776
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+        volumeMounts:
+        - name: ssh-keys
+          mountPath: /app/config/.ssh
+          readOnly: true
+        - name: uploads
+          mountPath: /app/uploads
+        - name: logs
+          mountPath: /app/logs
+        - name: output
+          mountPath: /app/output
+      volumes:
+      - name: ssh-keys
+        secret:
+          secretName: loghoi-secrets
+          items:
+          - key: SSH_PRIVATE_KEY
+            path: ntnx-lockdown
+            mode: 0600
+          - key: SSH_PUBLIC_KEY
+            path: ntnx-lockdown.pub
+            mode: 0644
+      - name: uploads
+        emptyDir: {}
+      - name: logs
+        emptyDir: {}
+      - name: output
+        persistentVolumeClaim:
+          claimName: loghoi-backend-output
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: loghoi
+  labels:
+    name: loghoi
+    app: loghoi
+    version: v1.0.0

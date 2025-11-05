@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: loghoi-config
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: config
+data:
+  # アプリケーション設定
+  APP_NAME: "LogHoi"
+  APP_VERSION: "v1.0.0"
+  DEBUG: "false"
+  
+  # バックエンド設定
+  BACKEND_HOST: "0.0.0.0"
+  BACKEND_PORT: "7776"
+  # FastAPI設定（Kubernetes/Traefik環境用）
+  FASTAPI_ROOT_PATH: "/api"  # Ingress経由で/apiプレフィックスを使用する場合に必要
+  FASTAPI_DOCS_URL: "/api/docs"  # Swagger UI URL
+  FASTAPI_REDOC_URL: "/api/redoc"  # ReDoc URL
+  
+  # フロントエンド設定
+  FRONTEND_PORT: "7777"
+  # フロントエンド用バックエンドURL（Ingress経由、空文字列で現在のホスト使用）
+  NEXT_PUBLIC_BACKEND_URL: ""
+  
+  # Elasticsearch設定
+  ELASTICSEARCH_URL: "http://elasticsearch-service:9200"
+  ELASTICSEARCH_INDEX_PREFIX: "loghoi"
+  
+  # ログ設定
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  STRUCTURED_LOGGING: "true"
+  CORRELATION_ID_HEADER: "X-Correlation-ID"
+  
+  # セキュリティ設定
+  CORS_ORIGINS: "*"
+  CORS_CREDENTIALS: "true"
+  
+  # パフォーマンス設定
+  MAX_CONNECTIONS: "100"
+  TIMEOUT: "30"
+  
+  # ファイル設定
+  MAX_FILE_SIZE: "100MB"
+  UPLOAD_DIR: "/app/uploads"
+  LOG_DIR: "/app/logs"

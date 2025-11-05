@@ -1,0 +1,72 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: loghoi-ingress
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: ingress
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    # Socket.IO用の設定（リクエストバッファリング無効化）
+    traefik.ingress.kubernetes.io/buffering: "false"
+    # バックエンドへのリクエストタイムアウトを10分に延長（ログ収集は時間がかかる）
+    traefik.ingress.kubernetes.io/service.serversscheme: http
+    traefik.ingress.kubernetes.io/service.passhostheader: "true"
+spec:
+  ingressClassName: kommander-traefik
+  rules:
+  - http:
+      paths:
+      # バックエンドAPIエンドポイント（/apiプレフィックスを保持）
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: loghoi-backend-service
+            port:
+              number: 7776
+      - path: /socket.io
+        pathType: Prefix
+        backend:
+          service:
+            name: loghoi-backend-service
+            port:
+              number: 7776
+      - path: /kibana
+        pathType: Prefix
+        backend:
+          service:
+            name: kibana-service
+            port:
+              number: 5601
+      # Swagger UI/ReDoc/OpenAPI JSON用（/apiなしでもアクセス可能、/より前に配置）
+      - path: /docs
+        pathType: Prefix
+        backend:
+          service:
+            name: loghoi-backend-service
+            port:
+              number: 7776
+      - path: /redoc
+        pathType: Prefix
+        backend:
+          service:
+            name: loghoi-backend-service
+            port:
+              number: 7776
+      - path: /openapi.json
+        pathType: Exact
+        backend:
+          service:
+            name: loghoi-backend-service
+            port:
+              number: 7776
+      # フロントエンド（最後に配置）
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: loghoi-frontend-service
+            port:
+              number: 7777
