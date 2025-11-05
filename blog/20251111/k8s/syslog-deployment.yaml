@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loghoi-syslog
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: syslog
+    version: v1.1.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loghoi
+      component: syslog
+  template:
+    metadata:
+      labels:
+        app: loghoi
+        component: syslog
+        version: v1.1.0
+    spec:
+      containers:
+      - name: filebeat
+        image: ghcr.io/konchangakita/loghoi-syslog:v1.1.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7515
+          name: syslog-tcp
+          protocol: TCP
+        - containerPort: 5066
+          name: http-metrics
+          protocol: TCP
+        env:
+        - name: ELASTICSEARCH_URL
+          value: "http://elasticsearch-service:9200"
+        - name: KIBANA_URL
+          value: "http://kibana-service:5601"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5066
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5066
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loghoi-syslog-service
+  namespace: loghoihoi
+  labels:
+    app: loghoi
+    component: syslog
+spec:
+  type: LoadBalancer
+  selector:
+    app: loghoi
+    component: syslog
+  ports:
+  - name: syslog-tcp
+    port: 7515
+    targetPort: 7515
+    protocol: TCP
+  - name: http-metrics
+    port: 5066
+    targetPort: 5066
+    protocol: TCP
+
+

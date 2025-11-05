@@ -1,0 +1,105 @@
+version: "3.8"
+services:
+  elasticsearch:
+    image: elasticsearch:7.17.9
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+    ports:
+      - 9200:9200
+      - 9300:9300
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - ./elastic/es-data:/usr/share/elasticsearch/data:z
+    networks:
+      - local
+
+  kibana:
+    image: kibana:7.17.9
+    container_name: kibana
+    ports:
+      - 5601:5601
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    networks:
+      - local
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    container_name: loghoi-backend
+    # scp/SFTPの互換性のためrootで実行（出力は後段でchown処理）
+    ports:
+      - 7776:7776
+    volumes:
+      - ./backend/fastapi_app:/usr/src/fastapi_app:z
+      - ./backend/core:/usr/src/core:z
+      - ./backend/config:/app/config:z
+      - ./backend/output:/usr/src/output:z
+      - ./shared:/usr/src/shared:z # 共通ライブラリをマウント
+      - ./config/.ssh:/app/config/.ssh:z # SSH鍵ディレクトリ
+      - ./backend/docker-entrypoint.sh:/app/docker-entrypoint.sh:z # entrypointスクリプト
+    working_dir: /usr/src/fastapi_app
+    entrypoint: ["/app/docker-entrypoint.sh"]
+    command:
+      [
+        "uvicorn",
+        "app_fastapi:socket_app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "7776",
+      ]
+    environment:
+      - PYTHONPATH=/usr/src:/usr/src/shared # Python パス設定
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - BACKEND_HOST=0.0.0.0
+      - BACKEND_PORT=7776
+      - DEBUG=false
+      - HOST_UID=1000
+      - HOST_GID=1000
+      - SSH_KEY_PATH=/app/config/.ssh/loghoi-key
+      - SSH_PUBLIC_KEY_PATH=/app/config/.ssh/loghoi-key.pub
+    depends_on:
+      - elasticsearch
+    networks:
+      - local
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: dockerfile
+    container_name: loghoi-frontend
+    ports:
+      - 7777:7777
+    volumes:
+      - ./frontend/next-app:/usr/src/next-app:z
+    command: bash -c "cd /usr/src/next-app/loghoi
+      && yarn
+      && yarn dev"
+    working_dir: /usr/src/next-app/loghoi
+    environment:
+      - NEXT_PUBLIC_BACKEND_URL=http://10.38.113.49:7776
+    networks:
+      - local
+
+  syslog:
+    build:
+      context: ./syslog
+      dockerfile: dockerfile
+    container_name: loghoi-syslog
+    ports:
+      - 7515:7515
+    networks:
+      - local
+
+networks:
+  local:
+    driver: bridge

@@ -1,0 +1,65 @@
+# Traefik Helm Chart Values
+# 使用: helm install traefik traefik/traefik -f traefik-values.yaml -n kommander --create-namespace
+
+# IngressClass設定
+ingressClass:
+  enabled: true
+  isDefaultClass: true
+  name: kommander-traefik
+
+# デプロイメント設定
+deployment:
+  replicas: 1
+  podAnnotations: {}
+
+# イメージ設定（Docker Hubレート制限回避のためghcr.ioを使用）
+image:
+  registry: ghcr.io
+  repository: traefik/traefik
+  tag: ""  # 空の場合はHelmチャートのデフォルトタグを使用
+  
+# サービス設定
+service:
+  type: LoadBalancer
+  annotations: {}
+  spec:
+    loadBalancerIP: ""  # 空の場合は自動割り当て
+
+# ポート設定
+ports:
+  web:
+    port: 80
+    expose:
+      default: true
+    exposedPort: 80
+    protocol: TCP
+  websecure:
+    port: 443
+    expose:
+      default: true
+    exposedPort: 443
+    protocol: TCP
+
+# ログ設定
+logs:
+  access:
+    enabled: true
+    format: json
+  general:
+    level: INFO
+
+# WebSocketサポート（Socket.IO用）
+# TraefikはデフォルトでWebSocketをサポート
+
+# その他
+globalArguments:
+  - "--api.insecure=true"
+  - "--providers.kubernetesingress=true"
+  
+additionalArguments:
+  - "--entrypoints.web.address=:80"
+  - "--entrypoints.websecure.address=:443"
+  # HTTPSリダイレクト（Let's Encrypt等で証明書がある場合のみ有効化）
+  # - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+  # - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
