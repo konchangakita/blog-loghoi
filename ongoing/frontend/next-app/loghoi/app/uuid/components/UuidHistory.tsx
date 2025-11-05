@@ -55,7 +55,6 @@ export default function UuidHistory() {
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-lg font-semibold">UUID History</h3>
         <button 
-          type="button"
           onClick={clearHistory}
           className="btn btn-sm btn-outline btn-error"
         >

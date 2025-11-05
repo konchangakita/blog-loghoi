@@ -66,10 +66,11 @@ frontend/next-app/loghoi/
 
 - **レジストリ**: `ghcr.io` (GitHub Container Registry) - **2025-10-21移行**
 - **Namespace**: `konchangakita`
-- **イメージタグ戦略**（2025-10-21更新）:
-  - **Backend**: `ghcr.io/konchangakita/loghoi-backend:latest` - 常に最新版を使用
-  - **Frontend**: `ghcr.io/konchangakita/loghoi-frontend:latest` - 常に最新版を使用
-  - **Syslog**: `ghcr.io/konchangakita/loghoi-syslog:v1.0.1` - 安定版を使用（頻繁に更新されないため固定）
+- **イメージタグ戦略**（2025-10-21更新、2025-11-02修正）:
+  - **Backend**: `ghcr.io/konchangakita/loghoi-backend:v1.1.0` - バージョンタグとlatestタグの両方をプッシュ
+  - **Frontend**: `ghcr.io/konchangakita/loghoi-frontend:v1.1.0` - バージョンタグとlatestタグの両方をプッシュ
+  - **Syslog**: `ghcr.io/konchangakita/loghoi-syslog:v1.1.0` - バージョンタグとlatestタグの両方をプッシュ
+  - **デプロイメント**: バージョンタグ（`v1.1.0`）を使用（2025-11-02: v1.1.0に更新）
 - **移行理由**: Docker Hubのイメージプルエラー（500/504/401 Unauthorized）を解決
 - **注意**: `latest`タグは開発イテレーション高速化のため。本番環境では特定バージョンタグの使用を推奨
 - **公式イメージ**:
@@ -80,7 +81,7 @@ frontend/next-app/loghoi/
 
 ```bash
 # ローカルビルドのみ
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 ./build-and-push.sh
 
 # GitHub Container Registry (GHCR) へプッシュ
@@ -114,15 +115,23 @@ docker login ghcr.io
 - **Controller**: Traefik (`kommander-traefik`)
 - **IngressClass**: `kommander-traefik`
 - **LoadBalancer IP**: 10.55.23.42 (MetalLB割り当て)
+- **自動インストール**: デプロイスクリプト（`deploy.sh`）が自動的にTraefikのインストール状態を確認し、未インストールの場合は自動インストールを試行
+  - 既にインストール済み: 検出してスキップ
+  - 他のIngress Controller検出時: 警告表示して確認を求める
+  - 未インストール時: Helmを使用して自動インストール
+  - **インストール設定**: `traefik-values.yaml` を使用
 
 ### ルーティング
 
-| パス | バックエンド | 説明 |
-|------|------------|------|
-| `/api/*` | backend:7776 | REST API |
-| `/socket.io/*` | backend:7776 | WebSocket (Socket.IO) |
-| `/kibana/*` | kibana:5601 | Kibana UI (ログ可視化) |
-| `/` | frontend:7777 | Next.js アプリケーション |
+| パス | pathType | バックエンド | 説明 |
+|------|---------|------------|------|
+| `/api/*` | Prefix | backend:7776 | REST API |
+| `/docs` | Prefix | backend:7776 | Swagger UI (API ドキュメント) |
+| `/redoc` | Prefix | backend:7776 | ReDoc (API ドキュメント) |
+| `/openapi.json` | Exact | backend:7776 | OpenAPI スキーマ |
+| `/socket.io/*` | Prefix | backend:7776 | WebSocket (Socket.IO) |
+| `/kibana/*` | Prefix | kibana:5601 | Kibana UI (ログ可視化) |
+| `/` | Prefix | frontend:7777 | Next.js アプリケーション |
 
 ### Services
 
@@ -442,7 +451,7 @@ readinessProbe:
 
 2. **Dockerイメージのビルド**
    ```bash
-   cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+   cd k8s
    ./build-and-push.sh
    ```
 
@@ -456,7 +465,7 @@ readinessProbe:
 ### 自動デプロイ
 
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 ./deploy.sh
 ```
 
@@ -777,8 +786,36 @@ kubectl patch pv backend-output-pv -p '{"spec":{"claimRef":null}}'
 
 ---
 
-**最終更新**: 2025-10-21  
-**現在のバージョン**: v1.2.1  
+### v1.1.0 (2025-11-02)
+- ✅ **コンテナイメージタグをv1.1.0に更新**
+  - Backend/Frontend/Syslogのイメージタグをv1.0.33→v1.1.0に更新
+  - build-and-push.shのデフォルトVERSIONをv1.1.0に更新
+- ✅ **Ingressルーティング改善**
+  - `/docs`と`/redoc`の`pathType`を`Exact`→`Prefix`に変更
+  - Swagger UI/ReDoc配下の静的アセット（例: `/docs/swagger-ui-bundle.js`）も確実にバックエンドへルーティング
+  - `/api`なしでも`/docs`と`/redoc`にアクセス可能
+- ✅ **Traefik自動インストール機能**
+  - deploy.shで既存Ingress Controllerを検出して分岐処理
+  - 未インストール時はHelm経由で自動インストール
+  - `traefik-values.yaml`でGHCRからTraefikイメージを取得（Docker Hubレート制限回避）
+- ✅ **deploy.sh更新**
+  - Traefik MiddlewareとIngressRoute（OpenAPI JSON用）を自動デプロイするように更新
+  - Swagger UI/ReDocのURL出力を`/docs`と`/redoc`（`/api`なし）のみ表示するように更新
+
+### v1.0.34 (2025-11-02)
+- ✅ **Backend API (Swagger UI/ReDoc) アクセス修正**
+  - Traefik Middleware (`openapi-rewrite`) を追加して`/api/openapi.json`→`/openapi.json`に変換
+  - IngressRoute (`loghoi-openapi-redirect`) を追加して`/api/openapi.json`を処理
+  - FastAPIの既存コード変更なしでSwagger UI/ReDocが正常動作
+  - `openapi-rewrite-middleware.yaml`と`ingressroute-openapi-redirect.yaml`を追加
+- 📚 **ドキュメント更新**
+  - IngressセクションにTraefik Middlewareの説明を追加
+  - ルーティングテーブルにSwagger UI/ReDoc/OpenAPI JSONのパスを明記
+
+---
+
+**最終更新**: 2025-11-02  
+**現在のバージョン**: v1.1.0  
 **作成者**: AI Assistant  
 **レビュー**: 必要に応じて更新してください
 

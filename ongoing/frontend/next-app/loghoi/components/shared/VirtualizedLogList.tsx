@@ -1,7 +1,5 @@
 'use client'
-
 import React, { useMemo, useRef, useEffect, useState } from 'react'
-
 import { LogEntry } from './LogViewer'
 
 interface VirtualizedLogListProps {

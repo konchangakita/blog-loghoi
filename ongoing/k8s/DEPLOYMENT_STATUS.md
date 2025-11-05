@@ -101,7 +101,7 @@ kubectl apply -f local-registry.yaml
 
 ### **ステップ2: イメージのpush**
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 
 # Docker Hubの場合
 PUSH_IMAGES=true DOCKER_REGISTRY=docker.io DOCKER_NAMESPACE=your-username ./build-and-push.sh
@@ -120,7 +120,7 @@ PUSH_IMAGES=true DOCKER_REGISTRY=registry.loghoi.local DOCKER_NAMESPACE=loghoi .
 kubectl --kubeconfig="/home/nutanix/nkp/kon-hoihoi.conf" delete deployment -n loghoihoi --all
 
 # 再デプロイ
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 ./deploy.sh
 ```
 

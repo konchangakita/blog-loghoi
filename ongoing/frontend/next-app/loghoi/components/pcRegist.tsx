@@ -1,11 +1,12 @@
 'use client'
-
+// React Hook Form
 import { SubmitHandler, useForm } from 'react-hook-form'
+import { getBackendUrl } from '../lib/getBackendUrl'
 import { useState } from 'react'
+
+//fontawesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faArrowCircleRight } from '@fortawesome/free-solid-svg-icons'
-
-import { getBackendUrl } from '../lib/getBackendUrl'
 
 // Input value
 type FormValues = {

@@ -1,5 +1,4 @@
 'use client'
-
 import { useEffect, useRef } from 'react'
 
 interface LogFileListProps {
@@ -53,14 +52,6 @@ const LogFileList = ({
                     : 'hover:bg-base-200 hover:shadow-sm'
                 }`}
                 onClick={() => onLogSelect(log)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    onLogSelect(log)
-                  }
-                }}
-                role="button"
-                tabIndex={0}
               >
                 <span className={`break-words leading-tight ${selectedLogFile === log ? 'text-primary-content' : 'text-base-content'}`}>
                   {log}

@@ -1,10 +1,9 @@
 'use client'
-
 import Link from 'next/link'
 import Image from 'next/image'
-import { useEffect, useState } from 'react'
-
 import { getBackendUrl } from '../lib/getBackendUrl'
+
+import { useEffect, useState } from 'react'
 
 interface dict {
   [key: string]: any

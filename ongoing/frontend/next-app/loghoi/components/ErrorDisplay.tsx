@@ -73,7 +73,6 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
         </div>
         {onClose && (
           <button
-            type="button"
             onClick={onClose}
             className="btn btn-sm btn-ghost btn-circle ml-2"
             aria-label="エラーを閉じる"
@@ -137,7 +136,6 @@ export const LoadingError: React.FC<LoadingErrorProps> = ({
           <div className="text-sm">{error}</div>
           {onRetry && (
             <button
-              type="button"
               onClick={onRetry}
               className="btn btn-sm btn-primary mt-3"
             >

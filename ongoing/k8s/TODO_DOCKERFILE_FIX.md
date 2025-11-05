@@ -129,7 +129,7 @@ containers:
 
 ### **Phase 1: ブランチ作成**
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing
+cd .
 git checkout refactor
 git pull origin refactor
 git checkout -b feature/fix-k8s-dockerfile-context
@@ -143,7 +143,7 @@ git checkout -b feature/fix-k8s-dockerfile-context
 
 ### **Phase 3: ビルド＆テスト**
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 
 # ビルドテスト
 ./build-and-push.sh
@@ -267,10 +267,10 @@ curl http://10.55.23.41
 
 ```bash
 # 1. このファイルを確認
-cat /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s/TODO_DOCKERFILE_FIX.md
+cat k8s/TODO_DOCKERFILE_FIX.md
 
 # 2. featureブランチ作成
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing
+cd .
 git checkout refactor
 git pull origin refactor
 git checkout -b feature/fix-k8s-dockerfile-context

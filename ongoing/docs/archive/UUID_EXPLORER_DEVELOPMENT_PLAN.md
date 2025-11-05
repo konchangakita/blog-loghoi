@@ -27,7 +27,7 @@
 
 #### 1.1 ディレクトリ構造作成 ✅ **完了**
 ```
-/home/nutanix/konchangakita/blog-loghoi/ongoing/frontend/next-app/loghoi/app/uuid/
+frontend/next-app/loghoi/app/uuid/（プロジェクトルートからの相対パス）
 ├── page.tsx                    # UUID一覧ページ
 ├── layout.tsx                  # UUIDページレイアウト
 ├── content/

@@ -1,18 +1,18 @@
 'use client'
-
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
+import { getBackendUrl } from '../lib/getBackendUrl'
+import { SSH_KEY_MODAL_EVENT } from '../lib/sshKeyModal'
+
+// fontアイコンの読み込み
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faBug } from '@fortawesome/free-solid-svg-icons'
 import { faFileLines } from '@fortawesome/free-solid-svg-icons'
 import { faGear } from '@fortawesome/free-solid-svg-icons'
 import { faFingerprint } from '@fortawesome/free-solid-svg-icons'
 import { faBarsStaggered } from '@fortawesome/free-solid-svg-icons'
-
-import { getBackendUrl } from '../lib/getBackendUrl'
-import { SSH_KEY_MODAL_EVENT } from '../lib/sshKeyModal'
 
 const Navbar = () => {
   const searchParams = useSearchParams()

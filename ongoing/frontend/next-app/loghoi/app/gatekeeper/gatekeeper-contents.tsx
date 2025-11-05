@@ -1,10 +1,10 @@
 'use client'
-
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 
+//api
 import getClusterList from '@/app/_api/getClusterList'
 
 
