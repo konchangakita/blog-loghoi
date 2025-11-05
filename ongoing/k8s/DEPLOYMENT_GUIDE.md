@@ -114,7 +114,7 @@ MetalLB: 10.55.23.41-10.55.23.43
 #### デフォルト（HostPath使用）
 
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 ```
 
@@ -123,7 +123,7 @@ KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 #### カスタムStorageClass使用
 
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 KUBECONFIG=/path/to/your/kubeconfig.conf STORAGE_CLASS=my-storage-class ./deploy.sh
 ```
 
@@ -688,7 +688,7 @@ kubectl describe hpa loghoi-backend-hpa -n loghoihoi
 
 ```bash
 # 新しいイメージをビルド
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 ./build-and-push.sh
 
 # Deploymentを更新

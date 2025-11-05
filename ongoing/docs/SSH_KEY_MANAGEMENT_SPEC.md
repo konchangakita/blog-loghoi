@@ -73,7 +73,7 @@ ongoing/
 ### 生成コマンド
 ```bash
 ssh-keygen -t rsa -b 4096 \
-  -f /home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh/loghoi-key \
+  -f config/.ssh/loghoi-key \
   -N "" \
   -C "loghoi@kubernetes"
 ```
@@ -86,8 +86,10 @@ ssh-keygen -t rsa -b 4096 \
 #!/bin/bash
 set -e
 
-# 設定
-SSH_KEY_DIR="/home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh"
+# 設定（スクリプトの場所から相対パスで取得）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SSH_KEY_DIR="${PROJECT_ROOT}/config/.ssh"
 SSH_PRIVATE_KEY="${SSH_KEY_DIR}/loghoi-key"
 SSH_PUBLIC_KEY="${SSH_KEY_DIR}/loghoi-key.pub"
 NAMESPACE="loghoi"
@@ -178,7 +180,10 @@ backend:
 ```bash
 #!/bin/bash
 
-SSH_KEY_DIR="/home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh"
+# 設定（スクリプトの場所から相対パスで取得）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SSH_KEY_DIR="${PROJECT_ROOT}/config/.ssh"
 SSH_PRIVATE_KEY="${SSH_KEY_DIR}/loghoi-key"
 SSH_PUBLIC_KEY="${SSH_KEY_DIR}/loghoi-key.pub"
 
@@ -284,7 +289,7 @@ ongoing/config/.ssh/id_*
 ### 鍵のローテーション
 ```bash
 # 既存鍵を削除
-rm -f /home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh/loghoi-key*
+rm -f config/.ssh/loghoi-key*
 
 # Kubernetes Secret削除
 kubectl delete secret loghoi-secrets -n loghoi
@@ -318,7 +323,7 @@ kubectl delete secret loghoi-secrets -n loghoi
 2. **公開鍵の確認**:
    ```bash
    # ファイルから確認
-   cat /home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh/loghoi-key.pub
+   cat config/.ssh/loghoi-key.pub
    
    # UIから確認
    「Open SSH KEY」ボタンをクリック
@@ -332,14 +337,14 @@ kubectl delete secret loghoi-secrets -n loghoi
 4. **接続テスト**:
    ```bash
    # CVMに直接SSH接続してテスト
-   ssh -i /home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh/loghoi-key \
+   ssh -i config/.ssh/loghoi-key \
        nutanix@<CVM_IP>
    ```
 
 #### 鍵を再生成したい場合
 1. 既存鍵を削除:
    ```bash
-   rm -f /home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh/loghoi-key*
+   rm -f config/.ssh/loghoi-key*
    ```
 
 2. Kubernetes Secretを削除（Kubernetes環境の場合）:
@@ -350,11 +355,11 @@ kubectl delete secret loghoi-secrets -n loghoi
 3. 再デプロイ:
    ```bash
    # Kubernetes
-   cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+   cd k8s
    ./deploy.sh
    
    # docker-compose
-   cd /home/nutanix/konchangakita/blog-loghoi/ongoing
+   cd .
    ./scripts/init-ssh-keys.sh
    docker-compose -f docker-compose.yml restart backend
    ```
@@ -390,8 +395,10 @@ graph TD
 #!/bin/bash
 set -e
 
-# 設定
-SSH_KEY_DIR="/home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh"
+# 設定（スクリプトの場所から相対パスで取得）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SSH_KEY_DIR="${PROJECT_ROOT}/config/.ssh"
 SSH_PRIVATE_KEY="${SSH_KEY_DIR}/loghoi-key"
 SSH_PUBLIC_KEY="${SSH_KEY_DIR}/loghoi-key.pub"
 NAMESPACE="loghoi"
@@ -523,7 +530,10 @@ spec:
 #!/bin/bash
 set -e
 
-SSH_KEY_DIR="/home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh"
+# 設定（スクリプトの場所から相対パスで取得）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SSH_KEY_DIR="${PROJECT_ROOT}/config/.ssh"
 SSH_PRIVATE_KEY="${SSH_KEY_DIR}/loghoi-key"
 SSH_PUBLIC_KEY="${SSH_KEY_DIR}/loghoi-key.pub"
 
@@ -586,14 +596,14 @@ services:
 
 ```bash
 # 1. SSH鍵の初期化（初回のみ）
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing
+cd .
 ./scripts/init-ssh-keys.sh
 
 # 2. docker-compose起動
 docker-compose -f docker-compose.yml up -d
 
 # 3. 公開鍵の確認（必要に応じて）
-cat /home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh/loghoi-key.pub
+cat config/.ssh/loghoi-key.pub
 ```
 
 ## バックエンド実装
@@ -705,13 +715,13 @@ ongoing/config/.ssh/known_hosts
 
 ### Kubernetes環境
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 ./deploy.sh
 ```
 
 ### docker-compose環境
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing
+cd .
 ./scripts/init-ssh-keys.sh
 ```
 

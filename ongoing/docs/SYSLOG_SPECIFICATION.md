@@ -501,7 +501,7 @@ class SyslogSearchRequest(BaseModel):
 #### Filebeat設定（Syslogサーバー側）
 
 **設定ファイル場所**:
-- `/home/nutanix/konchangakita/blog-loghoi/ongoing/syslog/filebeat.yml`
+- `syslog/filebeat.yml`（プロジェクトルートからの相対パス）
 
 **実際の設定内容**:
 ```yaml
@@ -659,12 +659,12 @@ setup.kibana:
 ### 1. Syslogサーバーのデプロイ
 ```bash
 # Dockerイメージのビルド
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/syslog
+cd syslog
 docker build -f Dockerfile.k8s -t ghcr.io/konchangakita/loghoi-syslog:v1.0.1 .
 docker push ghcr.io/konchangakita/loghoi-syslog:v1.0.1
 
 # Kubernetesにデプロイ
-kubectl apply -f /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s/syslog-deployment.yaml
+kubectl apply -f k8s/syslog-deployment.yaml
 
 # External IPの確認
 kubectl get service loghoi-syslog-service -n loghoi
@@ -786,7 +786,7 @@ kubectl exec -n loghoi deployment/elasticsearch -- curl -s "http://localhost:920
 ### 4. バックエンド・フロントエンドの更新
 ```bash
 # バックエンドイメージのビルド＆デプロイ
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing
+cd .
 docker build -f backend/Dockerfile.k8s -t ghcr.io/konchangakita/loghoi-backend:latest .
 docker push ghcr.io/konchangakita/loghoi-backend:latest
 kubectl set image deployment/loghoi-backend -n loghoi backend=ghcr.io/konchangakita/loghoi-backend:latest

@@ -361,7 +361,7 @@ useEffect(() => {
 
 ### 🔧 修正1: `lib/rt-logs.ts` ファイルを作成
 
-**ファイルパス**: `/home/nutanix/konchangakita/blog-loghoi/ongoing/frontend/next-app/loghoi/lib/rt-logs.ts`
+**ファイルパス**: `frontend/next-app/loghoi/lib/rt-logs.ts`（プロジェクトルートからの相対パス）
 
 **内容**:
 ```typescript
@@ -773,8 +773,8 @@ paramiko.ssh_exception.AuthenticationException: Authentication (publickey) faile
 3. **Kubernetes Secretを最新の鍵で更新**
    ```bash
    kubectl create secret generic loghoi-secrets \
-     --from-file=ntnx-lockdown=/home/nutanix/konchangakita/blog-loghoi/ongoing/backend/config/.ssh/ntnx-lockdown \
-     --from-file=ntnx-lockdown.pub=/home/nutanix/konchangakita/blog-loghoi/ongoing/backend/config/.ssh/ntnx-lockdown.pub \
+     --from-file=ntnx-lockdown=backend/config/.ssh/ntnx-lockdown \
+     --from-file=ntnx-lockdown.pub=backend/config/.ssh/ntnx-lockdown.pub \
      --dry-run=client -o yaml | kubectl apply -f -
    ```
 

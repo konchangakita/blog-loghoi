@@ -11,7 +11,7 @@ HostPath対応により、CSI Driver不要で即座にデプロイ可能な開�
 ## 🚀 クイックスタート
 
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 KUBECONFIG=/path/to/your/kubeconfig.conf ./deploy.sh
 ```
 

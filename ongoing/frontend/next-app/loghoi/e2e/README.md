@@ -8,7 +8,7 @@ Playwrightを使用して、ユーザーの実際の操作フローをテスト�
 
 ### 1. 依存関係のインストール
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/frontend/next-app/loghoi
+cd frontend/next-app/loghoi
 npm install
 ```
 

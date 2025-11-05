@@ -8,8 +8,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# 設定
-SSH_KEY_DIR="/home/nutanix/konchangakita/blog-loghoi/ongoing/config/.ssh"
+# 設定（スクリプトの場所から相対パスで取得）
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+SSH_KEY_DIR="${PROJECT_ROOT}/config/.ssh"
 SSH_PRIVATE_KEY="${SSH_KEY_DIR}/loghoi-key"
 SSH_PUBLIC_KEY="${SSH_KEY_DIR}/loghoi-key.pub"
 

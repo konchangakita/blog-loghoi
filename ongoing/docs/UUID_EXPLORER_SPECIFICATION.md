@@ -279,7 +279,7 @@ GET /api/uuid/search?cluster={クラスタ名}&keyword={検索キーワード}
 
 ### 認証（フロント入力なし）
 - **方式**: サーバ側で管理されたSSH鍵による認証（フロントからの資格情報入力は不要）
-- **鍵の配置**: `/home/nutanix/konchangakita/blog-loghoi/ongoing/backend/config/.ssh/ntnx-lockdown`
+- **鍵の配置**: `backend/config/.ssh/ntnx-lockdown`（プロジェクトルートからの相対パス）
 - **前提**: Prism Element（CVM）側に公開鍵を事前登録
 - **エラー表示**: 失敗時はページ上にユーザーフレンドリーなメッセージを表示
 

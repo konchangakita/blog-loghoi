@@ -81,7 +81,7 @@ frontend/next-app/loghoi/
 
 ```bash
 # ローカルビルドのみ
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 ./build-and-push.sh
 
 # GitHub Container Registry (GHCR) へプッシュ
@@ -451,7 +451,7 @@ readinessProbe:
 
 2. **Dockerイメージのビルド**
    ```bash
-   cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+   cd k8s
    ./build-and-push.sh
    ```
 
@@ -465,7 +465,7 @@ readinessProbe:
 ### 自動デプロイ
 
 ```bash
-cd /home/nutanix/konchangakita/blog-loghoi/ongoing/k8s
+cd k8s
 ./deploy.sh
 ```
 
