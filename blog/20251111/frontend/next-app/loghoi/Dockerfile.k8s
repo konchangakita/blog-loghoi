@@ -1,0 +1,55 @@
+# 本番用Dockerfile for Frontend (Multi-stage build)
+
+# Stage 1: Dependencies
+FROM node:20-slim AS deps
+WORKDIR /app
+
+# package.json と package-lock.json をコピー
+COPY package*.json ./
+RUN npm ci
+
+# Stage 2: Builder
+FROM node:20-slim AS builder
+WORKDIR /app
+
+# 依存関係をコピー
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Next.js ビルド
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN npm run build
+
+# Stage 3: Runner (本番実行環境)
+FROM node:20-slim AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# 非rootユーザーの作成
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# 必要なファイルのコピー
+# standalonebuildでは、public/とstatic/、app/favicon.icoを明示的にコピーする必要がある
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+# App Routerのfavicon（重要！）
+COPY --from=builder --chown=nextjs:nodejs /app/app/favicon.ico ./app/favicon.ico
+
+USER nextjs
+
+EXPOSE 7777
+
+ENV PORT=7777
+ENV HOSTNAME="0.0.0.0"
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:7777/ || exit 1
+
+# アプリケーション起動
+CMD ["node", "server.js"]
+

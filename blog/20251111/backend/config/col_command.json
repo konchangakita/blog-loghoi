@@ -1,0 +1,56 @@
+{
+  "COMMAND_LIST": [
+    {
+      "name": "uname",
+      "command": "uname -a"
+    },
+    {
+      "name": "cluster_status",
+      "command": "/usr/local/nutanix/cluster/bin/cluster status"
+    },
+    {
+      "name": "hostssh_date",
+      "command": "/usr/local/nutanix/cluster/bin/hostssh date"
+    },
+    {
+      "name": "hostssh_uptime",
+      "command": "/usr/local/nutanix/cluster/bin/hostssh uptime"
+    },
+    {
+      "name": "ncli_cluster_info",
+      "command": "/home/nutanix/prism/cli/ncli cluster info"
+    },
+    {
+      "name": "ncli_host_ls",
+      "command": "/home/nutanix/prism/cli/ncli host ls"
+    },
+    {
+      "name": "ncli_cluster_get-domain-fault-tolerance-status_typenode",
+      "command": "/home/nutanix/prism/cli/ncli cluster get-domain-fault-tolerance-status type=node"
+    },
+    {
+      "name": "ncli_alert_history_duration16",
+      "command": "/home/nutanix/prism/cli/ncli alert history duration=16"
+    },
+    {
+      "name": "ncli_alert_ls_max-alerts16",
+      "command": "/home/nutanix/prism/cli/ncli alert ls max-alerts=16"
+    },
+    {
+      "name": "ncli_license_get-allowances",
+      "command": "/home/nutanix/prism/cli/ncli license get-allowances"
+    },
+    {
+      "name": "nodetool_-h_0_ring",
+      "command": "/usr/local/nutanix/apache-cassandra/bin/nodetool -h 0 ring"
+    },
+    {
+      "name": "ncli_license_get-license",
+      "command": "/home/nutanix/prism/cli/ncli license get-license"
+    },
+    {
+      "name": "zeus_config_printer",
+      "command": "/usr/local/nutanix/bin/zeus_config_printer"
+    }
+  ]
+}

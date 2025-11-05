@@ -1,0 +1,436 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { faSearch } from '@fortawesome/free-solid-svg-icons'
+
+import UuidListTable from './components/UuidListTable'
+import { useUuidApi } from './hooks/useUuidApi'
+import Navbar from '../../components/navbar'
+import Loading from '../../components/loading'
+import UuidCollecting from './components/UuidCollecting'
+import { ErrorDisplay, SearchInput, Button } from '../../components/common'
+import { getBackendUrl } from '../../lib/getBackendUrl'
+
+type FormValues = {
+  searchUuid: string
+}
+
+interface UuidData {
+  vmlist: Record<string, any>
+  vglist: Record<string, any>
+  vflist: Record<string, any>
+  sharelist: Record<string, any>
+  sclist: Record<string, any>
+}
+
+interface UuidResponse {
+  list: UuidData
+  cluster_name: string
+  timestamp_list: {
+    local_time: string
+  }
+}
+
+export default function UuidPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { fetchUuidData, loading, error, errorMessage, errorAlert, clearError } = useUuidApi()
+  
+  const [entity, setEntity] = useState<Record<string, any>>({})
+  const [isActive, setActive] = useState('vmlist')
+  const [uuidData, setUuidData] = useState<UuidResponse | null>(null)
+  const [showAuthDialog, setShowAuthDialog] = useState(false)
+  const [authData, setAuthData] = useState<{username?: string, password?: string}>({ username: 'admin', password: '' })
+  const [isAuthenticating, setIsAuthenticating] = useState(false)
+  const [isCollecting, setIsCollecting] = useState(false)
+  const [authError, setAuthError] = useState('')
+  const [isInitialLoading, setIsInitialLoading] = useState(true)
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<FormValues>()
+
+  const tabActive = 'tab tab-bordered tab-active text-gray-800 bg-blue-100 rounded-t-md'
+  const tabInactive = 'tab tab-bordered'
+
+  // 初期データ取得
+  useEffect(() => {
+    const fetchData = async () => {
+      const queryParams = {
+        pcip: searchParams.get('pcip') || '',
+        cluster: searchParams.get('cluster') || '',
+        prism: searchParams.get('prism') || '',
+      }
+      
+      try {
+        const data = await fetchUuidData(queryParams)
+        if (data) {
+          setUuidData(data)
+          setEntity(data.list.vmlist)
+        }
+      } catch (err) {
+        console.error('Failed to fetch UUID data:', err)
+      } finally {
+        setIsInitialLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [searchParams])
+
+  const handleActive = (key: string) => {
+    if (uuidData) {
+      setEntity(uuidData.list[key as keyof UuidData])
+      setActive(key)
+    }
+  }
+
+  const handleSearch = (data: FormValues) => {
+    const searchQuery = {
+      pcip: searchParams.get('pcip') || '',
+      cluster: searchParams.get('cluster') || '',
+      prism: searchParams.get('prism') || '',
+      search: data.searchUuid,
+    }
+    
+    router.push(`/uuid/search?${new URLSearchParams(searchQuery).toString()}`)
+  }
+
+  const handleDataFetch = () => {
+    setShowAuthDialog(true)
+  }
+
+  const handleAuthSubmit = async () => {
+    // 入力チェック
+    if (!(authData as any).password) {
+      setAuthError('パスワードを入力してください')
+      return
+    }
+
+    setIsAuthenticating(true)
+    setAuthError('')
+
+    try {
+      const requestOptions = {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          cluster_name: searchParams.get('cluster') || '',
+          prism_ip: searchParams.get('prism') || '',
+          username: (authData as any).username || 'admin',
+          password: (authData as any).password,
+        }),
+      }
+
+      const backendUrl = getBackendUrl()
+      const response = await fetch(`${backendUrl}/api/uuid/connect`, requestOptions)
+      
+      if (response.status === 200) {
+        // 認証成功 - プログレスバーを開始
+        setIsAuthenticating(false)
+        setIsCollecting(true)
+        setShowAuthDialog(false)
+        
+        // 30秒後にプログレスバーを完了
+        setTimeout(() => {
+          setIsCollecting(false)
+          setAuthData({})
+          // データ取得後にページをリロード
+          window.location.reload()
+        }, 30000)
+      } else {
+        // 認証失敗
+        setIsAuthenticating(false)
+        try {
+          const errorData = await response.json()
+          console.log('Error response:', errorData)
+          setAuthError('認証に失敗しました: SSH接続を確認してください')
+        } catch (jsonError) {
+          console.log('Failed to parse error response:', jsonError)
+          console.log('Response status:', response.status)
+          console.log('Response text:', await response.text())
+          setAuthError('認証に失敗しました: SSH接続を確認してください')
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching UUID data:', error)
+      setIsAuthenticating(false)
+      setAuthError('接続エラーが発生しました')
+    }
+  }
+
+  if (error) {
+    return (
+      <div>
+        <Navbar />
+        <div className="p-4">
+          <ErrorDisplay 
+            error={errorAlert} 
+            onClose={clearError}
+            className="max-w-2xl mx-auto"
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // 初期読み込み中またはAPI読み込み中はLoadingコンポーネントを表示
+  if (isInitialLoading || loading) {
+    return (
+      <div>
+        <Navbar />
+        <Loading />
+      </div>
+    )
+  }
+
+  // データがない場合のみ「現在データ無し」を表示
+  if (!uuidData) {
+    return (
+      <div>
+        <Navbar />
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="alert alert-info">
+            <span>現在データ無し</span>
+          </div>
+          <div className="text-center my-4">
+            <Button 
+              onClick={handleDataFetch}
+              variant="primary"
+              size="lg"
+              className="px-8"
+            >
+              データ取得
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <Navbar />
+      {errorAlert && (
+        <div className="p-4">
+          <ErrorDisplay 
+            error={errorAlert} 
+            onClose={clearError}
+            className="max-w-2xl mx-auto"
+          />
+        </div>
+      )}
+      {uuidData ? (
+        <main data-theme="white" className="text-center items-center">
+          <div className="p-1">
+            {(() => {
+              const vmlistLength = uuidData.list.vmlist ? Object.keys(uuidData.list.vmlist).length : 0
+              const vglistLength = uuidData.list.vglist ? Object.keys(uuidData.list.vglist).length : 0
+              const vflistLength = uuidData.list.vflist ? Object.keys(uuidData.list.vflist).length : 0
+              const sharelistLength = uuidData.list.sharelist ? Object.keys(uuidData.list.sharelist).length : 0
+              const sclistLength = uuidData.list.sclist ? Object.keys(uuidData.list.sclist).length : 0
+              
+              return (
+                <>
+        <p className="text-3xl text-primary p-2">UUID Xplorer - "{uuidData.cluster_name}"</p>
+        <div className="flex flex-col">
+          <div className="flex flex-col">
+            <div className="text-center my-4">
+              <Button 
+                onClick={handleDataFetch}
+                variant="primary"
+                size="lg"
+                className="px-8"
+              >
+                データ取得
+              </Button>
+            </div>
+            <div className="text-center -mt-2 mb-3 text-sm text-gray-600">データ取得日時：{uuidData.timestamp_list.local_time}</div>
+            <div className="flex justify-center">
+              <SearchInput
+                placeholder="UUID検索"
+                value={watch('searchUuid')}
+                onChange={(e) => setValue('searchUuid', e.target.value)}
+                onSearch={(value) => {
+                  setValue('searchUuid', value)
+                  handleSearch({ searchUuid: value })
+                }}
+                size="sm"
+                className="w-64"
+                error={errors.searchUuid ? '必須項目です' : undefined}
+              />
+            </div>
+          </div>
+          <div className="mx-auto flex flex-row">
+            <div className="w-32 pt-8">
+              <div className="grid-flow-row shadow-lg border-2 stats w-32">
+                <div className="stat p-4 text-right">
+                  <a className="cursor-pointer hover:no-underline" onClick={() => handleActive('vmlist')}>
+                    <div className="stat-title text-info">VMs</div>
+                    <div className="stat-value text-xl">{vmlistLength}</div>
+                  </a>
+                </div>
+                <div className="stat p-4 text-right">
+                  <a className="cursor-pointer hover:no-underline" onClick={() => handleActive('vglist')}>
+                    <div className="stat-title text-success text-sm">Volume Group</div>
+                    <div className="stat-value text-xl">{vglistLength}</div>
+                  </a>
+                </div>
+                <div className="stat p-4 text-right">
+                  <a className="cursor-pointer hover:no-underline" onClick={() => handleActive('vflist')}>
+                    <div className="stat-title text-warning text-sm">File Server</div>
+                    <div className="stat-value text-xl">{vflistLength}</div>
+                  </a>
+                </div>
+                <div className="stat p-4 text-right">
+                  <a className="cursor-pointer hover:no-underline" onClick={() => handleActive('sharelist')}>
+                    <div className="stat-title text-error">Shares</div>
+                    <div className="stat-value text-xl">{sharelistLength}</div>
+                  </a>
+                </div>
+                <div className="stat p-3 text-right">
+                  <a className="cursor-pointer hover:no-underline" onClick={() => handleActive('sclist')}>
+                    <div className="stat-title text-secondary text-xs">StorageContainer</div>
+                    <div className="stat-value text-xl">{sclistLength}</div>
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div className="mx-4">
+              <div className="">
+                <a 
+                  className={isActive === 'vmlist' ? tabActive : tabInactive} 
+                  onClick={() => handleActive('vmlist')}
+                >
+                  VM List
+                </a>
+                <a 
+                  className={isActive === 'vglist' ? tabActive : tabInactive} 
+                  onClick={() => handleActive('vglist')}
+                >
+                  Volume Group
+                </a>
+                <a 
+                  className={isActive === 'vflist' ? tabActive : tabInactive} 
+                  onClick={() => handleActive('vflist')}
+                >
+                  File Server
+                </a>
+                <a 
+                  className={isActive === 'sharelist' ? tabActive : tabInactive} 
+                  onClick={() => handleActive('sharelist')}
+                >
+                  Shares
+                </a>
+                <a 
+                  className={isActive === 'sclist' ? tabActive : tabInactive} 
+                  onClick={() => handleActive('sclist')}
+                >
+                  Storage Container
+                </a>
+                <div className="min-h-[480px] h-[60vh] max-h-[800px] overflow-auto border-2 shadow">
+                  <div className="">
+                    <UuidListTable entity={entity} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
+                </>
+              )
+            })()}
+          </div>
+        </main>
+      ) : null}
+
+      {/* 認証ダイアログ */}
+      {showAuthDialog && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">Prism Element 認証情報入力</h3>
+            
+            {/* エラー表示 */}
+            {authError && (
+              <div className="alert alert-error mb-4">
+                <span>{authError}</span>
+              </div>
+            )}
+            
+            <div className="space-y-4">
+              <div className="alert alert-info text-sm">
+                <span>Prism API アクセスのための認証情報を入力してください</span>
+              </div>
+              
+              {/* Username入力 */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Username</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="admin"
+                  className="input input-bordered w-full text-black"
+                  value={(authData as any).username || 'admin'}
+                  onChange={(e) => setAuthData({ ...authData, username: e.target.value })}
+                  disabled={isAuthenticating}
+                />
+              </div>
+              
+              {/* Password入力 */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Password</span>
+                </label>
+                <input
+                  type="password"
+                  placeholder="パスワードを入力"
+                  className="input input-bordered w-full text-black"
+                  value={(authData as any).password || ''}
+                  onChange={(e) => setAuthData({ ...authData, password: e.target.value })}
+                  disabled={isAuthenticating}
+                />
+              </div>
+            </div>
+            
+            <div className="modal-action">
+              <button
+                className="btn btn-primary"
+                onClick={handleAuthSubmit}
+                disabled={isAuthenticating || !(authData as any).password}
+              >
+                {isAuthenticating ? '認証中...' : 'データ取得'}
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  setShowAuthDialog(false)
+                  setAuthData({})
+                  setAuthError('')
+                }}
+                disabled={isAuthenticating}
+              >
+                キャンセル
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Loading表示（認証中） */}
+      {isAuthenticating && <Loading />}
+      
+      {/* プログレスバー表示（データ収集中） */}
+      {isCollecting && <UuidCollecting />}
+    </div>
+  )
+}
