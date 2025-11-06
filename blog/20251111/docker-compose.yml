@@ -86,7 +86,14 @@ services:
       && yarn dev"
     working_dir: /usr/src/next-app/loghoi
     environment:
-      - NEXT_PUBLIC_BACKEND_URL=http://10.38.113.49:7776
+      # ホストIPを自動取得（docker-composeではlocalhostが使えないため）
+      # NEXT_PUBLIC_BACKEND_URLが未設定の場合、host.docker.internalを使用
+      # Linux環境ではextra_hostsでhost-gatewayにマッピングされる
+      - NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL:-http://host.docker.internal:7776}
+    extra_hosts:
+      # Linux環境でhost.docker.internalが使えない場合のフォールバック
+      # Docker 20.10以降では自動的に解決されるが、古いバージョン用に明示的に設定
+      - "host.docker.internal:host-gateway"
     networks:
       - local
 

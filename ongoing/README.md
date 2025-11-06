@@ -9,13 +9,26 @@ Prism Centralに登録されたクラスターから、CVMのリアルタイム�
 
 ### docker-compose（開発環境）
 ```bash
+# デフォルト（host.docker.internal使用、ホストIPを自動検出）
 docker-compose -f docker-compose.yml up -d --build
+
+# ホストIPを自動取得して起動（推奨）
+HOST_IP=$(./scripts/get-host-ip.sh) && NEXT_PUBLIC_BACKEND_URL=http://${HOST_IP}:7776 docker-compose -f docker-compose.yml up -d --build
+
+# カスタムバックエンドURLを指定する場合
+NEXT_PUBLIC_BACKEND_URL=http://your-backend-ip:7776 docker-compose -f docker-compose.yml up -d --build
 
 # アクセス
 # フロントエンド: http://localhost:7777
 # バックエンドAPI: http://localhost:7776
 # Kibana: http://localhost:5601
 ```
+
+**注意**: 
+- `NEXT_PUBLIC_BACKEND_URL`環境変数が設定されていない場合、デフォルトで`http://host.docker.internal:7776`が使用されます
+- `host.docker.internal`はDocker 20.10以降でLinux環境でもサポートされています
+- 古いDockerバージョンの場合、`extra_hosts`で`host-gateway`にマッピングされます
+- docker-composeではコンテナ内から`localhost`はコンテナ自身を指すため、ホストのバックエンドにアクセスするには`host.docker.internal`が必要です
 
 ### Kubernetes（本番環境）
 ```bash
