@@ -177,12 +177,20 @@ next2023
 output
 
 # SSH Keys（機密情報）
-ongoing/config/.ssh/loghoi-key
-ongoing/config/.ssh/loghoi-key.pub
-ongoing/config/.ssh/*.pem
-ongoing/config/.ssh/id_*
-ongoing/config/.ssh/known_hosts
+# すべてのSSH鍵ファイルを除外
+**/config/.ssh/loghoi-key
+**/config/.ssh/loghoi-key.pub
+**/config/.ssh/ntnx-lockdown
+**/config/.ssh/ntnx-lockdown.pub
+**/backend/config/.ssh/ntnx-lockdown
+**/backend/config/.ssh/ntnx-lockdown.pub
+**/.ssh/*.pem
+**/.ssh/id_*
+**/.ssh/known_hosts
+**/.ssh/*-key
+**/.ssh/*-key.pub
 # SSH鍵ディレクトリのREADMEは保持
+!**/config/.ssh/README.md
 !ongoing/config/.ssh/README.md
 
 # Next.js
