@@ -16,7 +16,7 @@ Kubernetes化に合わせて、大きくリファクタリングも行いまし�
 
 ### リファクタリング方針：Tidy First で「掃除してから進む」
 
-- **狙い**: 変更容易性を上げるために、設計負債や運用上のひっかかりを先に解消。
+- **狙い**: 変更容易性を上げるために、設計負債や運用上のひっかかりを先に解消
 - **今回のTidy例**:
   - Ingress のルール整理（`/docs`/`/redoc` の `pathType: Prefix`、不要Middleware/IngressRouteの削除）
   - Dockerfileの用途分離（`dockerfile`=開発、`Dockerfile.k8s`=本番）
@@ -28,17 +28,31 @@ Kubernetes化に合わせて、大きくリファクタリングも行いまし�
 
 ---
 
+### フォルダ構造刷新と汎用コンポーネントの独立
+
+- **背景**: Kubernetes対応で、役割ごとにフォルダを明確に分離
+- **scripts/**
+  - `k8s/deploy.sh` や `build-and-push.sh` など、環境準備・デプロイを自動化するスクリプト群を集約
+  - `init-ssh-keys.sh` や `get-host-ip.sh` のような開発向けユーティリティもここに配置し、再利用性・権限管理を一本化
+- **shared/**
+  - `shared/gateways/` に Prism API クライアントや Elasticsearch ラッパーなど、バックエンド複数機能で使い回すドメインサービスを格納
+  - FastAPIアプリ本体（`backend/fastapi_app`）からは `import shared.gateways...` するだけで利用でき、依存関係が明示的に
+  - テストや将来のジョブワーカー追加時にも、同じ shared モジュールを読み込めばロジックを重複させずに済む
+- **効果**: コンポーネント間の境界が明確になり、CI/CDやローカル開発の導線も一本化できた
+
+---
+
 ### `Swagger` と `ReDoc` の実装（FastAPI標準機能 + Ingress整備）
 
-- バックエンドは FastAPI の標準機能で提供：
-  - `app = FastAPI(docs_url="/docs", redoc_url="/redoc")`
-  - 実体はアプリ内のOpenAPIスキーマ `/openapi.json` を参照
-- Ingress 側の調整で静的アセットまで正しく到達：
-  - `pathType: Prefix` に変更することで `/docs/*`/`/redoc/*` 配下の静的ファイルを確実にバックエンドへルーティング
-  - `/api/docs` や `/api/redoc` のルーティングは廃止（FastAPIは `/docs` `/redoc` を前提）
-  - Traefik Middleware/IngressRoute による `/api/openapi.json` → `/openapi.json` 変換は不要となり削除
-
-読者Tips: ドキュメントUIにパスプリフィックスを足したい場合でも、まずはFastAPI標準を尊重し、Ingress側での過度な書き換えを避ける方が安定します。
+- **Swagger UIとは**: OpenAPI仕様をGUIで操作できるインタラクティブドキュメントエンドポイントのリクエスト/レスポンス例を見ながら、その場で試し打ちができる
+- **ReDocとは**: 同じOpenAPI仕様をもとにした静的ドキュメントビューア情報密度が高く、階層化されたメニューで仕様を読み込みやすい
+- **FastAPIでの提供方法**:
+  - `app = FastAPI(docs_url="/docs", redoc_url="/redoc", openapi_url="/openapi.json")`
+  - エンドポイントやPydanticモデルを定義すると、FastAPIが起動時に**OpenAPIスキーマを自動生成**
+- **OpenAPI JSONの所在と内容**:
+  - 実体はバックエンドが動的に返す `http://<host>:7776/openapi.json`
+  - JSONには `paths`（APIエンドポイント定義）、`components.schemas`（Pydanticモデル）、`securitySchemes` などが含まれ、Swagger/ ReDoc がこれを読み込んで画面表示
+  - スナップショットでもコードから生成されるため、専用の静的ファイルを同期する必要がない
 
 ---
 
@@ -48,10 +62,9 @@ Kubernetes化に合わせて、大きくリファクタリングも行いまし�
 - **要点**
   - `docker-compose.yml` は、ボリュームマウントで `backend/fastapi_app` や `shared` を反映
   - Backend/Frontend は小文字 `dockerfile` を使用（開発専用）
-  - `scripts/init-ssh-keys.sh` で初回鍵生成。UIの「Open SSH KEY」から公開鍵表示
-  - FE から BE へのURLは `NEXT_PUBLIC_BACKEND_URL` で制御
+  - `scripts/init-ssh-keys.sh` で初回鍵生成
 
-開発と本番で「ファイル/環境変数/ストレージ/起動方法」が明確に分離され、相互の混入を防止。
+開発と本番で「ファイル/環境変数/ストレージ/起動方法」が明確に分離され、相互の混入を防止
 
 ---
 
@@ -62,17 +75,18 @@ Kubernetes化に合わせて、大きくリファクタリングも行いまし�
   - 本番: `*/Dockerfile.k8s`
   - 誤運用を防ぎつつ、CI/CDとローカル開発の両立を容易に
 
-- **レジストリ**: GHCR（`ghcr.io/konchangakita/*`）へ移行
-  - Pull安定性、公開設定で認証レスPull、バージョンタグ固定（例: `v1.1.1`）
+- **イメージレジストリ**: GHCR（`ghcr.io/konchangakita/*`）
+  - Docker hubに比べて Pull安定性、公開設定で認証レス Pull
 
 - **ストレージ戦略**
-  - デフォルトは HostPath `manual`（開発・検証向け）。PVCはRWOのため、Elasticsearch/Backendは **`strategy: Recreate`** を採用
-  - 本番では `STORAGE_CLASS` を環境変数で差し替え（NKP等のCSIに対応）
+  - デフォルトは HostPath `manual`（開発・検証向け）、PVCはRWOのため、Elasticsearch/Backendは **`strategy: Recreate`** を採用
+  - 本番用には `STORAGE_CLASS` を環境変数で差し替え（NKP等のCSIに対応）
 
 - **Ingress / ネットワーク**
   - IngressClass: `kommander-traefik`
   - ルーティング: `/api`（API）, `/socket.io`（WebSocket）, `/docs` `/redoc`（API UI）, `/kibana`（UI）, `/`（FE）
   - MetalLB で LoadBalancer IP を割当
+  - `/docs` `/redoc` の`pathType: Prefix`化で静的アセットまで確実にバックエンドへ転送し、`/api`付き経路やTraefik Middlewareを整理
 
 - **ヘルスチェック**
   - Backend: `/health`（liveness）, `/ready`（readiness）
@@ -91,7 +105,7 @@ Kubernetes化に合わせて、大きくリファクタリングも行いまし�
   - Deploymentで `/app/config/.ssh` にマウント、`SSH_KEY_PATH`/`SSH_PUBLIC_KEY_PATH` で参照
   - 初回は公開鍵をPrism Element（Cluster Lockdown）へ登録
 - **docker-compose**
-  - `./config/.ssh` をコンテナにマウント。環境変数で鍵パスを指定
+  - `./config/.ssh` をコンテナにマウント環境変数で鍵パスを指定
   - 初回は `scripts/init-ssh-keys.sh` で鍵生成→公開鍵をUI/ファイルで確認
 - **フロント連携**: SSH認証失敗を検知したら、UIで自動的に公開鍵表示を促す
 
@@ -110,6 +124,35 @@ Kubernetes化に合わせて、大きくリファクタリングも行いまし�
 
 ---
 
+### Ingressルーティング図（Mermaid）
+
+```mermaid
+flowchart TD
+    Internet[ユーザー/ブラウザ] --> LB[MetalLB LoadBalancer IP]
+    LB --> Ingress[Traefik Ingress]
+    Ingress -->|/| FEService[frontend-service]
+    FEService --> FEPod[Frontend Pod]
+    Ingress -->|/api| BEService[backend-service]
+    BEService --> BEPod[Backend Pod]
+    Ingress -->|/docs /redoc| BEService
+    Ingress -->|/socket.io| BEService
+    Ingress -->|/kibana| KibanaService[Kibana service]
+    KibanaService --> KibanaPod[Kibana Pod]
+    BEService --> Elasticsearch[Elasticsearch service]
+    Elasticsearch --> ESPod[Elasticsearch Pod]
+```
+
+---
+
+### ストレージ比較表
+
+| 環境 | StorageClass | アクセスモード | デプロイ戦略 | 備考 |
+|------|--------------|----------------|--------------|------|
+| 開発・検証 | `manual` (HostPath) | `ReadWriteOnce` | `Recreate` | ノードローカルに永続化、手軽さ優先 |
+| 本番 | `STORAGE_CLASS` 環境変数で指定 (CSI) | クラスタ標準のアクセスモード | `RollingUpdate` (Elasticsearchは環境依存) | NKPなどのクラスタストレージに合わせて差し替え |
+
+---
+
 ### 次の改善（アイデア）
 
 - 鍵のローテーション自動化（可能ならPrism API連携）
@@ -119,6 +162,6 @@ Kubernetes化に合わせて、大きくリファクタリングも行いまし�
 
 ---
 
-以上。記事公開時は図表の追加（Ingressルーティング図、ストレージ比較表、Tidy Firstの前後比較）を行うと伝わりやすくなります。
+以上、記事公開時は図表の追加（Ingressルーティング図、ストレージ比較表、Tidy Firstの前後比較）を行うと伝わりやすくなります
 
 
