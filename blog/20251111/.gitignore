@@ -159,3 +159,19 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 elastic/es-data/nodes/0
+
+# SSH Keys（機密情報）
+# すべてのSSH鍵ファイルを除外
+**/config/.ssh/loghoi-key
+**/config/.ssh/loghoi-key.pub
+**/config/.ssh/ntnx-lockdown
+**/config/.ssh/ntnx-lockdown.pub
+**/backend/config/.ssh/ntnx-lockdown
+**/backend/config/.ssh/ntnx-lockdown.pub
+**/.ssh/*.pem
+**/.ssh/id_*
+**/.ssh/known_hosts
+**/.ssh/*-key
+**/.ssh/*-key.pub
+# SSH鍵ディレクトリのREADMEは保持
+!**/config/.ssh/README.md
