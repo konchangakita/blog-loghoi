@@ -16,9 +16,9 @@ HOST_IP=$(./scripts/get-host-ip.sh) && NEXT_PUBLIC_BACKEND_URL=http://${HOST_IP}
 NEXT_PUBLIC_BACKEND_URL=http://your-backend-ip:7776 docker-compose -f docker-compose.yml up -d --build
 
 # アクセス
-# フロントエンド: http://localhost:7777
-# バックエンドAPI: http://localhost:7776
-# Kibana: http://localhost:5601
+# フロントエンド: http://your-host-ip:7777
+# バックエンドAPI: http://your-host-ip:7776
+# Kibana: http://your-host-ip:5601
 ```
 
 **注意**: 
