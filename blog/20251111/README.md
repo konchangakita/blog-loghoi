@@ -9,8 +9,8 @@ Prism Centralに登録されたクラスターから、CVMのリアルタイム�
 
 ### docker-compose（開発環境）
 ```bash
-# デフォルト（host.docker.internal使用、ホストIPを自動検出）
-docker-compose -f docker-compose.yml up -d --build
+# ホストIPを自動取得して起動
+HOST_IP=$(./scripts/get-host-ip.sh) && NEXT_PUBLIC_BACKEND_URL=http://${HOST_IP}:7776 docker-compose -f docker-compose.yml up -d --build
 
 # カスタムバックエンドURLを指定する場合
 NEXT_PUBLIC_BACKEND_URL=http://your-backend-ip:7776 docker-compose -f docker-compose.yml up -d --build
